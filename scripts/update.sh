@@ -29,13 +29,16 @@ prompt_user() {
     local var_name="$2"
     local default_val="${3:-}"
 
+    local input=""
     if [ -t 0 ]; then
-        read -rp "$prompt_msg" "$var_name"
+        read -rp "$prompt_msg" input || true
     elif [ -r /dev/tty ]; then
-        read -rp "$prompt_msg" "$var_name" < /dev/tty
+        read -rp "$prompt_msg" input < /dev/tty || true
     else
-        eval "$var_name=\"$default_val\""
+        input="$default_val"
     fi
+    input="${input:-$default_val}"
+    eval "$var_name=\"$input\""
 }
 
 check_not_root() {

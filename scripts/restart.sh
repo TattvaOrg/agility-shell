@@ -31,8 +31,9 @@ for arg in "$@"; do
 done
 
 # Check if managed by systemd user service first
-if [[ "$FOREGROUND" != true ]] && systemctl --user is-active --quiet agility-shell.service 2>/dev/null; then
-    info "Agility Shell is running as a systemd user unit. Restarting via systemctl..."
+if [[ "$FOREGROUND" != true ]] && (systemctl --user is-active --quiet agility-shell.service 2>/dev/null || systemctl --user is-enabled --quiet agility-shell.service 2>/dev/null); then
+    info "Agility Shell is managed by a systemd user unit. Restarting via systemctl..."
+    systemctl --user reset-failed agility-shell.service 2>/dev/null || true
     systemctl --user restart agility-shell.service
     success "Agility Shell systemd service restarted successfully."
     if command -v notify-send >/dev/null 2>&1; then

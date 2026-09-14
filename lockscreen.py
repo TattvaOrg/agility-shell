@@ -14,6 +14,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 
 from gi.repository import Gtk, Gdk, GtkSessionLock, GLib, GdkPixbuf, GtkLayerShell
+import utils.fabric_compat
 from fabric.widgets.window import Window
 from fabric.widgets.wayland import WaylandWindow
 from fabric.widgets.entry import Entry

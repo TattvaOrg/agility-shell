@@ -1,4 +1,4 @@
-spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null && exec agility-shell || exec ~/.config/agility-shell/start.sh"
+spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service || exec agility-shell"
 
 layout {
     background-color "transparent"

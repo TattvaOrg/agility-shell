@@ -1,24 +1,52 @@
 #!/usr/bin/env bash
+# =============================================================================
+#  Agility Shell -- Main Executable Launcher
+# =============================================================================
 
-# Script for running agility-shell where it is globally installed
+set -euo pipefail
 
 SYSTEM_DATA="/usr/share/agility-shell"
-USER_CONFIG="$HOME/.config/agility-shell"
+SYSTEM_VENV="/usr/lib/agility-shell/venv"
+USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
 
-mkdir -p "$USER_CONFIG"
+# Determine source and python binary
+SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" 2>/dev/null && pwd || echo "")"
 
-# Seed default configurations if they do not exist
-for dir in config themes matugen wallpapers style; do
-    if [ ! -d "$USER_CONFIG/$dir" ] && [ -d "$SYSTEM_DATA/$dir" ]; then
-        cp -r "$SYSTEM_DATA/$dir" "$USER_CONFIG/"
+if [[ -f "$SELF_DIR/main.py" && -f "$SELF_DIR/bar.py" ]]; then
+    # In-tree development execution
+    SOURCE_DIR="$SELF_DIR"
+    if [[ -x "$SELF_DIR/venv/bin/python3" ]]; then
+        PYTHON_EXEC="$SELF_DIR/venv/bin/python3"
+    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
+        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
+    else
+        PYTHON_EXEC="python3"
     fi
-done
-
-export AGILITY_STYLE_DIR="$USER_CONFIG/style"
-
-cd "$SYSTEM_DATA" || {
-    echo "Error: Could not change directory to $SYSTEM_DATA"
+elif [[ -d "$SYSTEM_DATA" && -f "$SYSTEM_DATA/main.py" ]]; then
+    # Standard system-wide FHS installation
+    SOURCE_DIR="$SYSTEM_DATA"
+    if [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
+        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
+    else
+        PYTHON_EXEC="python3"
+    fi
+elif [[ -f "$USER_CONFIG/main.py" ]]; then
+    # Legacy user-space installation
+    SOURCE_DIR="$USER_CONFIG"
+    if [[ -x "$USER_CONFIG/venv/bin/python3" ]]; then
+        PYTHON_EXEC="$USER_CONFIG/venv/bin/python3"
+    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
+        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
+    else
+        PYTHON_EXEC="python3"
+    fi
+else
+    echo "[agility-shell] Error: Installation not found in /usr/share/agility-shell or $USER_CONFIG" >&2
     exit 1
-}
+fi
 
-exec python3 main.py "$@"
+export PYTHONPATH="$SOURCE_DIR${PYTHONPATH:+:$PYTHONPATH}"
+export AGILITY_DIR="$SOURCE_DIR"
+
+cd "$SOURCE_DIR"
+exec "$PYTHON_EXEC" main.py "$@"

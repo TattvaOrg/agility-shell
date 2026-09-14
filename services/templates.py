@@ -11,9 +11,11 @@ from loguru import logger
 
 from user_options import user_options
 
-TEMPLATES_DIR        = os.path.expanduser("~/.config/agility-shell/templates")
+from services.paths import get_user_config_dir, get_cache_path, resolve_style_file
+
+TEMPLATES_DIR        = os.path.join(get_user_config_dir(), "templates")
 TEMPLATES_REPO       = "https://github.com/AbsolLinux/agility-templates"
-MATUGEN_CONFIG_CACHE = os.path.expanduser("~/.cache/agility-shell/matugen-templates.toml")
+MATUGEN_CONFIG_CACHE = get_cache_path("matugen-templates.toml")
 MATUGEN_CONFIG_DIR  = os.path.expanduser("~/.config/matugen")
 MATUGEN_CONFIG_PATH = os.path.join(MATUGEN_CONFIG_DIR, "config.toml")
 
@@ -110,8 +112,8 @@ class TemplateService:
 
         # agility-shell colors — always applied
         lines.append("[templates.agility]")
-        lines.append(f"input_path = '{os.path.expanduser('~/.config/agility-shell/style/agility-shell-colors.css')}'")
-        lines.append(f"output_path = '{os.path.expanduser('~/.config/agility-shell/style/colors.css')}'")
+        lines.append(f"input_path = '{resolve_style_file('agility-shell-colors.css')}'")
+        lines.append(f"output_path = '{os.path.join(get_user_config_dir(), 'style', 'colors.css')}'")
         lines.append("")
 
         for t in enabled:

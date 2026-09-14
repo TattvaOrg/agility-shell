@@ -1,9 +1,9 @@
 import os
 import json
 from loguru import logger
-from fabric.utils import get_relative_path
+from services.paths import get_config_path, resolve_asset
 
-CONFIG_PATH = os.path.expanduser("~/.config/agility-shell/config/config.json")
+CONFIG_PATH = get_config_path("config.json")
 
 
 class UserOptions:
@@ -142,7 +142,7 @@ class UserOptions:
 
     class Wallpaper:
         def __init__(self):
-            self.path = f"{get_relative_path('wallpapers/wall14.jpg')}"
+            self.path = resolve_asset("wallpapers/wall14.jpg")
             self.transition_type = "random"
             self.enabled_transitions = [
                 "grow", "fade", "wipe", "wave", "left", "right", "top", "bottom", "outer",

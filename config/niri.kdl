@@ -1,4 +1,4 @@
-spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"
+spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null && exec agility-shell || exec ~/.config/agility-shell/start.sh"
 
 layout {
     background-color "transparent"

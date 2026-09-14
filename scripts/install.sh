@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  Agility Shell -- Installer
-#  Arch Linux only
+#  Arch Linux - Distributed System-Wide Installation
 # =============================================================================
 
 set -euo pipefail
 
 REPO_URL="https://github.com/AbsolOrg/agility-shell.git"
-INSTALL_DIR="$HOME/.config/agility-shell"
-CONFIG_DIR="$INSTALL_DIR/config"
+SYSTEM_DATA="/usr/share/agility-shell"
+SYSTEM_LIB="/usr/lib/agility-shell"
+SYSTEM_VENV="$SYSTEM_LIB/venv"
+USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
+USER_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
 
 SCRIPT_SRC="${BASH_SOURCE[0]:-}"
 if [[ -n "$SCRIPT_SRC" && "$SCRIPT_SRC" != "bash" && "$SCRIPT_SRC" != "sh" && "$SCRIPT_SRC" != "/dev/stdin" && -f "$SCRIPT_SRC" ]]; then
@@ -66,7 +69,6 @@ cat << "EOF"
       
 EOF
 
-# -- Interactive prompt helper (handles pipe / curl execution) -----------------
 prompt_user() {
     local prompt_msg="$1"
     local var_name="$2"
@@ -81,17 +83,15 @@ prompt_user() {
     fi
 }
 
-
-# -- Sanity checks -------------------------------------------------------------
 check_arch() {
     if ! command -v pacman &>/dev/null; then
-        die "This installer is for Arch Linux only."
+        die "This installer is designed for Arch Linux."
     fi
 }
 
 check_not_root() {
     if [[ "$EUID" -eq 0 ]]; then
-        die "Please run this script as a regular user, not root."
+        die "Please run this script as a regular user (sudo will be prompted when required)."
     fi
 }
 
@@ -116,9 +116,21 @@ PACMAN_DEPS=(
     bluez
     python
     python-pip
+    python-gobject
+    python-cairo
+    python-pillow
+    python-psutil
+    python-cffi
+    python-click
+    python-loguru
+    python-setproctitle
+    python-rapidfuzz
+    python-thefuzz
     awww
     base-devel
     git
+    make
+    gcc
     niri
 )
 
@@ -126,7 +138,6 @@ AUR_DEPS=(
     fabric-cli-git
 )
 
-# -- yay bootstrap -------------------------------------------------------------
 ensure_yay() {
     if command -v yay &>/dev/null; then
         success "yay is already installed."
@@ -147,7 +158,6 @@ ensure_yay() {
     success "yay installed."
 }
 
-# -- Pre-flight dependency check & prompt ---------------------------------------
 check_and_install_deps() {
     info "Checking system dependencies..."
     local missing_pacman=()
@@ -217,98 +227,106 @@ check_and_install_deps() {
     esac
 }
 
-# -- Deploy files to INSTALL_DIR ------------------------------------------------
-deploy_source() {
-    if [[ "$IS_LOCAL_REPO" == "true" ]]; then
-        if [[ "$(realpath "$LOCAL_SRC_DIR")" == "$(realpath "$INSTALL_DIR" 2>/dev/null || true)" ]]; then
-            info "Already located in $INSTALL_DIR."
-            return
-        fi
+# -- Legacy Migration ----------------------------------------------------------
+migrate_legacy_installation() {
+    if [[ -d "$USER_CONFIG" && -f "$USER_CONFIG/main.py" ]]; then
+        echo
+        info "Legacy monolithic installation detected in $USER_CONFIG."
+        local timestamp
+        timestamp="$(date +%Y%m%d_%H%M%S)"
+        local backup_dir="$HOME/.config/agility-shell.backup-$timestamp"
+        
+        info "Creating non-destructive backup at $backup_dir..."
+        cp -r "$USER_CONFIG" "$backup_dir"
+        success "Backup created at $backup_dir"
 
-        info "Deploying Agility Shell from local source ($LOCAL_SRC_DIR) to $INSTALL_DIR..."
-        mkdir -p "$INSTALL_DIR"
-        if command -v rsync &>/dev/null; then
-            rsync -a --delete --exclude='.git' --exclude='venv' --exclude='__pycache__' "$LOCAL_SRC_DIR/" "$INSTALL_DIR/"
-        else
-            cp -r "$LOCAL_SRC_DIR"/* "$INSTALL_DIR/"
-        fi
-        success "Local files deployed."
-    else
-        if [[ -d "$INSTALL_DIR" ]]; then
-            rm -rf "$INSTALL_DIR"
-        fi
-        info "Cloning Agility Shell from $REPO_URL to $INSTALL_DIR..."
-        git clone "$REPO_URL" "$INSTALL_DIR"
-        success "Repository cloned."
+        local tmp_data
+        tmp_data="$(mktemp -d)"
+        [[ -d "$USER_CONFIG/config" ]] && cp -r "$USER_CONFIG/config" "$tmp_data/"
+        [[ -d "$USER_CONFIG/wallpapers" ]] && cp -r "$USER_CONFIG/wallpapers" "$tmp_data/"
+        [[ -d "$USER_CONFIG/style" ]] && cp -r "$USER_CONFIG/style" "$tmp_data/"
+        [[ -d "$USER_CONFIG/themes" ]] && cp -r "$USER_CONFIG/themes" "$tmp_data/"
+        [[ -f "$USER_CONFIG/widget_settings.json" ]] && cp "$USER_CONFIG/widget_settings.json" "$tmp_data/"
+
+        info "Cleaning obsolete Python source files and virtualenv from $USER_CONFIG..."
+        rm -rf "$USER_CONFIG"
+        mkdir -p "$USER_CONFIG"
+
+        # Restore user custom data
+        cp -r "$tmp_data"/* "$USER_CONFIG/" 2>/dev/null || true
+        rm -rf "$tmp_data"
+        success "Migration complete: ~/.config/agility-shell now cleanly holds user configurations only."
     fi
 }
 
-# -- Python venv ---------------------------------------------------------------
-setup_venv() {
-    info "Setting up Python virtual environment..."
-    python -m venv "$INSTALL_DIR/venv"
-    "$INSTALL_DIR/venv/bin/pip" install --upgrade pip -q
-    "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt" -q
-    success "Python dependencies installed."
-}
+# -- Build and Install System Files --------------------------------------------
+install_system_files() {
+    local src_dir="$1"
+    local method="${2:-make}"
 
-# -- Compile native snippets ---------------------------------------------------
-compile_snippets() {
-    info "Compiling native libraries..."
+    cd "$src_dir"
 
-    local blur_dir="$INSTALL_DIR/snippets/blur/lib"
-    local hacktk_dir="$INSTALL_DIR/snippets/hacktk/lib"
-
-    if [[ -d "$blur_dir" ]]; then
-        make -C "$blur_dir"
-        success "blur library compiled."
+    if [[ "$method" == "pacman" ]]; then
+        info "Building and installing native Arch pacman package (makepkg)..."
+        makepkg -si --noconfirm
+        success "Pacman package installed successfully."
     else
-        warn "blur lib directory not found -- skipping."
-    fi
-
-    if [[ -d "$hacktk_dir" ]]; then
-        make -C "$hacktk_dir"
-        success "hacktk library compiled."
-    else
-        warn "hacktk directory not found -- skipping."
+        info "Building native snippets and installing via root Makefile..."
+        make
+        sudo make PREFIX="/usr" install
+        sudo make PREFIX="/usr" install-venv
+        success "System files and dedicated virtualenv installed to /usr/share and /usr/lib."
     fi
 }
 
-# -- Niri Config Integration ---------------------------------------------------
+# -- Seed User Config ----------------------------------------------------------
+seed_user_configuration() {
+    info "Setting up user configuration and state directories..."
+    mkdir -p "$USER_CONFIG/config" "$USER_CONFIG/style" "$USER_STATE"
+
+    local src_data="$SYSTEM_DATA"
+    if [[ ! -d "$src_data" && -n "$LOCAL_SRC_DIR" ]]; then
+        src_data="$LOCAL_SRC_DIR"
+    fi
+
+    # Seed baseline config.json if not present
+    if [[ ! -f "$USER_CONFIG/config/config.json" && -f "$src_data/config/config.json" ]]; then
+        cp "$src_data/config/config.json" "$USER_CONFIG/config/config.json"
+        info "Seeded default config.json"
+    fi
+
+    # Seed baseline suits.json if not present
+    if [[ ! -f "$USER_CONFIG/config/suits.json" && -f "$src_data/config/suits.json" ]]; then
+        cp "$src_data/config/suits.json" "$USER_CONFIG/config/suits.json"
+        info "Seeded default suits.json"
+    fi
+
+    # Seed baseline styles if not present
+    for css in borders.css fonts.css colors.css; do
+        if [[ ! -f "$USER_CONFIG/style/$css" && -f "$src_data/style/$css" ]]; then
+            cp "$src_data/style/$css" "$USER_CONFIG/style/$css"
+        fi
+    done
+    success "User configuration initialized."
+}
+
+# -- Compositor Integration ---------------------------------------------------
 inject_niri_include() {
     local niri_config_dir="$HOME/.config/niri"
     local niri_config="$niri_config_dir/config.kdl"
+    local startup_line='spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null && exec agility-shell || exec ~/.config/agility-shell/start.sh"'
     local include_line='include "~/.config/agility-shell/config/niri.kdl"'
 
     mkdir -p "$niri_config_dir"
 
     if [[ ! -f "$niri_config" ]]; then
-        info "No Niri config found at $niri_config -- creating one with default configuration template..."
-        local candidate_defaults=(
-            "/usr/share/doc/niri/default-config.kdl"
-            "/etc/xdg/niri/config.kdl"
-            "/etc/niri/config.kdl"
-        )
-        local copied=false
-        for cand in "${candidate_defaults[@]}"; do
-            if [[ -f "$cand" ]]; then
-                cp "$cand" "$niri_config"
-                copied=true
-                info "Copied default Niri template from $cand"
-                break
-            fi
-        done
-
-        if [[ "$copied" == "false" ]]; then
-            info "Creating clean base Niri config..."
-            cat << 'BASE_NIRI_EOF' > "$niri_config"
+        info "Creating clean base Niri config..."
+        cat << 'BASE_NIRI_EOF' > "$niri_config"
 // Niri Base Configuration
 prefer-no-csd
 
 input {
     keyboard {
-        xkb {
-        }
         numlock
     }
     touchpad {
@@ -323,307 +341,106 @@ binds {
     Mod+Shift+E { quit; }
 }
 BASE_NIRI_EOF
-        fi
+    fi
 
+    # Remove old includes if any
+    sed -i '/caffyne-shell/d' "$niri_config" 2>/dev/null || true
+
+    # Update startup line if old one exists
+    if grep -qF '~/.config/agility-shell/start.sh' "$niri_config" && ! grep -qF 'command -v agility-shell' "$niri_config"; then
+        info "Updating Niri startup command to use agility-shell system binary..."
+        sed -i 's|spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null \&\& exec agility-shell \|\| exec ~/.config/agility-shell/start.sh"|g' "$niri_config"
+    fi
+
+    if ! grep -qF "$include_line" "$niri_config"; then
+        info "Appending Agility Shell include to existing Niri config..."
         echo "" >> "$niri_config"
         echo "$include_line" >> "$niri_config"
-        success "Niri config initialized with default settings and Agility Shell include."
-        return
     fi
-
-    # Clean old caffyne includes if any
-    if grep -qF 'caffyne-shell' "$niri_config"; then
-        info "Removing old caffyne-shell include from niri config..."
-        sed -i '/caffyne-shell/d' "$niri_config"
-    fi
-
-    if grep -qF "$include_line" "$niri_config"; then
-        info "Agility Shell include already present in $niri_config."
-        return
-    fi
-
-    info "Appending Agility Shell include to existing Niri config..."
-    echo "" >> "$niri_config"
-    echo "$include_line" >> "$niri_config"
-    success "Niri config updated with Agility Shell include."
+    success "Niri config integrated."
 }
 
-# -- Matugen Setup -------------------------------------------------------------
 setup_matugen() {
     info "Configuring Matugen templates..."
-
     local matugen_config_dir="$HOME/.config/matugen"
     local matugen_conf="$matugen_config_dir/config.toml"
 
     mkdir -p "$matugen_config_dir"
-
-    if [[ ! -f "$matugen_conf" ]]; then
-        info "Creating Matugen config.toml..."
-        touch "$matugen_conf"
-    fi
+    [[ ! -f "$matugen_conf" ]] && touch "$matugen_conf"
 
     if ! grep -q "^\[config\]$" "$matugen_conf"; then
-        info "Adding [config] section..."
         printf "[config]\n" >> "$matugen_conf"
     fi
 
-    # Remove old caffyne entries if present
-    if grep -q '\[templates.caffyne\]' "$matugen_conf"; then
-        info "Removing old caffyne matugen config entries..."
-        sed -i '/\[templates.caffyne\]/,/^$/d' "$matugen_conf"
-        sed -i '/# Caffyne Shell Colors/d' "$matugen_conf"
-    fi
-
-    if grep -q "\[templates.agility\]" "$matugen_conf"; then
-        info "Matugen config entry already exists -- skipping append."
-    else
-        info "Appending Agility Shell template config to matugen/config.toml..."
+    if ! grep -q "\[templates.agility\]" "$matugen_conf"; then
         cat <<MATUGEN_EOF >> "$matugen_conf"
 
 # Agility Shell Colors
 [templates.agility]
-input_path = '~/.config/agility-shell/style/agility-shell-colors.css'
+input_path = '/usr/share/agility-shell/style/agility-shell-colors.css'
 output_path = '~/.config/agility-shell/style/colors.css'
 MATUGEN_EOF
     fi
     success "Matugen configured."
 }
 
-# -- Install CLI ---------------------------------------------------------------
-install_cli() {
-    info "Setting up agl CLI tool..."
-    local bin_dir="$HOME/.local/bin"
-    mkdir -p "$bin_dir"
-
-    if [[ -f "$INSTALL_DIR/bin/agl" ]]; then
-        ln -sf "$INSTALL_DIR/bin/agl" "$bin_dir/agl"
-        chmod +x "$INSTALL_DIR/bin/agl" "$bin_dir/agl"
-        success "agl CLI installed to $bin_dir/agl"
-    fi
-
-    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-        warn "$HOME/.local/bin is not in your PATH. Add it to ~/.bashrc or ~/.zshrc:"
-        warn "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+setup_systemd_service() {
+    if command -v systemctl &>/dev/null; then
+        info "Reloading systemd user daemon..."
+        systemctl --user daemon-reload || true
+        prompt_user "  Would you like to enable the Agility Shell systemd user service on login? [Y/n]: " enable_choice "y"
+        case "$enable_choice" in
+            [nN]|[nN][oO])
+                info "Systemd service enable skipped. You can enable anytime via: systemctl --user enable agility-shell.service"
+                ;;
+            *)
+                systemctl --user enable agility-shell.service || true
+                success "Agility Shell systemd user service enabled."
+                ;;
+        esac
     fi
 }
 
-# -- Prompt Reboot -------------------------------------------------------------
-prompt_reboot() {
-    echo
-    warn "A system reboot is recommended to ensure all services, environment variables, and compositor configs take effect."
-    echo
-    prompt_user "  Would you like to reboot now? [y/N]: " reboot_choice "n"
-    case "$reboot_choice" in
-        [yY]|[yY][eE][sS])
-            info "Rebooting system..."
-            systemctl reboot || sudo reboot
-            ;;
-        *)
-            info "Reboot skipped. You can manually start the shell using: agl start"
-            ;;
-    esac
-}
-
-# -- Fresh Install -------------------------------------------------------------
 do_install() {
-    info "Starting installation of Agility Shell..."
+    local method="${1:-make}"
+    info "Starting installation of Agility Shell (Method: $method)..."
 
     check_and_install_deps
-    deploy_source
-    setup_venv
-    compile_snippets
+    migrate_legacy_installation
+
+    local work_dir=""
+    if [[ "$IS_LOCAL_REPO" == "true" ]]; then
+        work_dir="$LOCAL_SRC_DIR"
+    else
+        work_dir="$(mktemp -d)"
+        info "Cloning Agility Shell from $REPO_URL..."
+        git clone "$REPO_URL" "$work_dir/repo"
+        work_dir="$work_dir/repo"
+    fi
+
+    install_system_files "$work_dir" "$method"
+    seed_user_configuration
     inject_niri_include
     setup_matugen
-    install_cli
-
-    chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR/scripts"/*.sh "$INSTALL_DIR/bin/agl" "$INSTALL_DIR/agility-shell" 2>/dev/null || true
+    setup_systemd_service
 
     echo
     success "Agility Shell installed successfully!"
     echo
     echo -e "  ${BOLD}Start shell:${RESET}"
-    echo -e "    ${CYAN}agl start${RESET}  ${DIM}(or ~/.config/agility-shell/start.sh)${RESET}"
+    echo -e "    ${CYAN}agl start${RESET}       (or systemctl --user start agility-shell)"
     echo
     echo -e "  ${BOLD}CLI Commands:${RESET}"
-    echo -e "    ${CYAN}agl restart${RESET}   - Restart running shell"
-    echo -e "    ${CYAN}agl update${RESET}    - Update to latest version"
-    echo -e "    ${CYAN}agl uninstall${RESET} - Uninstall cleanly"
+    echo -e "    ${CYAN}agl restart${RESET}     - Restart running shell"
+    echo -e "    ${CYAN}agl status${RESET}      - Inspect shell runtime status and logs"
+    echo -e "    ${CYAN}agl update${RESET}      - Rebuild and update in place"
+    echo -e "    ${CYAN}agl uninstall${RESET}   - Cleanly remove"
     echo
-    echo -e "  ${BOLD}Compositor configs:${RESET}"
-    echo -e "    ${CYAN}~/.config/agility-shell/config/${RESET}"
+    echo -e "  ${BOLD}User Configuration:${RESET}"
+    echo -e "    ${CYAN}~/.config/agility-shell/config/config.json${RESET}"
     echo
-    echo -e "  ${BOLD}Niri integration:${RESET}"
-    echo -e "    Auto-start and keybindings included in: ${CYAN}~/.config/niri/config.kdl${RESET}"
-    echo
-
-    prompt_reboot
 }
 
-# Directories and files to preserve during updates (relative to INSTALL_DIR)
-PRESERVE_DIRS=("wallpapers" "config")
-PRESERVE_FILES=(
-    "style/colors.css"
-    "style/borders.css"
-    "style/fonts.css"
-)
-
-backup_preserved_dirs() {
-    local tmp_backup="$1"
-    for dir in "${PRESERVE_DIRS[@]}"; do
-        local src="$INSTALL_DIR/$dir"
-        if [[ -d "$src" ]]; then
-            info "Preserving $dir/..."
-            cp -r "$src" "$tmp_backup/$dir"
-        fi
-    done
-}
-
-restore_preserved_dirs() {
-    local tmp_backup="$1"
-    for dir in "${PRESERVE_DIRS[@]}"; do
-        local backed_up="$tmp_backup/$dir"
-        if [[ -d "$backed_up" ]]; then
-            info "Restoring $dir/..."
-            rm -rf "$INSTALL_DIR/$dir"
-            cp -r "$backed_up" "$INSTALL_DIR/$dir"
-        fi
-    done
-}
-
-backup_preserved_files() {
-    local tmp_backup="$1"
-    for file in "${PRESERVE_FILES[@]}"; do
-        local src="$INSTALL_DIR/$file"
-        if [[ -f "$src" ]]; then
-            mkdir -p "$tmp_backup/$(dirname "$file")"
-            cp "$src" "$tmp_backup/$file"
-            info "Preserving $file..."
-        fi
-    done
-}
-
-restore_preserved_files() {
-    local tmp_backup="$1"
-    for file in "${PRESERVE_FILES[@]}"; do
-        local backed_up="$tmp_backup/$file"
-        if [[ -f "$backed_up" ]]; then
-            mkdir -p "$INSTALL_DIR/$(dirname "$file")"
-            cp "$backed_up" "$INSTALL_DIR/$file"
-            info "Restoring $file..."
-        fi
-    done
-}
-
-update_from_github_release() {
-    info "Updating Agility Shell to latest release tag from GitHub ($REPO_URL)..."
-    if [[ -d "$INSTALL_DIR/.git" ]]; then
-        git -C "$INSTALL_DIR" fetch --tags origin
-        local latest_tag
-        latest_tag=$(git -C "$INSTALL_DIR" describe --tags "$(git -C "$INSTALL_DIR" rev-list --tags --max-count=1 2>/dev/null)" 2>/dev/null || echo "")
-        if [[ -n "$latest_tag" ]]; then
-            info "Checking out latest release tag: $latest_tag"
-            git -C "$INSTALL_DIR" checkout "$latest_tag"
-        else
-            warn "No release tags found -- falling back to main branch."
-            git -C "$INSTALL_DIR" fetch origin
-            git -C "$INSTALL_DIR" reset --hard origin/main
-        fi
-    else
-        info "Cloning latest release from GitHub..."
-        local tmp_clone
-        tmp_clone=$(mktemp -d)
-        git clone "$REPO_URL" "$tmp_clone/repo"
-        local latest_tag
-        latest_tag=$(git -C "$tmp_clone/repo" describe --tags "$(git -C "$tmp_clone/repo" rev-list --tags --max-count=1 2>/dev/null)" 2>/dev/null || echo "")
-        if [[ -n "$latest_tag" ]]; then
-            info "Checking out latest release tag: $latest_tag"
-            git -C "$tmp_clone/repo" checkout "$latest_tag"
-        fi
-        if command -v rsync &>/dev/null; then
-            rsync -a --delete --exclude='venv' --exclude='__pycache__' "$tmp_clone/repo/" "$INSTALL_DIR/"
-        else
-            cp -r "$tmp_clone/repo"/.git "$INSTALL_DIR/"
-            cp -r "$tmp_clone/repo"/* "$INSTALL_DIR/"
-        fi
-        rm -rf "$tmp_clone"
-    fi
-    success "Release files synchronized."
-}
-
-update_from_github_main() {
-    info "Updating Agility Shell to latest main branch ($REPO_URL)..."
-    if [[ -d "$INSTALL_DIR/.git" ]]; then
-        git -C "$INSTALL_DIR" fetch origin
-        git -C "$INSTALL_DIR" checkout -B main origin/main 2>/dev/null || git -C "$INSTALL_DIR" reset --hard origin/main
-    else
-        info "Cloning latest main branch from GitHub..."
-        local tmp_clone
-        tmp_clone=$(mktemp -d)
-        git clone --branch main "$REPO_URL" "$tmp_clone/repo"
-        if command -v rsync &>/dev/null; then
-            rsync -a --delete --exclude='venv' --exclude='__pycache__' "$tmp_clone/repo/" "$INSTALL_DIR/"
-        else
-            cp -r "$tmp_clone/repo"/.git "$INSTALL_DIR/"
-            cp -r "$tmp_clone/repo"/* "$INSTALL_DIR/"
-        fi
-        rm -rf "$tmp_clone"
-    fi
-    success "Main branch synchronized with latest commits."
-}
-
-do_update() {
-    local target_mode="$1"
-    info "Updating existing Agility Shell installation..."
-
-    check_and_install_deps
-
-    local tmp_backup
-    tmp_backup=$(mktemp -d)
-
-    backup_preserved_dirs "$tmp_backup"
-    backup_preserved_files "$tmp_backup"
-
-    if [[ "$target_mode" == "release" ]]; then
-        update_from_github_release
-    else
-        update_from_github_main
-    fi
-
-    restore_preserved_files "$tmp_backup"
-    restore_preserved_dirs "$tmp_backup"
-    rm -rf "$tmp_backup"
-
-    setup_venv
-    compile_snippets
-    inject_niri_include
-    setup_matugen
-    install_cli
-
-    chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR/scripts"/*.sh "$INSTALL_DIR/bin/agl" "$INSTALL_DIR/agility-shell" 2>/dev/null || true
-
-    echo
-    success "Agility Shell updated successfully!"
-    echo
-    prompt_user "  Would you like to restart Agility Shell now? [Y/n]: " restart_choice "y"
-    case "$restart_choice" in
-        [nN]|[nN][oO])
-            info "Restart skipped. You can manually restart using: agl restart"
-            prompt_reboot
-            ;;
-        *)
-            info "Restarting Agility Shell..."
-            if [[ -f "$INSTALL_DIR/scripts/restart.sh" ]]; then
-                exec "$INSTALL_DIR/scripts/restart.sh"
-            elif command -v agl &>/dev/null; then
-                exec agl restart
-            else
-                prompt_reboot
-            fi
-            ;;
-    esac
-}
-
-# -- Entry point ---------------------------------------------------------------
 main() {
     echo
     echo -e "${BOLD}${CYAN}+==================================+${RESET}"
@@ -634,40 +451,27 @@ main() {
     check_arch
     check_not_root
 
-    if [[ -d "$INSTALL_DIR" ]]; then
-        warn "Existing installation found at $INSTALL_DIR"
-        echo
-        echo -e "  Please choose an option:"
-        echo -e "  ${BOLD}1)${RESET} ${RED}Reinstall from scratch${RESET} (Clean wipe & fresh install)"
-        echo -e "  ${BOLD}2)${RESET} ${CYAN}Update with latest release tag${RESET} (Preserves configs & wallpapers)"
-        echo -e "  ${BOLD}3)${RESET} ${GREEN}Update with main branch${RESET} (Latest commits, preserves configs & wallpapers)"
-        echo -e "  ${BOLD}4)${RESET} Cancel"
-        echo
-        prompt_user "  Choice [1/2/3/4]: " choice "2"
-        case "$choice" in
-            1)
-                warn "Wiping existing installation..."
-                rm -rf "$INSTALL_DIR"
-                do_install
-                ;;
-            2)
-                do_update "release"
-                ;;
-            3)
-                do_update "main"
-                ;;
-            4|[qQ]|[eE][xX][iI][tT])
-                info "Installation cancelled."
-                exit 0
-                ;;
-            *)
-                die "Invalid choice: '$choice'"
-                ;;
-        esac
-    else
-        do_install
-    fi
+    echo -e "  Please choose an installation method:"
+    echo -e "  ${BOLD}1)${RESET} ${CYAN}Native Arch Package (makepkg -si)${RESET}  (Recommended - tracked by pacman)"
+    echo -e "  ${BOLD}2)${RESET} ${GREEN}Direct System Install (make install)${RESET} (Installed into /usr/share & /usr/lib)"
+    echo -e "  ${BOLD}3)${RESET} Cancel"
+    echo
+    prompt_user "  Choice [1/2/3]: " choice "1"
+    case "$choice" in
+        1)
+            do_install "pacman"
+            ;;
+        2)
+            do_install "make"
+            ;;
+        3|[qQ]|[eE][xX][iI][tT])
+            info "Installation cancelled."
+            exit 0
+            ;;
+        *)
+            die "Invalid choice: '$choice'"
+            ;;
+    esac
 }
 
 main "$@"
-

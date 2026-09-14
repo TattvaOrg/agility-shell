@@ -19,11 +19,35 @@ success() { echo -e "${GREEN}${BOLD}[  ok  ]${RESET} $*"; }
 warn()    { echo -e "${YELLOW}${BOLD}[ warn ]${RESET} $*"; }
 error()   { echo -e "${RED}${BOLD}[ err  ]${RESET} $*" >&2; }
 
+# Parse arguments
+FOREGROUND=false
+PASS_ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == "--foreground" || "$arg" == "-f" ]]; then
+        FOREGROUND=true
+    else
+        PASS_ARGS+=("$arg")
+    fi
+done
+
+# Check if managed by systemd user service first
+if [[ "$FOREGROUND" != true ]] && systemctl --user is-active --quiet agility-shell.service 2>/dev/null; then
+    info "Agility Shell is running as a systemd user unit. Restarting via systemctl..."
+    systemctl --user restart agility-shell.service
+    success "Agility Shell systemd service restarted successfully."
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "Agility Shell" "Agility Shell" "Shell restarted via systemd" 2>/dev/null || true
+    fi
+    exit 0
+fi
+
 # Determine script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd || echo "")"
-USER_CONFIG="$HOME/.config/agility-shell"
-LOG_DIR="$HOME/.cache/agility-shell"
+USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
+SYSTEM_DATA="/usr/share/agility-shell"
+SYSTEM_VENV="/usr/lib/agility-shell/venv"
+LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
 LOG_FILE="$LOG_DIR/shell.log"
 
 mkdir -p "$LOG_DIR"
@@ -43,11 +67,9 @@ find_shell_pids() {
 
     for pid in $raw_pids; do
         [[ -z "$pid" ]] && continue
-        # Do not kill self or parent
         if [[ "$pid" -eq "$$" || "$pid" -eq "$PPID" ]]; then
             continue
         fi
-        # Never match restart, update, install, or agl scripts
         local cmdline
         cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
         if [[ "$cmdline" =~ restart\.sh|update\.sh|install\.sh|/bin/agl ]]; then
@@ -61,10 +83,8 @@ find_shell_pids() {
 ALL_PIDS=$(find_shell_pids)
 
 if [[ -n "${ALL_PIDS// /}" ]]; then
-    # Send SIGTERM first for clean shutdown
     kill -15 $ALL_PIDS 2>/dev/null || true
     
-    # Wait up to 2 seconds for graceful exit
     for i in {1..20}; do
         REMAINING=$(find_shell_pids)
         if [[ -z "${REMAINING// /}" ]]; then
@@ -73,7 +93,6 @@ if [[ -n "${ALL_PIDS// /}" ]]; then
         sleep 0.1
     done
 
-    # Force kill if still lingering
     REMAINING=$(find_shell_pids)
     if [[ -n "${REMAINING// /}" ]]; then
         warn "Force terminating lingering processes..."
@@ -85,31 +104,32 @@ fi
 success "All previous shell processes stopped."
 sleep 0.3
 
-# -- 2. Determine launcher target (prefer updated ~/.config/agility-shell) -----
+# -- 2. Determine launcher target ---------------------------------------------
 TARGET_DIR=""
 PYTHON_BIN="python3"
 
-if [[ -d "$USER_CONFIG" && -f "$USER_CONFIG/main.py" ]]; then
+if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/main.py" && -f "$REPO_ROOT/bar.py" ]]; then
+    # In-tree development checkout
+    TARGET_DIR="$REPO_ROOT"
+    if [[ -x "$REPO_ROOT/venv/bin/python3" ]]; then
+        PYTHON_BIN="$REPO_ROOT/venv/bin/python3"
+    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
+        PYTHON_BIN="$SYSTEM_VENV/bin/python3"
+    fi
+elif [[ -d "$SYSTEM_DATA" && -f "$SYSTEM_DATA/main.py" ]]; then
+    # System-wide installation
+    TARGET_DIR="$SYSTEM_DATA"
+    if [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
+        PYTHON_BIN="$SYSTEM_VENV/bin/python3"
+    fi
+elif [[ -d "$USER_CONFIG" && -f "$USER_CONFIG/main.py" ]]; then
+    # Legacy user-config installation
     TARGET_DIR="$USER_CONFIG"
     if [[ -x "$USER_CONFIG/venv/bin/python3" ]]; then
         PYTHON_BIN="$USER_CONFIG/venv/bin/python3"
     fi
-elif [[ -f "$SCRIPT_DIR/main.py" && -f "$SCRIPT_DIR/bar.py" ]]; then
-    TARGET_DIR="$SCRIPT_DIR"
-    if [[ -x "$SCRIPT_DIR/venv/bin/python3" ]]; then
-        PYTHON_BIN="$SCRIPT_DIR/venv/bin/python3"
-    elif [[ -x "$USER_CONFIG/venv/bin/python3" ]]; then
-        PYTHON_BIN="$USER_CONFIG/venv/bin/python3"
-    fi
-elif [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/main.py" && -f "$REPO_ROOT/bar.py" ]]; then
-    TARGET_DIR="$REPO_ROOT"
-    if [[ -x "$REPO_ROOT/venv/bin/python3" ]]; then
-        PYTHON_BIN="$REPO_ROOT/venv/bin/python3"
-    elif [[ -x "$USER_CONFIG/venv/bin/python3" ]]; then
-        PYTHON_BIN="$USER_CONFIG/venv/bin/python3"
-    fi
 else
-    error "Could not find Agility Shell main.py in $USER_CONFIG or $SCRIPT_DIR"
+    error "Could not find Agility Shell main.py in $SYSTEM_DATA, $USER_CONFIG, or $REPO_ROOT"
     exit 1
 fi
 
@@ -117,23 +137,12 @@ info "Launching updated shell from: $TARGET_DIR"
 info "Using Python:                 $PYTHON_BIN"
 
 # -- 3. Start Shell -----------------------------------------------------------
-FOREGROUND=false
-PASS_ARGS=()
-for arg in "$@"; do
-    if [[ "$arg" == "--foreground" || "$arg" == "-f" ]]; then
-        FOREGROUND=true
-    else
-        PASS_ARGS+=("$arg")
-    fi
-done
-
 cd "$TARGET_DIR"
 
 if [[ "$FOREGROUND" == true ]]; then
     info "Running in foreground mode..."
     exec "$PYTHON_BIN" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}
 else
-    # Disown and background safely with a new session
     if command -v setsid >/dev/null 2>&1; then
         setsid "$PYTHON_BIN" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
     else
@@ -142,7 +151,6 @@ else
     DISOWN_PID=$!
     disown "$DISOWN_PID" 2>/dev/null || true
     
-    # Check if process launched successfully
     sleep 1.0
     if kill -0 "$DISOWN_PID" 2>/dev/null; then
         success "Agility Shell started with PID $DISOWN_PID"

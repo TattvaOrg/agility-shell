@@ -1,8 +1,9 @@
 import os
 from fabric.core.service import Service, Property
-from fabric.utils import get_relative_path, monitor_file
+from fabric.utils import monitor_file
 from gi.repository import GLib
 from plugin_loader import apply_plugin_css
+from services.paths import get_user_config_dir, resolve_style_file
 
 
 class StyleService(Service):
@@ -12,7 +13,7 @@ class StyleService(Service):
         self.app = app
         self._style_changed = False
 
-        style_dir = os.path.expanduser("~/.config/agility-shell/style")
+        style_dir = os.path.join(get_user_config_dir(), "style")
         os.makedirs(style_dir, exist_ok=True)
         self.style_monitor = monitor_file(style_dir)
         self.style_monitor.connect("changed", lambda *_: self.reload())
@@ -23,9 +24,7 @@ class StyleService(Service):
 
     def reload(self, *_):
         try:
-            user_style = os.path.expanduser("~/.config/agility-shell/style/style.css")
-            fallback_style = os.path.join(os.path.dirname(__file__), "../style/style.css")
-            target_style = user_style if os.path.isfile(user_style) else fallback_style
+            target_style = resolve_style_file("style.css")
 
             if os.path.isfile(target_style):
                 self.app.set_stylesheet_from_file(

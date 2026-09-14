@@ -2,8 +2,9 @@ from __future__ import annotations
 import json
 import os
 from loguru import logger
+from services.paths import get_state_path
 
-DOCK_STATE_PATH = os.path.expanduser("~/.config/agility-shell/config/dock_state.json")
+DOCK_STATE_PATH = get_state_path("dock_state.json")
 
 class DockEntry:
     def __init__(self, app_id: str, order: int = 0):

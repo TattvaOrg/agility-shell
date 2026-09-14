@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Agility Shell
+GenericName=Desktop Shell
+Comment=Next-generation Wayland Desktop Shell
+Exec=/usr/bin/agility-shell
+Icon=agility-shell
+Terminal=false
+Type=Application
+Categories=System;Utility;
+StartupNotify=false

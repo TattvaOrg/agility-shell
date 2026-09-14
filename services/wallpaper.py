@@ -456,19 +456,21 @@ class WallpaperService(Service):
         self._sync_monitors()
 
     def get_all_wallpapers(self) -> list[str]:
-        candidates = [
-            os.path.expanduser("~/.config/agility-shell/wallpapers"),
-            os.path.join(os.path.dirname(__file__), "../wallpapers"),
-        ]
-        wallpapers_dir = next((d for d in candidates if os.path.isdir(d)), "")
+        from services.paths import get_wallpaper_dirs
+        candidates = get_wallpaper_dirs()
         valid_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
         files = []
-        if wallpapers_dir:
+        seen_names = set()
+        for wallpapers_dir in candidates:
+            if not os.path.isdir(wallpapers_dir):
+                continue
             for f in sorted(os.listdir(wallpapers_dir)):
                 ext = os.path.splitext(f)[1].lower()
-                if ext in valid_exts:
+                if ext in valid_exts and f not in seen_names:
+                    seen_names.add(f)
                     files.append(os.path.join(wallpapers_dir, f))
         return files
+
 
     def random_wallpaper(self, is_hotkey: bool = True) -> str | None:
         import random

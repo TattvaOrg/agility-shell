@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/AbsolOrg/agility-shell.git"
+REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
 SYSTEM_DATA="/usr/share/agility-shell"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
 
@@ -62,7 +62,7 @@ do_update() {
 
     if [[ "$is_pacman" == "true" ]]; then
         info "Updating native Arch pacman package via makepkg..."
-        makepkg -si --noconfirm
+        makepkg -sif --noconfirm
     else
         info "Rebuilding and updating system files via make install..."
         make

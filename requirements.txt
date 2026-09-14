@@ -1,5 +1,5 @@
-cffi==2.1.1
-click==8.4.1
+cffi==2.0.0
+click==8.5.0
 fabric @ git+https://github.com/Fabric-Development/fabric.git
 loguru==0.7.3
 pam==0.2.0

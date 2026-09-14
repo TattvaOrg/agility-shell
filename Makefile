@@ -62,6 +62,7 @@ install-venv:
 	mkdir -p $(DESTDIR)$(LIBDIR)
 	$(PYTHON) -m venv --system-site-packages $(DESTDIR)$(LIBDIR)/venv
 	$(DESTDIR)$(LIBDIR)/venv/bin/pip install --upgrade pip -q
+	$(DESTDIR)$(LIBDIR)/venv/bin/pip install --no-deps "fabric @ git+https://github.com/Fabric-Development/fabric.git" -q
 	$(DESTDIR)$(LIBDIR)/venv/bin/pip install -r requirements.txt -q
 	@echo "==> Virtual environment provisioned successfully."
 

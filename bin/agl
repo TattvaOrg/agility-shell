@@ -50,6 +50,7 @@ show_help() {
     echo -e "    ${CYAN}stop${RESET}          Stop running Agility Shell instance"
     echo -e "    ${CYAN}restart${RESET}       Restart Agility Shell (-f/--foreground for console logs)"
     echo -e "    ${CYAN}status${RESET}        Check runtime status and active process information"
+    echo -e "    ${CYAN}deps${RESET}          Test and install missing dependencies one-by-one"
     echo -e "    ${CYAN}install${RESET}       Install or reinstall Agility Shell system-wide"
     echo -e "    ${CYAN}update${RESET}        Update Agility Shell in-place (preserves configs)"
     echo -e "    ${CYAN}uninstall${RESET}     Uninstall Agility Shell (--purge to wipe user configs)"
@@ -60,6 +61,9 @@ show_help() {
     echo -e "    ${CYAN}-v, --version${RESET} Show Agility Shell version"
     echo -e ""
     echo -e "${BOLD}EXAMPLES:${RESET}"
+    echo -e "    ${DIM}# Test and install dependencies:${RESET}"
+    echo -e "    agl deps"
+    echo -e ""
     echo -e "    ${DIM}# Start or restart shell gracefully:${RESET}"
     echo -e "    agl restart"
     echo -e ""
@@ -149,6 +153,24 @@ cmd_status() {
         success "Agility Shell is running (PIDs: ${pids//  / })"
     else
         warn "Agility Shell is not currently active."
+    fi
+}
+
+cmd_deps() {
+    info "Launching Agility Shell dependency checker..."
+    if [[ -n "$REPO_DIR" && -f "$REPO_DIR/scripts/install.sh" ]]; then
+        exec "$REPO_DIR/scripts/install.sh" --deps "$@"
+    elif [[ -n "$REPO_DIR" && -f "$REPO_DIR/install.sh" ]]; then
+        exec "$REPO_DIR/install.sh" --deps "$@"
+    elif [[ -f "/usr/share/agility-shell/scripts/install.sh" ]]; then
+        exec "/usr/share/agility-shell/scripts/install.sh" --deps "$@"
+    else
+        local tmp_dir
+        tmp_dir="$(mktemp -d)"
+        trap 'rm -rf "$tmp_dir"' EXIT
+        curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/scripts/install.sh -o "$tmp_dir/install.sh"
+        chmod +x "$tmp_dir/install.sh"
+        exec "$tmp_dir/install.sh" --deps "$@"
     fi
 }
 
@@ -275,6 +297,9 @@ case "$COMMAND" in
         ;;
     status)
         cmd_status "$@"
+        ;;
+    deps|check-deps)
+        cmd_deps "$@"
         ;;
     install)
         cmd_install "$@"

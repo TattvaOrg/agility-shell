@@ -55,8 +55,25 @@ echo -e "${BOLD}${RED}Agility Shell Uninstaller${RESET}"
 echo -e "This will remove Agility Shell from your system."
 echo ""
 
+prompt_user() {
+    local prompt_msg="$1"
+    local var_name="$2"
+    local default_val="${3:-}"
+
+    local input=""
+    if [ -t 0 ]; then
+        read -rp "$prompt_msg" input || true
+    elif [ -r /dev/tty ]; then
+        read -rp "$prompt_msg" input < /dev/tty || true
+    else
+        input="$default_val"
+    fi
+    input="${input:-$default_val}"
+    eval "$var_name=\"$input\""
+}
+
 if [[ "$FORCE" == "false" ]]; then
-    read -rp "Are you sure you want to uninstall Agility Shell? [y/N]: " confirm
+    prompt_user "Are you sure you want to uninstall Agility Shell? [y/N]: " confirm "n"
     case "$confirm" in
         [yY]|[yY][eE][sS]) ;;
         *)

@@ -25,20 +25,28 @@ While agility shell does not manage window configurations itself, it connects na
 
 ## Installation & Quick Start
 
-### Quick Install (Arch Linux)
-For a rapid deployment on Arch Linux, stream the setup script:
+### 1. Check & Install Dependencies (Step-by-Step Doctor)
+To test and install every missing dependency one-by-one with interactive prompts:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash -s -- --deps
+```
+
+### 2. Install Agility Shell (System-Wide)
+Once dependencies are satisfied, install Agility Shell into the distributed system directories (`/usr/share` and `/usr/lib`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash
 ```
+
 >[!NOTE]
->A system `reboot` is recommended after installation to ensure all background services, environment variables, and compositor configs load cleanly.
+>The installer automatically scans `~/.config/agility-shell` for any old monolithic shell installations, removes old source files and venvs, and safely migrates your custom configs, themes, wallpapers, and styles to the new clean config directory.
 
 ---
 
 ## CLI Management (`agl`)
 
-Agility Shell includes a dedicated command-line interface `agl` installed to `~/.local/bin/agl` for easy lifecycle and maintenance management:
+Agility Shell includes a dedicated command-line interface `agl` installed to `/usr/bin/agl` (or `~/.local/bin/agl`) for easy lifecycle and maintenance management:
 
 ```bash
 agl <command> [options]
@@ -46,11 +54,14 @@ agl <command> [options]
 
 | Command | Description | Example |
 | :--- | :--- | :--- |
-| `agl start` | Launch Agility Shell | `agl start` |
+| `agl start` | Launch Agility Shell (or systemd user unit) | `agl start` |
 | `agl restart` | Restart running shell gracefully | `agl restart` (or `agl restart -f` for live logs) |
+| `agl status` | Check runtime process and service status | `agl status` |
+| `agl deps` | Test and install dependencies step-by-step | `agl deps` |
 | `agl update` | Update shell in-place while preserving wallpapers & configs | `agl update` |
 | `agl uninstall` | Cleanly uninstall Agility Shell | `agl uninstall` (or `agl uninstall --purge`) |
-| `agl install` | Run or rerun system dependency setup & installer | `agl install` |
+| `agl install` | Run or rerun system installer | `agl install` |
+| `agl suits` | Manage desktop suites (switch, list, next, prev) | `agl suits next` |
 
 ---
 

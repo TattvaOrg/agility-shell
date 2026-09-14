@@ -74,13 +74,16 @@ prompt_user() {
     local var_name="$2"
     local default_val="${3:-}"
 
+    local input=""
     if [ -t 0 ]; then
-        read -rp "$prompt_msg" "$var_name"
+        read -rp "$prompt_msg" input || true
     elif [ -r /dev/tty ]; then
-        read -rp "$prompt_msg" "$var_name" < /dev/tty
+        read -rp "$prompt_msg" input < /dev/tty || true
     else
-        eval "$var_name=\"$default_val\""
+        input="$default_val"
     fi
+    input="${input:-$default_val}"
+    eval "$var_name=\"$input\""
 }
 
 check_arch() {
@@ -137,6 +140,17 @@ AUR_DEPS=(
     fabric-cli-git
 )
 
+is_pkg_installed() {
+    local pkg="$1"
+    if pacman -T "$pkg" &>/dev/null; then
+        return 0
+    fi
+    if command -v "$pkg" &>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
 ensure_yay() {
     if command -v yay &>/dev/null; then
         success "yay is already installed."
@@ -157,19 +171,145 @@ ensure_yay() {
     success "yay installed."
 }
 
+test_and_install_deps_step_by_step() {
+    local standalone="${1:-true}"
+    echo
+    echo -e "${BOLD}${CYAN}+================================================+${RESET}"
+    echo -e "${BOLD}${CYAN}|      Agility Shell - Dependency Doctor         |${RESET}"
+    echo -e "${BOLD}${CYAN}+================================================+${RESET}"
+    echo -e "Testing all required dependencies one-by-one..."
+    echo
+
+    check_arch
+
+    local missing_count=0
+    local installed_count=0
+
+    echo -e "${BOLD}--- [1/2] Official Arch Pacman Packages ---${RESET}"
+    for pkg in "${PACMAN_DEPS[@]}"; do
+        if is_pkg_installed "$pkg"; then
+            echo -e "  ${GREEN}[  ok  ]${RESET} ${pkg}"
+            installed_count=$(( installed_count + 1 ))
+        else
+            missing_count=$(( missing_count + 1 ))
+            echo -e "  ${YELLOW}[ miss ]${RESET} ${BOLD}${pkg}${RESET} (not installed)"
+            prompt_user "         -> Install '${pkg}' via pacman now? [Y/n]: " inst_choice "y"
+            case "$inst_choice" in
+                [nN]|[nN][oO])
+                    echo -e "         ${DIM}Skipped ${pkg}.${RESET}"
+                    ;;
+                *)
+                    info "Installing ${pkg}..."
+                    if sudo pacman -S --needed --noconfirm "$pkg"; then
+                        success "Installed ${pkg}"
+                        installed_count=$(( installed_count + 1 ))
+                        missing_count=$(( missing_count - 1 ))
+                    else
+                        error "Failed to install ${pkg}"
+                    fi
+                    ;;
+            esac
+        fi
+    done
+
+    echo
+    echo -e "${BOLD}--- [2/2] AUR Packages ---${RESET}"
+    local aur_helper=""
+    if command -v yay &>/dev/null; then
+        aur_helper="yay"
+    elif command -v paru &>/dev/null; then
+        aur_helper="paru"
+    fi
+
+    for pkg in "${AUR_DEPS[@]}"; do
+        if is_pkg_installed "$pkg"; then
+            echo -e "  ${GREEN}[  ok  ]${RESET} ${pkg}"
+            installed_count=$(( installed_count + 1 ))
+        else
+            missing_count=$(( missing_count + 1 ))
+            echo -e "  ${YELLOW}[ miss ]${RESET} ${BOLD}${pkg}${RESET} (AUR package - not installed)"
+            if [[ -z "$aur_helper" ]]; then
+                warn "AUR helper (yay or paru) is required to install ${pkg}."
+                prompt_user "         -> Install yay from AUR now? [Y/n]: " yay_choice "y"
+                case "$yay_choice" in
+                    [yY]|[yY][eE][sS]|"")
+                        ensure_yay
+                        aur_helper="yay"
+                        ;;
+                    *)
+                        warn "Cannot install ${pkg} without an AUR helper."
+                        continue
+                        ;;
+                esac
+            fi
+
+            prompt_user "         -> Install '${pkg}' using ${aur_helper}? [Y/n]: " aur_choice "y"
+            case "$aur_choice" in
+                [nN]|[nN][oO])
+                    echo -e "         ${DIM}Skipped ${pkg}.${RESET}"
+                    ;;
+                *)
+                    info "Installing ${pkg} via ${aur_helper}..."
+                    if "$aur_helper" -S --needed --noconfirm "$pkg"; then
+                        success "Installed ${pkg}"
+                        installed_count=$(( installed_count + 1 ))
+                        missing_count=$(( missing_count - 1 ))
+                    else
+                        error "Failed to install ${pkg}"
+                    fi
+                    ;;
+            esac
+        fi
+    done
+
+    echo
+    echo -e "${BOLD}--------------------------------------------------${RESET}"
+    if [[ "$missing_count" -eq 0 ]]; then
+        success "All dependencies are satisfied!"
+    else
+        warn "$missing_count dependency/dependencies are still missing."
+    fi
+    echo
+
+    if [[ "$standalone" == "true" ]]; then
+        if [[ "$missing_count" -eq 0 ]]; then
+            prompt_user "  All dependencies are satisfied! Would you like to install Agility Shell now? [Y/n]: " install_now "y"
+            case "$install_now" in
+                [yY]|[yY][eE][sS]|"")
+                    echo
+                    main_menu_choice
+                    ;;
+                *)
+                    echo
+                    info "You can install Agility Shell whenever you are ready using:"
+                    echo -e "    ${CYAN}curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash${RESET}"
+                    echo
+                    ;;
+            esac
+        else
+            info "You can re-run the dependency checker at any time using:"
+            echo -e "    ${CYAN}curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash -s -- --deps${RESET}"
+            echo
+            info "Once dependencies are installed, install the shell using:"
+            echo -e "    ${CYAN}curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash${RESET}"
+            echo
+        fi
+    fi
+}
+
 check_and_install_deps() {
     info "Checking system dependencies..."
     local missing_pacman=()
     local missing_aur=()
 
     for pkg in "${PACMAN_DEPS[@]}"; do
-        if ! pacman -Qi "$pkg" &>/dev/null; then
+        if ! is_pkg_installed "$pkg"; then
             missing_pacman+=("$pkg")
         fi
     done
 
     for pkg in "${AUR_DEPS[@]}"; do
-        if ! pacman -Qi "$pkg" &>/dev/null; then
+        if ! is_pkg_installed "$pkg"; then
             missing_aur+=("$pkg")
         fi
     done
@@ -197,12 +337,14 @@ check_and_install_deps() {
     fi
     echo
 
-    prompt_user "  Would you like to install the missing dependencies now? [Y/n]: " dep_choice "y"
-    case "$dep_choice" in
-        [nN]|[nN][oO])
-            warn "Dependency installation skipped by user."
-            ;;
-        *)
+    echo -e "  Installation options for missing dependencies:"
+    echo -e "  ${BOLD}1)${RESET} Install all missing dependencies automatically"
+    echo -e "  ${BOLD}2)${RESET} Test and install dependencies step-by-step"
+    echo -e "  ${BOLD}3)${RESET} Skip (proceed without installing dependencies)"
+    echo
+    prompt_user "  Choice [1/2/3]: " dep_mode "1"
+    case "$dep_mode" in
+        1)
             if [[ ${#missing_pacman[@]} -gt 0 ]]; then
                 info "Installing missing pacman packages..."
                 sudo pacman -S --needed --noconfirm "${missing_pacman[@]}"
@@ -222,6 +364,15 @@ check_and_install_deps() {
                 "$aur_helper" -S --needed --noconfirm "${missing_aur[@]}"
                 success "AUR dependencies installed."
             fi
+            ;;
+        2)
+            test_and_install_deps_step_by_step false
+            ;;
+        3|[sS][kK][iI][pP])
+            warn "Dependency installation skipped by user."
+            ;;
+        *)
+            warn "Invalid choice; skipping dependency installation."
             ;;
     esac
 }
@@ -466,22 +617,37 @@ do_install() {
     echo
 }
 
-main() {
-    echo
-    echo -e "${BOLD}${CYAN}+==================================+${RESET}"
-    echo -e "${BOLD}${CYAN}|       Agility Shell Setup        |${RESET}"
-    echo -e "${BOLD}${CYAN}+==================================+${RESET}"
-    echo
+show_help() {
+    cat << EOF
+Agility Shell Installer
 
-    check_arch
-    check_not_root
+USAGE:
+    install.sh [OPTIONS]
 
-    echo -e "  Please choose an installation method:"
-    echo -e "  ${BOLD}1)${RESET} ${CYAN}Native Arch Package (makepkg -si)${RESET}  (Recommended - tracked by pacman)"
-    echo -e "  ${BOLD}2)${RESET} ${GREEN}Direct System Install (make install)${RESET} (Installed into /usr/share & /usr/lib)"
-    echo -e "  ${BOLD}3)${RESET} Cancel"
+OPTIONS:
+    --deps, --check-deps, -d    Test and install dependencies step-by-step
+    --pacman, -p                Install using native Arch pacman package (makepkg -si)
+    --make, -m                  Install using Makefile directly (/usr/share & /usr/lib)
+    --help, -h                  Show this help message
+
+TWO-STEP WORKFLOW:
+    1. Check and install dependencies:
+       curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash -s -- --deps
+
+    2. Install Agility Shell:
+       curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash
+
+EOF
+}
+
+main_menu_choice() {
+    echo -e "  Please choose an option:"
+    echo -e "  ${BOLD}1)${RESET} ${CYAN}Native Arch Package (makepkg -si)${RESET}   (Recommended - tracked by pacman)"
+    echo -e "  ${BOLD}2)${RESET} ${GREEN}Direct System Install (make install)${RESET}  (Installed into /usr/share & /usr/lib)"
+    echo -e "  ${BOLD}3)${RESET} ${YELLOW}Test & Install Dependencies Step-by-Step${RESET}"
+    echo -e "  ${BOLD}4)${RESET} Cancel"
     echo
-    prompt_user "  Choice [1/2/3]: " choice "1"
+    prompt_user "  Choice [1/2/3/4]: " choice "1"
     case "$choice" in
         1)
             do_install "pacman"
@@ -489,12 +655,52 @@ main() {
         2)
             do_install "make"
             ;;
-        3|[qQ]|[eE][xX][iI][tT])
+        3)
+            test_and_install_deps_step_by_step true
+            ;;
+        4|[qQ]|[eE][xX][iI][tT])
             info "Installation cancelled."
             exit 0
             ;;
         *)
             die "Invalid choice: '$choice'"
+            ;;
+    esac
+}
+
+main() {
+    check_arch
+    check_not_root
+
+    local arg="${1:-}"
+    case "$arg" in
+        --deps|--check-deps|-d|deps)
+            shift || true
+            test_and_install_deps_step_by_step true
+            ;;
+        --pacman|-p|pacman)
+            shift || true
+            do_install "pacman"
+            ;;
+        --make|-m|make)
+            shift || true
+            do_install "make"
+            ;;
+        --help|-h|help)
+            show_help
+            ;;
+        "")
+            echo
+            echo -e "${BOLD}${CYAN}+==================================+${RESET}"
+            echo -e "${BOLD}${CYAN}|       Agility Shell Setup        |${RESET}"
+            echo -e "${BOLD}${CYAN}+==================================+${RESET}"
+            echo
+            main_menu_choice
+            ;;
+        *)
+            error "Unknown option: '$arg'"
+            show_help
+            exit 1
             ;;
     esac
 }

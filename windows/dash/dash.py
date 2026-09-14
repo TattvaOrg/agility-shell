@@ -162,6 +162,7 @@ class Dash(Window):
         self._active_monitor_id: int | None = None
         self._in_canvas_mode: bool = False
         self._applet_drag_key: str | None = None
+        self._on_applets_active: bool = False
 
         self.header    = DashHeader()
         self.h_group_1 = DashGroup(transition_type="slide-left-right")
@@ -363,6 +364,7 @@ class Dash(Window):
             v_callback=lambda: self.v_stack.set_visible_child_name(v_target),
             show_search=(name in _PAGES_WITH_SEARCH),
             is_secondary=is_secondary,
+            refresh_callback=(lambda: self.launcher.reload_apps()) if name == "apps" else None,
         )
         if name in _PAGES_WITH_SEARCH:
             self._name_to_page[name]._attach_search_entry(self.header._entry)
@@ -373,14 +375,16 @@ class Dash(Window):
             self.h_group_1.get_visible_child() is self.applets
             and self.v_stack.get_visible_child() is not self.h_group_2
         )
-        if on_applets:
-            edit_mode.enable()
-            if self._active_monitor is not None:
-                self._bar_manager.set_bars_overlay(self._active_monitor)
-        else:
-            edit_mode.disable()
-            if self._active_monitor is not None:
-                self._bar_manager.set_bars_top(self._active_monitor)
+        if on_applets != getattr(self, "_on_applets_active", False):
+            self._on_applets_active = on_applets
+            if on_applets:
+                edit_mode.enable()
+                if self._active_monitor is not None:
+                    self._bar_manager.set_bars_overlay(self._active_monitor)
+            else:
+                edit_mode.disable()
+                if self._active_monitor is not None:
+                    self._bar_manager.set_bars_top(self._active_monitor)
         if self.h_group_1.get_visible_child() is not self.launcher:
             self.launcher.exit_drag_receive_mode()
 
@@ -435,6 +439,7 @@ class Dash(Window):
                     self.h_group_1.get_visible_child() is self.applets
                     and self.v_stack.get_visible_child() is not self.h_group_2
                 )
+                self._on_applets_active = on_applets
                 if on_applets:
                     self._bar_manager.set_bars_overlay(active_monitor)
                 else:

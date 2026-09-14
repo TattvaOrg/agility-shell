@@ -10,7 +10,7 @@ from utils.dispatch import dispatch_app
 from fabric.utils import get_desktop_applications, DesktopApp
 from .components import DashPage
 from desktop_applets import DESKTOP_APPLET_SIZES, DESKTOP_APPLET_WIDGETS
-from gi.repository import Gdk, Gtk, GLib
+from gi.repository import Gdk, Gtk, GLib, Gio
 from user_options import user_options
 import threading
 
@@ -18,11 +18,20 @@ COLUMNS = 6
 _TARGET = Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)
 
 
+def get_app_id(app: DesktopApp) -> str:
+    if hasattr(app, "_app") and app._app:
+        try:
+            return app._app.get_id() or app.name or str(id(app))
+        except Exception:
+            pass
+    return app.name or str(id(app))
+
+
 class DashLauncherAppItem(Button):
     def __init__(self, app: DesktopApp, launcher):
         self._app = app
         self._launcher = launcher
-        self._app_id = app._app.get_id() if hasattr(app, "_app") and app._app else (app.name or "")
+        self._app_id = get_app_id(app)
 
         card_opacity = getattr(user_options.settings, "dash_card_opacity", 1.0)
         style = f"background-color: alpha(var(--background), {card_opacity:.2f});" if card_opacity < 1.0 else ""
@@ -466,8 +475,20 @@ class DashLauncherPage(DashPage):
         self._hybrid_grid.show()
 
         self.connect("realize", self._on_realise)
+        self._app_monitor = Gio.AppInfoMonitor.get()
+        self._app_monitor.connect("changed", self._on_app_info_changed)
         self._load_placed_applets()
         self._rebuild()
+
+    def _on_app_info_changed(self, *_):
+        GLib.idle_add(self.reload_apps)
+
+    def reload_apps(self):
+        self._all_apps = get_desktop_applications()
+        if self._search_entry and self._search_entry.get_text():
+            self._search(self._search_entry)
+        else:
+            self._rebuild()
 
     def _load_placed_applets(self) -> None:
         entries = user_options.desktop_applets.get_applets()
@@ -501,7 +522,7 @@ class DashLauncherPage(DashPage):
         self._placed_items = items
 
     def _get_app_widgets(self, apps: list[DesktopApp]) -> list[DashLauncherAppItem]:
-        wanted_ids = {a._app.get_id() for a in apps}
+        wanted_ids = {get_app_id(a) for a in apps}
 
         for stale_id in [k for k in self._app_widget_cache if k not in wanted_ids]:
             widget = self._app_widget_cache.pop(stale_id)
@@ -510,10 +531,11 @@ class DashLauncherPage(DashPage):
                 widget.destroy()
 
         for app in apps:
-            if app._app.get_id() not in self._app_widget_cache:
-                self._app_widget_cache[app._app.get_id()] = DashLauncherAppItem(app, self.window)
+            aid = get_app_id(app)
+            if aid not in self._app_widget_cache:
+                self._app_widget_cache[aid] = DashLauncherAppItem(app, self.window)
 
-        return [self._app_widget_cache[a._app.get_id()] for a in apps]
+        return [self._app_widget_cache[get_app_id(a)] for a in apps if get_app_id(a) in self._app_widget_cache]
 
     def _rebuild(self, apps=None, placeholder_slot=None, dragging_key=None, applet_items_override=None):
         if self._rebuild_pending_id is not None:
@@ -527,12 +549,12 @@ class DashLauncherPage(DashPage):
         generation = self._rebuild_generation
         applet_items = applet_items_override if applet_items_override is not None else self._placed_items
 
-        wanted_ids = {a._app.get_id() for a in apps}
-        needs_creation = [a for a in apps if a._app.get_id() not in self._app_widget_cache]
+        wanted_ids = {get_app_id(a) for a in apps}
+        needs_creation = [a for a in apps if get_app_id(a) not in self._app_widget_cache]
 
         def _build_new_widgets():
             new_widgets = {
-                a._app.get_id(): DashLauncherAppItem(a, self.window)
+                get_app_id(a): DashLauncherAppItem(a, self.window)
                 for a in needs_creation
             }
 
@@ -546,7 +568,7 @@ class DashLauncherPage(DashPage):
                     widget = self._app_widget_cache.pop(stale_id)
                     if f"app:{stale_id}" not in self._hybrid_grid._grid_cache:
                         widget.destroy()
-                app_widgets = [self._app_widget_cache[a._app.get_id()] for a in apps]
+                app_widgets = [self._app_widget_cache[get_app_id(a)] for a in apps if get_app_id(a) in self._app_widget_cache]
                 self._hybrid_grid.layout(
                     applet_items=applet_items,
                     app_items=app_widgets,
@@ -559,7 +581,7 @@ class DashLauncherPage(DashPage):
         if needs_creation:
             threading.Thread(target=_build_new_widgets, daemon=True).start()
         else:
-            app_widgets = [self._app_widget_cache[a._app.get_id()] for a in apps]
+            app_widgets = [self._app_widget_cache[get_app_id(a)] for a in apps if get_app_id(a) in self._app_widget_cache]
             GLib.idle_add(lambda: (
                 self._hybrid_grid.layout(
                     applet_items=applet_items,
@@ -745,14 +767,19 @@ class DashLauncherPage(DashPage):
         self.window.connect("notify::visible", self._on_visibility_changed)
 
     def _on_visibility_changed(self, *_):
+        self._all_apps = get_desktop_applications()
         if not self.window.get_visible():
-            self._all_apps = get_desktop_applications()
             if self._search_entry:
                 self._search_entry.set_text("")
             self.exit_drag_receive_mode()
             self._rebuild()
             adj = self.scroll.get_vadjustment()
             adj.set_value(adj.get_lower())
+        else:
+            if self._search_entry and self._search_entry.get_text():
+                self._search(self._search_entry)
+            else:
+                self._rebuild()
 
     def set_card_opacity(self, opacity: float):
         for widget in self._app_widget_cache.values():
@@ -764,7 +791,7 @@ class DashLauncherPage(DashPage):
         pinned = list(getattr(user_options.settings, "pinned_apps", []))
 
         def sort_key(app):
-            app_id = app._app.get_id() if hasattr(app, "_app") and app._app else (app.name or "")
+            app_id = get_app_id(app)
             is_pinned = 0 if app_id in pinned else 1
             pinned_idx = pinned.index(app_id) if app_id in pinned else 0
             count = get_usage_count(app, usage)

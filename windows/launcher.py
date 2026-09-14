@@ -5,7 +5,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.stack import Stack
 from snippets import Applet, AppletPage, Icon, AnimatedScroll, StyleAwareEntry
 from utils.dispatch import dispatch_app
-from gi.repository import Gdk, GLib
+from gi.repository import Gdk, GLib, Gio
 from thefuzz import process, fuzz
 from fabric.utils import get_desktop_applications, DesktopApp
 from fabric.widgets.grid import Grid
@@ -196,11 +196,31 @@ class LauncherApplet(Applet):
             style_classes=["applet-header-label"],
         )
 
+        self._app_monitor = Gio.AppInfoMonitor.get()
+        self._app_monitor.connect("changed", self._on_app_info_changed)
+
+        self._refresh_icon = Icon(icon_name="arrows-clockwise-duotone", icon_size=16)
+        self._refresh_button = Button(
+            child=self._refresh_icon,
+            style_classes=["applet-misc-button"],
+            tooltip_text="Refresh applications",
+            on_clicked=lambda *_: self.reload_apps(),
+        )
+
         self._view_toggle_icon = Icon(icon_name="list-dashes-duotone" if self._grid_mode else "squares-four-duotone", icon_size=16)
         self._view_toggle = Button(
             child=self._view_toggle_icon,
             style_classes=["applet-misc-button"],
             on_clicked=lambda *_: self._toggle_view(),
+        )
+
+        header_buttons = Box(
+            orientation="h",
+            spacing=4,
+            children=[
+                self._refresh_button,
+                self._view_toggle,
+            ],
         )
 
         self._entry = StyleAwareEntry(
@@ -233,7 +253,7 @@ class LauncherApplet(Applet):
                 first=True,
                 title="Launcher",
                 label=self._app_count,
-                header_right_children=self._view_toggle,
+                header_right_children=header_buttons,
                 child=results,
             )
         )
@@ -292,10 +312,22 @@ class LauncherApplet(Applet):
             return True
         return False
 
+    def _on_app_info_changed(self, *_):
+        GLib.idle_add(self.reload_apps)
+
+    def reload_apps(self):
+        self._all_apps = get_desktop_applications()
+        self._app_count.set_text(f"Apps · {len(self._all_apps)}")
+        current_text = self._entry.get_text()
+        if current_text:
+            self._search(current_text)
+        else:
+            self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
+
     def _on_visibility_changed(self, *_):
         if not self.window.get_visible():
             self._grid_mode = user_options.launcher.grid
-            self._view_toggle_icon.set_icon_name("list-duotone" if self._grid_mode else "squares-four-duotone")
+            self._view_toggle_icon.set_icon_name("list-dashes-duotone" if self._grid_mode else "squares-four-duotone")
             self._view_stack.set_visible_child_name("grid" if self._grid_mode else "list")
             self._entry.set_text("")
             self.window.set_focus(None)
@@ -305,9 +337,16 @@ class LauncherApplet(Applet):
                 child.destroy()
             for child in self._grid_box.get_children():
                 child.destroy()
+            self._all_apps = get_desktop_applications()
             self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
-        # else:
-        #     self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
+        else:
+            self._all_apps = get_desktop_applications()
+            self._app_count.set_text(f"Apps · {len(self._all_apps)}")
+            current_text = self._entry.get_text()
+            if current_text:
+                self._search(current_text)
+            else:
+                self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
 
     def _sorted_by_usage(self, apps: list) -> list:
         usage = load_usage()
@@ -317,7 +356,7 @@ class LauncherApplet(Applet):
         target = self._grid_box if self._grid_mode else self._list_box
         for child in target.get_children():
             child.destroy()
-        self._app_count.label = f"Apps · {len(apps)}"
+        self._app_count.set_text(f"Apps · {len(apps)}")
         if self._grid_mode:
             grid = Grid(column_homogeneous=True, column_spacing=6, row_spacing=6)
             grid.attach_flow([LauncherGridItem(a, self.window) for a in apps], columns=3)
@@ -346,7 +385,7 @@ class LauncherApplet(Applet):
                     for child in self._grid_box.get_children():
                         child.destroy()
                     self._grid_box.add(grid)
-                    self._app_count.label = f"Apps · {len(apps)}"
+                    self._app_count.set_text(f"Apps · {len(apps)}")
 
                 GLib.idle_add(commit_grid)
             else:
@@ -362,7 +401,7 @@ class LauncherApplet(Applet):
                     for item in items:
                         self._list_box.add(item)
                     self._list_box.show_all()
-                    self._app_count.label = f"Apps · {len(apps)}"
+                    self._app_count.set_text(f"Apps · {len(apps)}")
 
                 GLib.idle_add(commit_list)
 

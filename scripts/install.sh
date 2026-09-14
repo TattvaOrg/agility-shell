@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/AbsolOrg/agility-shell.git"
+REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
 SYSTEM_DATA="/usr/share/agility-shell"
 SYSTEM_LIB="/usr/lib/agility-shell"
 SYSTEM_VENV="$SYSTEM_LIB/venv"
@@ -276,7 +276,7 @@ install_system_files() {
 
     if [[ "$method" == "pacman" ]]; then
         info "Building and installing native Arch pacman package (makepkg)..."
-        makepkg -si --noconfirm
+        makepkg -sif --noconfirm
         success "Pacman package installed successfully."
     else
         info "Building native snippets and installing via root Makefile..."

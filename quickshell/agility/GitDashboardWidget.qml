@@ -60,8 +60,9 @@ Item {
     // Process to query Git status
     Process {
         id: gitProc
-        command: ["sh", "-c", "(cd /home/cachy/github-p/github-based/agility-shell 2>/dev/null || cd ~/.config/agility-shell 2>/dev/null) && b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); m=$(git status --porcelain 2>/dev/null | wc -l); l=$(git log -1 --format='%h;;%an;;%s' 2>/dev/null); echo \"${b:-main};;${m:-0};;${l:-none;;Dev;;No commits}\""]
+        command: ["sh", "-c", "target=\"$PWD\"; [ -d \"$target/.git\" ] || target=\"$(git rev-parse --show-toplevel 2>/dev/null || echo ~/.config/agility-shell)\"; (cd \"$target\" 2>/dev/null) && b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); m=$(git status --porcelain 2>/dev/null | wc -l); l=$(git log -1 --format='%h;;%an;;%s' 2>/dev/null); echo \"${b:-main};;${m:-0};;${l:-none;;Dev;;No commits}\""]
         running: false
+
         stdout: StdioCollector {
             onStreamFinished: {
                 var line = text.trim()

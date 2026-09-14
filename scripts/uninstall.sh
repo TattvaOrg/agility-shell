@@ -6,8 +6,10 @@
 
 set -euo pipefail
 
-INSTALL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
-BIN_FILE="$HOME/.local/bin/agl"
+SYSTEM_DATA="/usr/share/agility-shell"
+SYSTEM_LIB="/usr/lib/agility-shell"
+USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
+USER_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
 NIRI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/niri/config.kdl"
 HYPR_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
@@ -26,17 +28,12 @@ warn()    { echo -e "${YELLOW}${BOLD}[ warn ]${RESET} $*"; }
 error()   { echo -e "${RED}${BOLD}[ err  ]${RESET} $*" >&2; }
 
 PURGE=false
-KEEP_DATA=false
 FORCE=false
 
-# Parse arguments
 for arg in "$@"; do
     case "$arg" in
         --purge)
             PURGE=true
-            ;;
-        --keep-data|--keep-config)
-            KEEP_DATA=true
             ;;
         -y|--yes)
             FORCE=true
@@ -45,9 +42,8 @@ for arg in "$@"; do
             echo "Usage: uninstall.sh [options]"
             echo ""
             echo "Options:"
-            echo "  --purge        Completely remove all files including configs and wallpapers"
-            echo "  --keep-data    Keep ~/.config/agility-shell/config and wallpapers"
-            echo "  -y, --yes      Do not ask for confirmation"
+            echo "  --purge        Completely remove user configurations and cached states"
+            echo "  -y, --yes      Do not prompt for confirmation"
             echo "  -h, --help     Show this help message"
             exit 0
             ;;
@@ -59,108 +55,65 @@ echo -e "${BOLD}${RED}Agility Shell Uninstaller${RESET}"
 echo -e "This will remove Agility Shell from your system."
 echo ""
 
-# Confirm uninstall if not forced
-if [[ "$FORCE" == false ]]; then
-    read -r -p "Are you sure you want to uninstall Agility Shell? [y/N]: " confirm_uninstall
-    case "$confirm_uninstall" in
-        [yY]|[yY][eE][sS])
-            ;;
+if [[ "$FORCE" == "false" ]]; then
+    read -rp "Are you sure you want to uninstall Agility Shell? [y/N]: " confirm
+    case "$confirm" in
+        [yY]|[yY][eE][sS]) ;;
         *)
-            info "Uninstall aborted by user."
+            echo "Uninstall cancelled."
             exit 0
             ;;
     esac
 fi
 
-# -- 1. Stop running processes -------------------------------------------------
-info "Stopping running Agility Shell processes..."
-PIDS=$(pgrep -f "agility-shell|caffyne-shell|python3.*main\.py" 2>/dev/null || true)
-QS_PIDS=$(pgrep -f "quickshell.*Awe|qs.*Awe" 2>/dev/null || true)
-SWAY_PIDS=$(pgrep -f "swayidle.*agility-shell" 2>/dev/null || true)
+info "Stopping running processes and services..."
+if command -v systemctl &>/dev/null; then
+    systemctl --user stop agility-shell.service 2>/dev/null || true
+    systemctl --user disable agility-shell.service 2>/dev/null || true
+fi
 
-ALL_PIDS="${PIDS} ${QS_PIDS} ${SWAY_PIDS}"
-if [[ -n "${ALL_PIDS// /}" ]]; then
-    kill -15 $ALL_PIDS 2>/dev/null || true
+pids=$(pgrep -x "agility-shell" 2>/dev/null || true)
+pids+=" $(pgrep -f "python.*[m]ain\.py" 2>/dev/null || true)"
+if [[ -n "${pids// /}" ]]; then
+    kill -15 $pids 2>/dev/null || true
     sleep 0.5
-    REMAINING=$(pgrep -f "agility-shell|caffyne-shell|python3.*main\.py" 2>/dev/null || true)
-    if [[ -n "${REMAINING// /}" ]]; then
-        kill -9 $REMAINING 2>/dev/null || true
-    fi
-    success "Shell processes stopped."
+    kill -9 $pids 2>/dev/null || true
 fi
 
-# -- 2. Determine data preservation --------------------------------------------
-if [[ "$PURGE" == false && "$KEEP_DATA" == false ]]; then
-    echo ""
-    read -r -p "Would you like to keep your custom configurations and wallpapers? [Y/n]: " keep_choice
-    case "$keep_choice" in
-        [nN]|[nN][oO])
-            PURGE=true
-            ;;
-        *)
-            KEEP_DATA=true
-            ;;
-    esac
+if pacman -Q agility-shell-git &>/dev/null || pacman -Q agility-shell &>/dev/null; then
+    info "Removing native pacman package..."
+    sudo pacman -R --noconfirm agility-shell-git 2>/dev/null || sudo pacman -R --noconfirm agility-shell 2>/dev/null || true
 fi
 
-# -- 3. Remove agl CLI binary --------------------------------------------------
-if [[ -f "$BIN_FILE" || -L "$BIN_FILE" ]]; then
-    info "Removing CLI binary ($BIN_FILE)..."
-    rm -f "$BIN_FILE"
-    success "Removed agl CLI binary."
+info "Removing system-installed files..."
+sudo rm -f /usr/bin/agility-shell /usr/bin/agl
+sudo rm -f /usr/lib/systemd/user/agility-shell.service
+sudo rm -f /usr/share/applications/agility-shell.desktop
+sudo rm -rf "$SYSTEM_DATA" "$SYSTEM_LIB"
+rm -f "$HOME/.local/bin/agl"
+
+if command -v systemctl &>/dev/null; then
+    systemctl --user daemon-reload || true
 fi
 
-# -- 4. Remove cache -----------------------------------------------------------
-if [[ -d "$CACHE_DIR" ]]; then
-    info "Removing cache ($CACHE_DIR)..."
-    rm -rf "$CACHE_DIR"
-    success "Removed cache."
+info "Cleaning compositor configurations..."
+if [[ -f "$NIRI_CONFIG" ]]; then
+    sed -i '/agility-shell/d' "$NIRI_CONFIG" 2>/dev/null || true
+fi
+if [[ -f "$HYPR_CONFIG" ]]; then
+    sed -i '/agility-shell/d' "$HYPR_CONFIG" 2>/dev/null || true
 fi
 
-# -- 5. Clean installation directory -------------------------------------------
-if [[ -d "$INSTALL_DIR" ]]; then
-    if [[ "$PURGE" == true ]]; then
-        info "Purging all Agility Shell files ($INSTALL_DIR)..."
-        rm -rf "$INSTALL_DIR"
-        success "Purged installation directory."
-    else
-        info "Removing application files while preserving configs and wallpapers..."
-        TMP_DATA="$(mktemp -d)"
-        
-        # Save config and wallpapers if they exist
-        if [[ -d "$INSTALL_DIR/config" ]]; then
-            cp -r "$INSTALL_DIR/config" "$TMP_DATA/config"
-        fi
-        if [[ -d "$INSTALL_DIR/wallpapers" ]]; then
-            cp -r "$INSTALL_DIR/wallpapers" "$TMP_DATA/wallpapers"
-        fi
+rm -rf "$CACHE_DIR"
 
-        rm -rf "$INSTALL_DIR"
-        mkdir -p "$INSTALL_DIR"
-
-        if [[ -d "$TMP_DATA/config" ]]; then
-            cp -r "$TMP_DATA/config" "$INSTALL_DIR/config"
-        fi
-        if [[ -d "$TMP_DATA/wallpapers" ]]; then
-            cp -r "$TMP_DATA/wallpapers" "$INSTALL_DIR/wallpapers"
-        fi
-
-        rm -rf "$TMP_DATA"
-        success "Preserved user configs in $INSTALL_DIR"
-    fi
-fi
-
-# -- 6. Clean compositor configs -----------------------------------------------
-if [[ -f "$NIRI_CONFIG" ]] && grep -qF 'include "~/.config/agility-shell/config/niri.kdl"' "$NIRI_CONFIG"; then
-    info "Removing Agility Shell include from Niri config ($NIRI_CONFIG)..."
-    sed -i '/include "~\/\.config\/agility-shell\/config\/niri\.kdl"/d' "$NIRI_CONFIG"
-    success "Cleaned Niri config."
-fi
-
-if [[ -f "$HYPR_CONFIG" ]] && grep -qF '~/.config/agility-shell/start.sh' "$HYPR_CONFIG"; then
-    warn "Found agility-shell autostart in $HYPR_CONFIG. You may remove the line manually if desired."
+if [[ "$PURGE" == "true" ]]; then
+    info "Purging user configuration and runtime state..."
+    rm -rf "$USER_CONFIG" "$USER_STATE"
+    success "All configurations and state purged."
+else
+    info "Preserved user configurations in $USER_CONFIG"
+    info "(To delete them, pass --purge or remove manually: rm -rf $USER_CONFIG)"
 fi
 
 echo ""
-success "Agility Shell has been uninstalled successfully."
-echo ""
+success "Agility Shell has been successfully uninstalled."

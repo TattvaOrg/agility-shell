@@ -3,6 +3,14 @@ import sys
 import shutil
 import signal
 
+from services.paths import (
+    get_user_config_dir,
+    get_config_path,
+    get_suits_config_path,
+    get_user_state_dir,
+    resolve_style_file,
+)
+
 def _on_signal(*_):
     sys.exit(0)
 
@@ -10,38 +18,35 @@ signal.signal(signal.SIGTERM, _on_signal)
 signal.signal(signal.SIGINT, _on_signal)
 
 def seed_user_environment():
-    user_dir = os.path.expanduser("~/.config/agility-shell")
-    repo_dir = os.path.dirname(os.path.abspath(__file__))
-    os.makedirs(user_dir, exist_ok=True)
+    user_dir = get_user_config_dir()
+    cfg_dir = os.path.join(user_dir, "config")
+    style_dir = os.path.join(user_dir, "style")
+    state_dir = get_user_state_dir()
 
-    for item in ["config", "themes", "style", "wallpapers", "icons", "svgs", "sounds"]:
-        src = os.path.join(repo_dir, item)
-        dst = os.path.join(user_dir, item)
-        if not os.path.exists(src):
-            continue
-        if not os.path.exists(dst):
-            try:
-                shutil.copytree(src, dst)
-            except Exception:
-                pass
-        elif os.path.isdir(src) and os.path.isdir(dst):
-            for root, _, files in os.walk(src):
-                rel = os.path.relpath(root, src)
-                target_subdir = os.path.join(dst, rel) if rel != "." else dst
-                os.makedirs(target_subdir, exist_ok=True)
-                for f in files:
-                    src_file = os.path.join(root, f)
-                    dst_file = os.path.join(target_subdir, f)
-                    if not os.path.exists(dst_file):
-                        try:
-                            shutil.copy2(src_file, dst_file)
-                        except Exception:
-                            pass
+    os.makedirs(cfg_dir, exist_ok=True)
+    os.makedirs(style_dir, exist_ok=True)
+    os.makedirs(state_dir, exist_ok=True)
+
+    # Ensure core configuration files are present
+    get_config_path("config.json")
+    get_suits_config_path()
+
+    # Seed baseline stylesheets into user style dir if missing
+    for css_file in ["borders.css", "fonts.css", "colors.css"]:
+        user_css = os.path.join(style_dir, css_file)
+        if not os.path.exists(user_css):
+            default_css = resolve_style_file(css_file)
+            if os.path.exists(default_css) and default_css != user_css:
+                try:
+                    shutil.copy2(default_css, user_css)
+                except Exception:
+                    pass
 
     # Migrate existing widget settings if needed
     user_settings = os.path.join(user_dir, "widget_settings.json")
     if not os.path.exists(user_settings):
         legacy_qs = os.path.expanduser("~/.config/quickshell/widget_settings.json")
+        repo_dir = os.path.dirname(os.path.abspath(__file__))
         default_qs = os.path.join(repo_dir, "quickshell", "agility", "widget_settings.json")
         src_settings = legacy_qs if os.path.exists(legacy_qs) else default_qs
         if os.path.exists(src_settings):
@@ -51,6 +56,7 @@ def seed_user_environment():
                 pass
 
 seed_user_environment()
+
 
 import bar
 import services.singletons as singletons

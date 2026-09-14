@@ -7,9 +7,10 @@ from fabric.core.service import Service, Signal, Property
 from gi.repository import GLib, Gdk
 from user_options import user_options
 from utils.sounds import play_sound
+from services.paths import get_suits_config_path
 
-SUITS_CONFIG_DIR = os.path.expanduser("~/.config/agility-shell/config")
-SUITS_FILE = os.path.join(SUITS_CONFIG_DIR, "suits.json")
+SUITS_FILE = get_suits_config_path()
+SUITS_CONFIG_DIR = os.path.dirname(SUITS_FILE)
 
 
 class SuitsService(Service):

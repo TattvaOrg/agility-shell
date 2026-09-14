@@ -27,8 +27,9 @@ ffi.cdef("""
 
 import os
 import subprocess
+from services.paths import get_native_lib_path
 
-_so_path = get_relative_path("./lib/libhacktk.so")
+_so_path = get_native_lib_path("libhacktk.so", "hacktk")
 if not os.path.exists(_so_path):
     _makefile_dir = get_relative_path("./lib")
     if os.path.exists(os.path.join(_makefile_dir, "Makefile")):
@@ -36,6 +37,9 @@ if not os.path.exists(_so_path):
             subprocess.run(["make", "-C", _makefile_dir], check=True, capture_output=True)
         except Exception:
             pass
+    if os.path.exists(get_relative_path("./lib/libhacktk.so")):
+        _so_path = get_relative_path("./lib/libhacktk.so")
+
 
 libhacktk = ffi.dlopen(_so_path)
 

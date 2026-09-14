@@ -13,8 +13,9 @@ from user_options import user_options
 import threading
 import json
 import os
+from services.paths import get_state_path
 
-USAGE_FILE = os.path.expanduser("~/.config/agility-shell/config/launcher_usage.json")
+USAGE_FILE = get_state_path("launcher_usage.json")
 
 def load_usage() -> dict:
     try:

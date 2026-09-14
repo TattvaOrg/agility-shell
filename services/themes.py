@@ -10,10 +10,9 @@ from user_options import user_options
 from .wallpaper import WallpaperService
 from .templates import template_service, MATUGEN_CONFIG_CACHE
 
-THEMES_DIR       = os.path.expanduser("~/.config/agility-shell/themes")
-LIGHT_THEMES_DIR = os.path.join(THEMES_DIR, "light")
-DARK_THEMES_DIR  = os.path.join(THEMES_DIR, "dark")
-CACHE_THEME_PATH = os.path.expanduser("~/.cache/agility-shell/theme.json")
+from services.paths import get_cache_path, get_theme_dirs
+
+CACHE_THEME_PATH = get_cache_path("theme.json")
 
 WALLPAPER_THEME = "Matugen"
 
@@ -169,23 +168,32 @@ class ThemeService(Service):
         self.notify("scheme-type")
         self.apply()
 
+    def _find_theme_path(self, name: str, dark: bool) -> str | None:
+        sub = "dark" if dark else "light"
+        for tdir in get_theme_dirs():
+            candidate = os.path.join(tdir, sub, f"{name}.json")
+            if os.path.isfile(candidate):
+                return candidate
+        return None
+
     def list_themes(self, dark: bool = False) -> list[str]:
-        folder = DARK_THEMES_DIR if dark else LIGHT_THEMES_DIR
-        if not os.path.isdir(folder):
-            return []
-        return [
-            os.path.splitext(f)[0]
-            for f in sorted(os.listdir(folder))
-            if f.endswith(".json")
-        ]
+        sub = "dark" if dark else "light"
+        found = set()
+        for tdir in get_theme_dirs():
+            folder = os.path.join(tdir, sub)
+            if not os.path.isdir(folder):
+                continue
+            for f in os.listdir(folder):
+                if f.endswith(".json"):
+                    found.add(os.path.splitext(f)[0])
+        return sorted(found)
 
     def load_theme_data(self, name: str, dark: bool) -> dict | None:
         """Load and return raw theme JSON for any theme by name, without changing state."""
         if name == WALLPAPER_THEME:
             return None
-        folder = DARK_THEMES_DIR if dark else LIGHT_THEMES_DIR
-        path = os.path.join(folder, f"{name}.json")
-        if not os.path.isfile(path):
+        path = self._find_theme_path(name, dark)
+        if not path or not os.path.isfile(path):
             return None
         try:
             with open(path) as f:
@@ -220,17 +228,17 @@ class ThemeService(Service):
             self.notify("available-accents")
             return
 
-        folder = DARK_THEMES_DIR if self._is_dark else LIGHT_THEMES_DIR
-        path   = os.path.join(folder, f"{active_name}.json")
+        path = self._find_theme_path(active_name, self._is_dark)
         logger.info(f"[ThemeService] loading theme: {path}")
 
-        if not os.path.isfile(path):
-            logger.warning(f"[ThemeService] theme file not found: {path}")
+        if not path or not os.path.isfile(path):
+            logger.warning(f"[ThemeService] theme file not found: {active_name}")
             self._current_theme_data = None
             self._available_accents  = []
             self.notify("current-theme-data")
             self.notify("available-accents")
             return
+
 
         try:
             with open(path) as f:

@@ -1,0 +1,17 @@
+[Unit]
+Description=Agility Shell - Wayland Desktop Shell
+PartOf=graphical-session.target
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/agility-shell
+Restart=on-failure
+RestartSec=1s
+Slice=session.slice
+TimeoutStopSec=3s
+KillMode=mixed
+
+[Install]
+WantedBy=graphical-session.target

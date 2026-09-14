@@ -33,8 +33,9 @@ ffi.cdef("""
 
 import os
 import subprocess
+from services.paths import get_native_lib_path
 
-_blur_so_path = get_relative_path("./lib/libblur.so")
+_blur_so_path = get_native_lib_path("libblur.so", "blur")
 if not os.path.exists(_blur_so_path):
     _blur_makefile_dir = get_relative_path("./lib")
     if os.path.exists(os.path.join(_blur_makefile_dir, "Makefile")):
@@ -42,6 +43,9 @@ if not os.path.exists(_blur_so_path):
             subprocess.run(["make", "-C", _blur_makefile_dir], check=True, capture_output=True)
         except Exception:
             pass
+    if os.path.exists(get_relative_path("./lib/libblur.so")):
+        _blur_so_path = get_relative_path("./lib/libblur.so")
+
 
 libblur = ffi.dlopen(_blur_so_path)
 libgtk  = ffi.dlopen("libgtk-3.so.0")

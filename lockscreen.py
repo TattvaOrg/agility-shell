@@ -557,10 +557,12 @@ def lock():
         )
         return None
 
+    from services.paths import resolve_style_file
     app = Application("lock")
-    app.set_stylesheet_from_file(os.path.expanduser("~/.config/agility-shell/style/style.css"))
+    app.set_stylesheet_from_file(resolve_style_file("style.css"))
     manager = LockManager()
     app.run()
+
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@ def seed_user_environment():
 
 seed_user_environment()
 
-
+import utils.fabric_compat
 import bar
 import services.singletons as singletons
 from setproctitle import setproctitle

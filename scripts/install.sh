@@ -466,6 +466,15 @@ seed_user_configuration() {
             cp "$src_data/style/$css" "$USER_CONFIG/style/$css"
         fi
     done
+
+    # Seed baseline niri.kdl if not present or outdated
+    if [[ -f "$src_data/config/niri.kdl" ]]; then
+        mkdir -p "$USER_CONFIG/config"
+        if [[ ! -f "$USER_CONFIG/config/niri.kdl" ]] || grep -q '~/.config/agility-shell/start.sh' "$USER_CONFIG/config/niri.kdl"; then
+            cp "$src_data/config/niri.kdl" "$USER_CONFIG/config/niri.kdl"
+            info "Synchronized niri.kdl configuration."
+        fi
+    fi
     success "User configuration initialized."
 }
 
@@ -473,7 +482,7 @@ seed_user_configuration() {
 inject_niri_include() {
     local niri_config_dir="$HOME/.config/niri"
     local niri_config="$niri_config_dir/config.kdl"
-    local startup_line='spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null && exec agility-shell || exec ~/.config/agility-shell/start.sh"'
+    local startup_line='spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service || exec agility-shell"'
     local include_line='include "~/.config/agility-shell/config/niri.kdl"'
 
     mkdir -p "$niri_config_dir"
@@ -506,9 +515,12 @@ BASE_NIRI_EOF
     sed -i '/caffyne-shell/d' "$niri_config" 2>/dev/null || true
 
     # Update startup line if old one exists
-    if grep -qF '~/.config/agility-shell/start.sh' "$niri_config" && ! grep -qF 'command -v agility-shell' "$niri_config"; then
-        info "Updating Niri startup command to use agility-shell system binary..."
-        sed -i 's|spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null \&\& exec agility-shell \|\| exec ~/.config/agility-shell/start.sh"|g' "$niri_config"
+    if grep -qF '~/.config/agility-shell/start.sh' "$niri_config"; then
+        info "Updating Niri startup command to use guarded agility-shell launcher..."
+        sed -i 's|spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$niri_config"
+    elif grep -qF 'command -v agility-shell' "$niri_config"; then
+        info "Updating Niri startup command to use guarded agility-shell launcher..."
+        sed -i 's|spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null \&\& exec agility-shell \|\| exec ~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$niri_config"
     fi
 
     if ! grep -qF "$include_line" "$niri_config"; then

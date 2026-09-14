@@ -80,6 +80,7 @@ show_help() {
 cmd_start() {
     if systemctl --user list-unit-files agility-shell.service &>/dev/null; then
         info "Starting Agility Shell via systemd user service..."
+        systemctl --user reset-failed agility-shell.service 2>/dev/null || true
         systemctl --user start agility-shell.service
         success "Service started. Check status: agl status"
     elif command -v agility-shell &>/dev/null; then

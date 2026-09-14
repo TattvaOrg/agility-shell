@@ -44,6 +44,26 @@ curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/instal
 
 ---
 
+## Filesystem Layout & Architecture ("Where & Why")
+
+Agility Shell follows standard Linux Filesystem Hierarchy Standards (FHS) and XDG base directory specifications to keep application code, dependencies, user data, and runtime logs cleanly decoupled.
+
+| Location | Component | Purpose & Why It Lives Here |
+| :--- | :--- | :--- |
+| **`/usr/bin/`** or **`~/.local/bin/`** | `agl`<br>`agility-shell` | **Executables & CLI**: Accessible directly from your `$PATH`. `agility-shell` auto-detects its environment (repo checkout vs system install) and launches the shell, while `agl` manages services, configs, and updates. |
+| **`/usr/share/agility-shell/`** | Core Application Source & Assets | **Immutable Code & Assets**: Contains `main.py`, `bar.py`, applets, widgets, sounds, SVGs, and baseline stylesheets. Placed here so system updates can upgrade the shell code without touching your personal preferences. |
+| **`/usr/lib/agility-shell/`** | Virtualenv & Native Shared Objects | **Isolated Runtime**: Houses `/usr/lib/agility-shell/venv` (Python runtime with Fabric) and compiled C shared libraries (`libblur.so`, `libhacktk.so`). Prevents Python package conflicts with system packages while still binding to native Wayland layer-shell libraries. |
+| **`~/.config/agility-shell/`** | User Configuration & Customizations | **Personal Settings**: Stores `config.json` (bar layout, widget ordering), `suits.json` (desktop presets), `style/*.css` (Matugen colors, custom borders), `wallpapers/`, and `config/niri.kdl`. Never overwritten by updates. |
+| **`~/.config/systemd/user/`** | `agility-shell.service` | **Process Lifecycle & Autostart**: Systemd user unit tied to `graphical-session.target`. Provides automatic login startup, automatic crash recovery (`Restart=on-failure`), and unified log management. |
+| **`~/.cache/agility-shell/`** | `shell.log` & Image Caches | **Ephemeral State & Logs**: Stores live session logs (`shell.log`), blurred wallpaper buffers, and temporary thumbnails. Keeps user config uncluttered and allows easy debugging. |
+
+### Why This Separation Matters:
+1. **Clean Updates**: Upgrading Agility Shell replaces only `/usr/share/` and `/usr/lib/`; your personal themes, suits, and bar layouts in `~/.config/agility-shell` remain untouched.
+2. **Crash Resilience**: Systemd service management guarantees that if the compositor reloads or an applet hiccups, Agility Shell restarts automatically in the background.
+3. **Multi-Environment Support**: The launcher automatically favors a local development checkout if run from a git clone, or falls back to system files when executed via systemd or CLI.
+
+---
+
 ## CLI Management (`agl`)
 
 Agility Shell includes a dedicated command-line interface `agl` installed to `/usr/bin/agl` (or `~/.local/bin/agl`) for easy lifecycle and maintenance management:
@@ -83,22 +103,33 @@ Root backup scripts (`install.sh`, `update.sh`, `uninstall.sh`, `start.sh`, `res
 
 ## Configuration & Autostart
 
-To launch agility shell automatically when logging into your compositor session, add the helper script to your compositor configuration:
+Agility Shell can be managed via the systemd user service (recommended) or started directly by your Wayland compositor:
 
-### Niri (`config.kdl`)
-```ini
-spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"
+### 1. Systemd User Service (Recommended)
+Agility Shell automatically enables its user service upon installation:
+```bash
+systemctl --user enable --now agility-shell.service
 ```
 
-#### Standard Config (`hyprland.conf`)
+### 2. Compositor Integration (Guarded Fallback)
+To ensure the shell is running while avoiding duplicate instances if systemd is already active, use the guarded launcher command:
+
+#### Niri (`config.kdl`)
+```kdl
+include "~/.config/agility-shell/config/niri.kdl"
+# Or standalone:
+spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service || exec agility-shell"
+```
+
+#### Hyprland (`hyprland.conf`)
 ```ini
-exec-once = ~/.config/agility-shell/start.sh
+exec-once = systemctl --user is-active --quiet agility-shell.service || agility-shell
 ```
 
 #### Modern Lua Config (`hyprland.lua`)
 ```lua
 -- Add this to your exec or startup table
-hyprland.exec_once({ "~/.config/agility-shell/start.sh" })
+hyprland.exec_once({ "systemctl --user is-active --quiet agility-shell.service || agility-shell" })
 ```
 
 ---

@@ -125,7 +125,6 @@ PACMAN_DEPS=(
     python-loguru
     python-setproctitle
     python-rapidfuzz
-    python-thefuzz
     awww
     base-devel
     git
@@ -227,16 +226,24 @@ check_and_install_deps() {
     esac
 }
 
-# -- Legacy Migration ----------------------------------------------------------
-migrate_legacy_installation() {
-    if [[ -d "$USER_CONFIG" && -f "$USER_CONFIG/main.py" ]]; then
+# -- Scan and Remove Old Shell from ~/.config -----------------------------------
+scan_and_remove_old_shell() {
+    local has_old_shell=false
+    if [[ -f "$USER_CONFIG/main.py" || -f "$USER_CONFIG/bar.py" || -d "$USER_CONFIG/bar_widgets" || -d "$USER_CONFIG/venv" || -d "$USER_CONFIG/services" ]]; then
+        has_old_shell=true
+    fi
+
+    if [[ "$has_old_shell" == "true" ]]; then
         echo
-        info "Legacy monolithic installation detected in $USER_CONFIG."
+        info "Scanning ~/.config/agility-shell for old monolithic shell..."
+        warn "Old shell detected in $USER_CONFIG!"
+        info "Deleting old shell from ~/.config/agility-shell and transitioning to distributed system installation..."
+        
         local timestamp
         timestamp="$(date +%Y%m%d_%H%M%S)"
         local backup_dir="$HOME/.config/agility-shell.backup-$timestamp"
         
-        info "Creating non-destructive backup at $backup_dir..."
+        info "Creating safety backup of user configurations at $backup_dir..."
         cp -r "$USER_CONFIG" "$backup_dir"
         success "Backup created at $backup_dir"
 
@@ -248,16 +255,17 @@ migrate_legacy_installation() {
         [[ -d "$USER_CONFIG/themes" ]] && cp -r "$USER_CONFIG/themes" "$tmp_data/"
         [[ -f "$USER_CONFIG/widget_settings.json" ]] && cp "$USER_CONFIG/widget_settings.json" "$tmp_data/"
 
-        info "Cleaning obsolete Python source files and virtualenv from $USER_CONFIG..."
+        info "Deleting old shell Python source files, venv, and scripts from $USER_CONFIG..."
         rm -rf "$USER_CONFIG"
         mkdir -p "$USER_CONFIG"
 
         # Restore user custom data
         cp -r "$tmp_data"/* "$USER_CONFIG/" 2>/dev/null || true
         rm -rf "$tmp_data"
-        success "Migration complete: ~/.config/agility-shell now cleanly holds user configurations only."
+        success "Old shell deleted. ~/.config/agility-shell now cleanly holds user configurations only."
     fi
 }
+
 
 # -- Build and Install System Files --------------------------------------------
 install_system_files() {
@@ -406,23 +414,40 @@ do_install() {
     info "Starting installation of Agility Shell (Method: $method)..."
 
     check_and_install_deps
-    migrate_legacy_installation
 
     local work_dir=""
+    local cleanup_work_dir=false
     if [[ "$IS_LOCAL_REPO" == "true" ]]; then
-        work_dir="$LOCAL_SRC_DIR"
+        # If running from inside ~/.config/agility-shell, stage sources to tmp before deleting old shell
+        if [[ "$(realpath "$LOCAL_SRC_DIR" 2>/dev/null)" == "$(realpath "$USER_CONFIG" 2>/dev/null)"* ]]; then
+            work_dir="$(mktemp -d)"
+            cleanup_work_dir=true
+            info "Staging installer sources from $LOCAL_SRC_DIR..."
+            cp -r "$LOCAL_SRC_DIR"/* "$work_dir/"
+        else
+            work_dir="$LOCAL_SRC_DIR"
+        fi
     else
         work_dir="$(mktemp -d)"
+        cleanup_work_dir=true
         info "Cloning Agility Shell from $REPO_URL..."
         git clone "$REPO_URL" "$work_dir/repo"
         work_dir="$work_dir/repo"
     fi
+
+    # Scan and delete old shell from ~/.config/agility-shell
+    scan_and_remove_old_shell
 
     install_system_files "$work_dir" "$method"
     seed_user_configuration
     inject_niri_include
     setup_matugen
     setup_systemd_service
+
+    if [[ "$cleanup_work_dir" == "true" ]]; then
+        rm -rf "$work_dir"
+    fi
+
 
     echo
     success "Agility Shell installed successfully!"

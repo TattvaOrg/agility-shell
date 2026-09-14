@@ -16,7 +16,7 @@ depends=(
     'gtk-session-lock'
     'cinnamon-desktop'
     'gnome-bluetooth-3.0'
-    'matugen-bin'
+    'matugen'
     'playerctl'
     'brightnessctl'
     'wf-recorder'
@@ -35,7 +35,6 @@ depends=(
     'python-loguru'
     'python-setproctitle'
     'python-rapidfuzz'
-    'python-thefuzz'
     'awww'
     'niri'
 )

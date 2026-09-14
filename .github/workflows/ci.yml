@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, expansions ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Lint & Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate Python Syntax
+        run: |
+          python3 -m py_compile main.py user_options.py lockscreen.py services/paths.py services/style.py services/themes.py services/wallpaper.py services/suits_service.py services/templates.py utils/sounds.py utils/svg.py windows/launcher.py bar_widgets/dock/dock_state.py snippets/blur/blur.py snippets/hacktk/hacktk.py

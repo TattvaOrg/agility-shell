@@ -9,12 +9,14 @@ set -euo pipefail
 REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
 SYSTEM_DATA="/usr/share/agility-shell"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
 
 # -- Colours -------------------------------------------------------------------
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BLUE='\033[0;34m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
@@ -23,6 +25,43 @@ success() { echo -e "${GREEN}${BOLD}[  ok  ]${RESET} $*"; }
 warn()    { echo -e "${YELLOW}${BOLD}[ warn ]${RESET} $*"; }
 error()   { echo -e "${RED}${BOLD}[ err  ]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
+
+# -- Banner --------------------------------------------------------------------
+show_banner() {
+    local subtitle="${1:-Updater}"
+    if [[ -n "${SCRIPT_DIR:-}" && -f "$SCRIPT_DIR/banner.sh" ]]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/banner.sh"
+        show_agility_banner "$subtitle"
+    else
+        echo ""
+        echo -e "                                    ${BLUE}~${RESET}"
+        echo -e "                                   ${BLUE}x:${RESET}"
+        echo -e "                                  ${BLUE}*#${RESET}"
+        echo -e "                                  ${BLUE}##:${RESET}"
+        echo -e "                                  ${BLUE}*##~${RESET}"
+        echo -e "                            ${BLUE}:${RESET}      ${BLUE}x##x+${RESET}"
+        echo -e "                          ${BLUE}:x${RESET}        ${BLUE}+####*.${RESET}"
+        echo -e "                          ${BLUE}#x${RESET}          ${BLUE}*####~${RESET}"
+        echo -e "                         ${BLUE}:##*.${RESET}         ${BLUE}:####.${RESET}     ${BLUE}*${RESET}"
+        echo -e "                          ${BLUE}x###x+.${RESET}       ${BLUE}+###.${RESET}     ${BLUE}x*${RESET}"
+        echo -e "                          ${BLUE}.x#####*.${RESET}     ${BLUE}~##+${RESET}     ${BLUE}~#x${RESET}"
+        echo -e "                    ${CYAN}=+${RESET}      ${BLUE}:*#####${RESET}     ${BLUE}xx:${RESET}    ${BLUE}.*##*${RESET}"
+        echo -e "                    ${CYAN}%%${RESET}         ${BLUE}+###~${RESET}   ${BLUE}::${RESET}    ${BLUE}~*###x${RESET}"
+        echo -e "                    ${CYAN}%@%=${RESET}        ${BLUE}.x#.${RESET}       ${BLUE}+####x~${RESET}   ${CYAN}+${RESET}"
+        echo -e "                    ${CYAN}+@@@@#+:${RESET}      ${BLUE}+${RESET}      ${BLUE}+####*~${RESET}    ${CYAN}#@${RESET}"
+        echo -e "                     ${CYAN}+@@@@@@@#+${RESET}         ${BLUE}*###*.${RESET}  ${CYAN}.=#@@*${RESET}"
+        echo -e "                       ${CYAN}+%@@@@@@@*${RESET}      ${BLUE}*##x:${CYAN}:+#@@@@@#${RESET}"
+        echo -e "                         ${CYAN}:+#@@@@@#${RESET}    ${BLUE}:##*${CYAN}+%@@@@@@#:${RESET}"
+        echo -e "                             ${CYAN}+%@@@=${RESET}   ${BLUE}~+${CYAN}*%@@@@#+:${RESET}"
+        echo -e "                               ${CYAN}=@@*${RESET}   ${CYAN}#@@@#+:${RESET}"
+        echo -e "                                ${CYAN}.%*${RESET}   ${CYAN}#@#:${RESET}"
+        echo -e "                                 ${CYAN}.+${RESET}   ${CYAN}*:${RESET}"
+        echo ""
+        echo -e "                     ${CYAN}${BOLD}Agility Shell${RESET} ${BLUE}--${RESET} ${BOLD}${subtitle}${RESET}"
+        echo ""
+    fi
+}
 
 prompt_user() {
     local prompt_msg="$1"
@@ -95,5 +134,6 @@ do_update() {
     esac
 }
 
+show_banner "Updater"
 check_not_root
 do_update "$@"

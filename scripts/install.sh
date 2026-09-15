@@ -37,6 +37,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BLUE='\033[0;34m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
@@ -46,28 +47,44 @@ warn()    { echo -e "${YELLOW}${BOLD}[ warn ]${RESET} $*"; }
 error()   { echo -e "${RED}${BOLD}[ err  ]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
-cat << "EOF"
+# -- Banner --------------------------------------------------------------------
+show_banner() {
+    local subtitle="${1:-Installer}"
+    if [[ -n "${SCRIPT_DIR:-}" && -f "$SCRIPT_DIR/banner.sh" ]]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/banner.sh"
+        show_agility_banner "$subtitle"
+    else
+        echo ""
+        echo -e "                                    ${BLUE}~${RESET}"
+        echo -e "                                   ${BLUE}x:${RESET}"
+        echo -e "                                  ${BLUE}*#${RESET}"
+        echo -e "                                  ${BLUE}##:${RESET}"
+        echo -e "                                  ${BLUE}*##~${RESET}"
+        echo -e "                            ${BLUE}:${RESET}      ${BLUE}x##x+${RESET}"
+        echo -e "                          ${BLUE}:x${RESET}        ${BLUE}+####*.${RESET}"
+        echo -e "                          ${BLUE}#x${RESET}          ${BLUE}*####~${RESET}"
+        echo -e "                         ${BLUE}:##*.${RESET}         ${BLUE}:####.${RESET}     ${BLUE}*${RESET}"
+        echo -e "                          ${BLUE}x###x+.${RESET}       ${BLUE}+###.${RESET}     ${BLUE}x*${RESET}"
+        echo -e "                          ${BLUE}.x#####*.${RESET}     ${BLUE}~##+${RESET}     ${BLUE}~#x${RESET}"
+        echo -e "                    ${CYAN}=+${RESET}      ${BLUE}:*#####${RESET}     ${BLUE}xx:${RESET}    ${BLUE}.*##*${RESET}"
+        echo -e "                    ${CYAN}%%${RESET}         ${BLUE}+###~${RESET}   ${BLUE}::${RESET}    ${BLUE}~*###x${RESET}"
+        echo -e "                    ${CYAN}%@%=${RESET}        ${BLUE}.x#.${RESET}       ${BLUE}+####x~${RESET}   ${CYAN}+${RESET}"
+        echo -e "                    ${CYAN}+@@@@#+:${RESET}      ${BLUE}+${RESET}      ${BLUE}+####*~${RESET}    ${CYAN}#@${RESET}"
+        echo -e "                     ${CYAN}+@@@@@@@#+${RESET}         ${BLUE}*###*.${RESET}  ${CYAN}.=#@@*${RESET}"
+        echo -e "                       ${CYAN}+%@@@@@@@*${RESET}      ${BLUE}*##x:${CYAN}:+#@@@@@#${RESET}"
+        echo -e "                         ${CYAN}:+#@@@@@#${RESET}    ${BLUE}:##*${CYAN}+%@@@@@@#:${RESET}"
+        echo -e "                             ${CYAN}+%@@@=${RESET}   ${BLUE}~+${CYAN}*%@@@@#+:${RESET}"
+        echo -e "                               ${CYAN}=@@*${RESET}   ${CYAN}#@@@#+:${RESET}"
+        echo -e "                                ${CYAN}.%*${RESET}   ${CYAN}#@#:${RESET}"
+        echo -e "                                 ${CYAN}.+${RESET}   ${CYAN}*:${RESET}"
+        echo ""
+        echo -e "                     ${CYAN}${BOLD}Agility Shell${RESET} ${BLUE}--${RESET} ${BOLD}${subtitle}${RESET}"
+        echo ""
+    fi
+}
 
-                       m                
-                     wq                 
-                   qqX                  
-                  dqd                   
-                wwwp      1             
-              .ppqm     Jr              
-             <wqqp     pp               
-            !dpqw    ~ww                
-            pppd_   [pq;                
-           CpqqL    pwU   `c            
-          (pqqq    Qpp    ww!           
-         YmqqqZ   ?qqw   |ppp           
-        ]pqwww    qww    Zqqwml         
-        qpqw:     d.      Owppq"        
-       )pw       C          .mwL        
-       wp                     wp[       
-      _b                       qq,      
-      m                          Z   
-      
-EOF
+show_banner "Installer"
 
 prompt_user() {
     local prompt_msg="$1"

@@ -13,12 +13,14 @@ USER_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
 NIRI_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/niri/config.kdl"
 HYPR_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland.conf"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
 
 # -- Colors --------------------------------------------------------------------
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BLUE='\033[0;34m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
@@ -26,6 +28,43 @@ info()    { echo -e "${CYAN}${BOLD}[agility]${RESET} $*"; }
 success() { echo -e "${GREEN}${BOLD}[  ok  ]${RESET} $*"; }
 warn()    { echo -e "${YELLOW}${BOLD}[ warn ]${RESET} $*"; }
 error()   { echo -e "${RED}${BOLD}[ err  ]${RESET} $*" >&2; }
+
+# -- Banner --------------------------------------------------------------------
+show_banner() {
+    local subtitle="${1:-Uninstaller}"
+    if [[ -n "${SCRIPT_DIR:-}" && -f "$SCRIPT_DIR/banner.sh" ]]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/banner.sh"
+        show_agility_banner "$subtitle"
+    else
+        echo ""
+        echo -e "                                    ${BLUE}~${RESET}"
+        echo -e "                                   ${BLUE}x:${RESET}"
+        echo -e "                                  ${BLUE}*#${RESET}"
+        echo -e "                                  ${BLUE}##:${RESET}"
+        echo -e "                                  ${BLUE}*##~${RESET}"
+        echo -e "                            ${BLUE}:${RESET}      ${BLUE}x##x+${RESET}"
+        echo -e "                          ${BLUE}:x${RESET}        ${BLUE}+####*.${RESET}"
+        echo -e "                          ${BLUE}#x${RESET}          ${BLUE}*####~${RESET}"
+        echo -e "                         ${BLUE}:##*.${RESET}         ${BLUE}:####.${RESET}     ${BLUE}*${RESET}"
+        echo -e "                          ${BLUE}x###x+.${RESET}       ${BLUE}+###.${RESET}     ${BLUE}x*${RESET}"
+        echo -e "                          ${BLUE}.x#####*.${RESET}     ${BLUE}~##+${RESET}     ${BLUE}~#x${RESET}"
+        echo -e "                    ${CYAN}=+${RESET}      ${BLUE}:*#####${RESET}     ${BLUE}xx:${RESET}    ${BLUE}.*##*${RESET}"
+        echo -e "                    ${CYAN}%%${RESET}         ${BLUE}+###~${RESET}   ${BLUE}::${RESET}    ${BLUE}~*###x${RESET}"
+        echo -e "                    ${CYAN}%@%=${RESET}        ${BLUE}.x#.${RESET}       ${BLUE}+####x~${RESET}   ${CYAN}+${RESET}"
+        echo -e "                    ${CYAN}+@@@@#+:${RESET}      ${BLUE}+${RESET}      ${BLUE}+####*~${RESET}    ${CYAN}#@${RESET}"
+        echo -e "                     ${CYAN}+@@@@@@@#+${RESET}         ${BLUE}*###*.${RESET}  ${CYAN}.=#@@*${RESET}"
+        echo -e "                       ${CYAN}+%@@@@@@@*${RESET}      ${BLUE}*##x:${CYAN}:+#@@@@@#${RESET}"
+        echo -e "                         ${CYAN}:+#@@@@@#${RESET}    ${BLUE}:##*${CYAN}+%@@@@@@#:${RESET}"
+        echo -e "                             ${CYAN}+%@@@=${RESET}   ${BLUE}~+${CYAN}*%@@@@#+:${RESET}"
+        echo -e "                               ${CYAN}=@@*${RESET}   ${CYAN}#@@@#+:${RESET}"
+        echo -e "                                ${CYAN}.%*${RESET}   ${CYAN}#@#:${RESET}"
+        echo -e "                                 ${CYAN}.+${RESET}   ${CYAN}*:${RESET}"
+        echo ""
+        echo -e "                     ${CYAN}${BOLD}Agility Shell${RESET} ${BLUE}--${RESET} ${BOLD}${subtitle}${RESET}"
+        echo ""
+    fi
+}
 
 PURGE=false
 FORCE=false
@@ -50,9 +89,8 @@ for arg in "$@"; do
     esac
 done
 
-echo ""
-echo -e "${BOLD}${RED}Agility Shell Uninstaller${RESET}"
-echo -e "This will remove Agility Shell from your system."
+show_banner "Uninstaller"
+echo -e "  ${YELLOW}This will remove Agility Shell from your system.${RESET}"
 echo ""
 
 prompt_user() {

@@ -38,9 +38,51 @@ warn()    { echo -e "${YELLOW}${BOLD}[agl:warn]${RESET} $*"; }
 error()   { echo -e "${RED}${BOLD}[agl:err]${RESET} $*" >&2; }
 die()     { error "$*"; exit 1; }
 
+# -- Banner --------------------------------------------------------------------
+show_banner() {
+    local subtitle="${1:-CLI (agl)}"
+    if [[ -n "${REPO_DIR:-}" && -f "$REPO_DIR/scripts/banner.sh" ]]; then
+        # shellcheck source=/dev/null
+        source "$REPO_DIR/scripts/banner.sh"
+        show_agility_banner "$subtitle"
+    elif [[ -f "/usr/share/agility-shell/scripts/banner.sh" ]]; then
+        # shellcheck source=/dev/null
+        source "/usr/share/agility-shell/scripts/banner.sh"
+        show_agility_banner "$subtitle"
+    else
+        echo ""
+        echo -e "                                    ${BLUE}~${RESET}"
+        echo -e "                                   ${BLUE}x:${RESET}"
+        echo -e "                                  ${BLUE}*#${RESET}"
+        echo -e "                                  ${BLUE}##:${RESET}"
+        echo -e "                                  ${BLUE}*##~${RESET}"
+        echo -e "                            ${BLUE}:${RESET}      ${BLUE}x##x+${RESET}"
+        echo -e "                          ${BLUE}:x${RESET}        ${BLUE}+####*.${RESET}"
+        echo -e "                          ${BLUE}#x${RESET}          ${BLUE}*####~${RESET}"
+        echo -e "                         ${BLUE}:##*.${RESET}         ${BLUE}:####.${RESET}     ${BLUE}*${RESET}"
+        echo -e "                          ${BLUE}x###x+.${RESET}       ${BLUE}+###.${RESET}     ${BLUE}x*${RESET}"
+        echo -e "                          ${BLUE}.x#####*.${RESET}     ${BLUE}~##+${RESET}     ${BLUE}~#x${RESET}"
+        echo -e "                    ${CYAN}=+${RESET}      ${BLUE}:*#####${RESET}     ${BLUE}xx:${RESET}    ${BLUE}.*##*${RESET}"
+        echo -e "                    ${CYAN}%%${RESET}         ${BLUE}+###~${RESET}   ${BLUE}::${RESET}    ${BLUE}~*###x${RESET}"
+        echo -e "                    ${CYAN}%@%=${RESET}        ${BLUE}.x#.${RESET}       ${BLUE}+####x~${RESET}   ${CYAN}+${RESET}"
+        echo -e "                    ${CYAN}+@@@@#+:${RESET}      ${BLUE}+${RESET}      ${BLUE}+####*~${RESET}    ${CYAN}#@${RESET}"
+        echo -e "                     ${CYAN}+@@@@@@@#+${RESET}         ${BLUE}*###*.${RESET}  ${CYAN}.=#@@*${RESET}"
+        echo -e "                       ${CYAN}+%@@@@@@@*${RESET}      ${BLUE}*##x:${CYAN}:+#@@@@@#${RESET}"
+        echo -e "                         ${CYAN}:+#@@@@@#${RESET}    ${BLUE}:##*${CYAN}+%@@@@@@#:${RESET}"
+        echo -e "                             ${CYAN}+%@@@=${RESET}   ${BLUE}~+${CYAN}*%@@@@#+:${RESET}"
+        echo -e "                               ${CYAN}=@@*${RESET}   ${CYAN}#@@@#+:${RESET}"
+        echo -e "                                ${CYAN}.%*${RESET}   ${CYAN}#@#:${RESET}"
+        echo -e "                                 ${CYAN}.+${RESET}   ${CYAN}*:${RESET}"
+        echo ""
+        echo -e "                     ${CYAN}${BOLD}Agility Shell${RESET} ${BLUE}--${RESET} ${BOLD}${subtitle}${RESET}"
+        echo ""
+    fi
+}
+
 # -- Help message --------------------------------------------------------------
 show_help() {
-    echo -e "${BOLD}Agility Shell CLI (agl)${RESET} - Management utility for agility-shell"
+    show_banner "CLI (agl)"
+    echo -e "  Management utility for agility-shell"
     echo -e ""
     echo -e "${BOLD}USAGE:${RESET}"
     echo -e "    agl <command> [options]"

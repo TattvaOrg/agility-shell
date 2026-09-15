@@ -79,8 +79,8 @@ class SuitsService(Service):
             "wallpaper": {
                 "path": user_options.wallpaper.path,
                 "transition_type": getattr(user_options.wallpaper, "transition_type", "random"),
-                "transition_duration": getattr(user_options.wallpaper, "transition_duration", 1.5),
-                "transition_speed": getattr(user_options.wallpaper, "transition_speed", "medium"),
+                "transition_duration": getattr(user_options.wallpaper, "transition_duration", 0.35),
+                "transition_speed": getattr(user_options.wallpaper, "transition_speed", "quick"),
                 "transition_fps": getattr(user_options.wallpaper, "transition_fps", 60),
                 "enabled_transitions": copy.deepcopy(getattr(user_options.wallpaper, "enabled_transitions", [])),
                 "custom_transitions": copy.deepcopy(getattr(user_options.wallpaper, "custom_transitions", [])),

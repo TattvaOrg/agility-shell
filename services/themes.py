@@ -215,8 +215,17 @@ class ThemeService(Service):
 
     def _on_wallpaper_changed(self, _service, _path: str) -> None:
         if self.active_is_wallpaper:
+            if getattr(self, "_matugen_timer_id", None) is not None:
+                GLib.source_remove(self._matugen_timer_id)
+                self._matugen_timer_id = None
+            self._matugen_timer_id = GLib.timeout_add(300, self._apply_debounced)
+
+    def _apply_debounced(self) -> bool:
+        self._matugen_timer_id = None
+        if self.active_is_wallpaper:
             logger.info("[ThemeService] wallpaper changed, re-applying wallpaper theme")
             self.apply()
+        return GLib.SOURCE_REMOVE
 
     def _load_current_theme(self) -> None:
         active_name = self._dark_theme if self._is_dark else self._light_theme

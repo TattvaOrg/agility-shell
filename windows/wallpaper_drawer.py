@@ -87,9 +87,7 @@ def _generate_thumb_to_cache(file_path: str) -> Path | None:
                     img = img.crop((0, top, w, top + new_h))
 
                 thumb = img.resize((THUMB_MAX_WIDTH, THUMB_MAX_HEIGHT), PilImage.Resampling.LANCZOS)
-                thumb.save(cache_path, "JPEG", quality=85, optimize=True)
-                del thumb
-            gc.collect()
+                thumb.save(cache_path, "JPEG", quality=80)
         return cache_path
     except Exception as e:
         logger.debug(f"[WallpaperDrawer] Failed to generate thumb for {file_path}: {e}")
@@ -447,11 +445,11 @@ class WallpaperDockWindow(Window):
             if 0 <= self._current_index < len(self._wallpapers):
                 active_path = self._wallpapers[self._current_index]
                 self._previewed_wallpaper = active_path
-                anim_duration = 0.5 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
+                anim_duration = 0.35 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
                 self._service.preview_wallpaper(active_path, pos=(0.5, 0.92), duration=anim_duration)
             return GLib.SOURCE_REMOVE
 
-        self._preview_timer_id = GLib.timeout_add(60, _do_preview)
+        self._preview_timer_id = GLib.timeout_add(150, _do_preview)
 
     def _commit_and_close(self):
         if self._preview_timer_id is not None:
@@ -705,11 +703,11 @@ class WallpaperStairsWindow(Window):
             if 0 <= self._current_index < len(self._wallpapers):
                 active_path = self._wallpapers[self._current_index]
                 self._previewed_wallpaper = active_path
-                anim_duration = 0.4 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
+                anim_duration = 0.35 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
                 self._service.preview_wallpaper(active_path, pos=(0.5, 0.5), duration=anim_duration)
             return GLib.SOURCE_REMOVE
 
-        self._preview_timer_id = GLib.timeout_add(60, _do_preview)
+        self._preview_timer_id = GLib.timeout_add(150, _do_preview)
 
     def _commit_and_close(self):
         if self._preview_timer_id is not None:
@@ -1465,11 +1463,11 @@ class WallpaperWheelWindow(Window):
             if 0 <= self._current_index < len(self._wallpapers):
                 active_path = self._wallpapers[self._current_index]
                 self._previewed_wallpaper = active_path
-                anim_duration = 0.4 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
+                anim_duration = 0.35 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
                 self._service.preview_wallpaper(active_path, pos=(0.5, 0.5), duration=anim_duration)
             return GLib.SOURCE_REMOVE
 
-        self._preview_timer_id = GLib.timeout_add(60, _do_preview)
+        self._preview_timer_id = GLib.timeout_add(150, _do_preview)
 
     def _commit_and_close(self):
         if self._preview_timer_id is not None:
@@ -1773,11 +1771,11 @@ class WallpaperCoverflowWindow(Window):
             if 0 <= self._current_index < len(self._wallpapers):
                 active_path = self._wallpapers[self._current_index]
                 self._previewed_wallpaper = active_path
-                anim_duration = 0.4 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
+                anim_duration = 0.35 if getattr(user_options.wallpaper, "hotkey_animations", True) else 0.0
                 self._service.preview_wallpaper(active_path, pos=(0.5, 0.5), duration=anim_duration)
             return GLib.SOURCE_REMOVE
 
-        self._preview_timer_id = GLib.timeout_add(60, _do_preview)
+        self._preview_timer_id = GLib.timeout_add(150, _do_preview)
 
     def _commit_and_close(self):
         if self._preview_timer_id is not None:

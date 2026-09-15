@@ -149,8 +149,8 @@ class UserOptions:
                 "corner_burst", "diag_down", "diag_up", "center_ripple", "corner_collapse"
             ]
             self.custom_transitions: list[dict] = []
-            self.transition_duration = 1.5
-            self.transition_speed = "medium"
+            self.transition_duration = 0.35
+            self.transition_speed = "quick"
             self.transition_fps = 60
             self.switcher_style = "dock"
             self.hotkey_animations = True

@@ -21,23 +21,21 @@ CACHE_WALLPAPER_PATH = os.path.expanduser("~/.cache/agility-shell/wallpaper")
 CACHE_BLURRED_PATH   = os.path.expanduser("~/.cache/agility-shell/wallpaper_blurred")
 
 AWWW_TRANSITION_FPS      = 60
-AWWW_TRANSITION_DURATION = 1.5
+AWWW_TRANSITION_DURATION = 0.35
 AWWW_TRANSITION_BEZIER   = ".43,1.19,1,.4"
 
 DEFAULT_WALLPAPER_PATH = os.path.join(os.path.dirname(__file__), "assets/default-wallpaper.jpg")
 
-def _generate_blurred_cache(path: str, blur_radius: int = 20) -> None:
+def _generate_blurred_cache(path: str, blur_radius: int = 15) -> None:
     try:
         tmp_path = CACHE_BLURRED_PATH
         with PILImage.open(path) as img:
-            img.draft("RGB", (1920, 1080))
+            img.draft("RGB", (960, 540))
             if img.mode != "RGB":
                 img = img.convert("RGB")
-            img.thumbnail((1920, 1080), PILImage.Resampling.LANCZOS)
+            img.thumbnail((960, 540), PILImage.Resampling.BILINEAR)
             blurred = img.filter(ImageFilter.GaussianBlur(blur_radius))
-            blurred.save(tmp_path, format="JPEG", quality=80, progressive=True)
-            blurred.close()
-            del blurred
+            blurred.save(tmp_path, format="JPEG", quality=75)
         os.replace(tmp_path, CACHE_BLURRED_PATH)
     except Exception as e:
         logger.error(f"WallpaperService: failed to generate blurred cache: {e}")
@@ -58,9 +56,9 @@ def _awww_set(
     """
     x, y = pos if pos is not None else (0.5, 0.5)
     SPEED_DURATIONS = {
-        "quick": 0.7,
-        "medium": 1.5,
-        "slow": 2.8,
+        "quick": 0.35,
+        "medium": 0.5,
+        "slow": 0.8,
     }
 
     t_type = transition_type or getattr(user_options.wallpaper, "transition_type", "random") or "random"
@@ -81,8 +79,12 @@ def _awww_set(
     custom_pos = None
 
     if duration is None:
-        speed = getattr(user_options.wallpaper, "transition_speed", "medium")
-        duration = SPEED_DURATIONS.get(speed, getattr(user_options.wallpaper, "transition_duration", AWWW_TRANSITION_DURATION))
+        user_dur = getattr(user_options.wallpaper, "transition_duration", None)
+        if user_dur is not None and isinstance(user_dur, (int, float)) and user_dur > 0:
+            duration = float(user_dur)
+        else:
+            speed = getattr(user_options.wallpaper, "transition_speed", "quick")
+            duration = SPEED_DURATIONS.get(speed, AWWW_TRANSITION_DURATION)
     fps = getattr(user_options.wallpaper, "transition_fps", AWWW_TRANSITION_FPS)
     bezier = AWWW_TRANSITION_BEZIER
 
@@ -298,6 +300,9 @@ class WallpaperService(Service):
         self._initialized = True
         super().__init__(**kwargs)
         self._blurred_pixbuf: GdkPixbuf.Pixbuf | None = None
+        self._commit_timer_id: int | None = None
+        self._cached_wallpapers: list[str] = []
+        self._cached_wallpapers_time: float = 0.0
         # self._windows: dict[int, WallpaperDropWindow] = {}
         self._bar_manager = None
 
@@ -362,7 +367,7 @@ class WallpaperService(Service):
         path: str,
         pos: tuple[float, float] | None = None,
         transition_type: str | None = None,
-        duration: float | None = 0.5,
+        duration: float | None = 0.35,
     ) -> None:
         if not os.path.isfile(path):
             return
@@ -382,49 +387,46 @@ class WallpaperService(Service):
         if is_hotkey and not getattr(user_options.wallpaper, "hotkey_animations", True):
             transition_type = "none"
 
-        _awww_set(path, pos, transition_type)
+        # Update in-memory state immediately so subsequent calls know the active wallpaper
+        self._wallpaper_path = path
+        user_options.wallpaper.path = path
+        self.notify("wallpaper-path")
         self._clear_blurred_pixbuf()
 
+        # Trigger fast visual wallpaper change right away
+        _awww_set(path, pos, transition_type)
+
+        # Cancel previous pending background commit if user is rapidly switching
+        if self._commit_timer_id is not None:
+            GLib.source_remove(self._commit_timer_id)
+            self._commit_timer_id = None
+
         def copy_to_cache():
+            self._commit_timer_id = None
             try:
-                shutil.copyfile(path, CACHE_WALLPAPER_PATH)
-                self._wallpaper_path = path
-                user_options.wallpaper.path = path
-                user_options.save()
-                self.notify("wallpaper-path")
-                self.wallpaper_changed(path)
-
-                threading.Thread(
-                    target=_generate_blurred_cache,
-                    args=(CACHE_WALLPAPER_PATH,),
-                    daemon=True,
-                ).start()
-
-            except shutil.SameFileError:
-                self._wallpaper_path = path
-                user_options.wallpaper.path = path
-                user_options.save()
-                self.notify("wallpaper-path")
-                self.wallpaper_changed(path)
-
-                threading.Thread(
-                    target=_generate_blurred_cache,
-                    args=(CACHE_WALLPAPER_PATH,),
-                    daemon=True,
-                ).start()
-
+                same = False
+                if os.path.exists(CACHE_WALLPAPER_PATH):
+                    try:
+                        same = os.path.samefile(path, CACHE_WALLPAPER_PATH)
+                    except Exception:
+                        same = False
+                if not same:
+                    shutil.copyfile(path, CACHE_WALLPAPER_PATH)
             except Exception as e:
                 logger.error(f"WallpaperService: failed to copy to cache: {e}")
 
-            return GLib.SOURCE_REMOVE
-        def cleanup_mem():
-            gc.collect()
-            return False
+            user_options.save()
+            self.wallpaper_changed(path)
 
-        curr_speed = getattr(user_options.wallpaper, "transition_speed", "medium")
-        speed_duration = {"quick": 0.7, "medium": 1.5, "slow": 2.8}.get(curr_speed, getattr(user_options.wallpaper, "transition_duration", AWWW_TRANSITION_DURATION))
-        GLib.timeout_add(4000, cleanup_mem)
-        GLib.timeout_add(int(speed_duration * 1000) + 100, copy_to_cache)
+            threading.Thread(
+                target=_generate_blurred_cache,
+                args=(CACHE_WALLPAPER_PATH,),
+                daemon=True,
+            ).start()
+            return GLib.SOURCE_REMOVE
+
+        # Debounce the heavy disk copy and theme re-generation so rapid switches are buttery smooth
+        self._commit_timer_id = GLib.timeout_add(300, copy_to_cache)
 
     def _sync_monitors(self) -> None:
         display  = Gdk.Display.get_default()
@@ -456,6 +458,10 @@ class WallpaperService(Service):
         self._sync_monitors()
 
     def get_all_wallpapers(self) -> list[str]:
+        now = time.time()
+        if self._cached_wallpapers and (now - self._cached_wallpapers_time < 30.0):
+            return list(self._cached_wallpapers)
+
         from services.paths import get_wallpaper_dirs
         candidates = get_wallpaper_dirs()
         valid_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -464,12 +470,17 @@ class WallpaperService(Service):
         for wallpapers_dir in candidates:
             if not os.path.isdir(wallpapers_dir):
                 continue
-            for f in sorted(os.listdir(wallpapers_dir)):
-                ext = os.path.splitext(f)[1].lower()
-                if ext in valid_exts and f not in seen_names:
-                    seen_names.add(f)
-                    files.append(os.path.join(wallpapers_dir, f))
-        return files
+            try:
+                for f in sorted(os.listdir(wallpapers_dir)):
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in valid_exts and f not in seen_names:
+                        seen_names.add(f)
+                        files.append(os.path.join(wallpapers_dir, f))
+            except Exception:
+                pass
+        self._cached_wallpapers = files
+        self._cached_wallpapers_time = now
+        return list(files)
 
 
     def random_wallpaper(self, is_hotkey: bool = True) -> str | None:

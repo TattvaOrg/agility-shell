@@ -840,9 +840,9 @@ class DashWallpaperPage(DashSelectorPage):
         self._trans_row_2.show_all()
 
     def _on_speed_selected(self, speed: str) -> None:
-        speed_durations = {"quick": 0.7, "medium": 1.5, "slow": 2.8}
+        speed_durations = {"quick": 0.35, "medium": 0.5, "slow": 0.8}
         user_options.wallpaper.transition_speed = speed
-        user_options.wallpaper.transition_duration = speed_durations.get(speed, 1.5)
+        user_options.wallpaper.transition_duration = speed_durations.get(speed, 0.35)
         user_options.save()
         for k, btn in self._speed_buttons.items():
             if k == speed:

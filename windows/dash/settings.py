@@ -18,7 +18,7 @@ from .themes import (
 )
 
 WIDGET_ICONS: dict[str, str] = {
-    "Dash":          "diamonds-four-duotone",
+    "Dash":          "agility-duotone",
     "Launcher":      "squares-four-duotone",
     "Processes":     "cpu-duotone",
     "SysMon":        "chart-line-up-duotone",

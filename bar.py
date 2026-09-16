@@ -162,6 +162,8 @@ def build_widget(key: str, monitor_id: int, vertical: bool, variant: str | None 
     if cls is None:
         print(f"[bar] Unknown widget key: {key!r}")
         return None
+    if key == "Settings" and variant is None:
+        variant = "single"
     return cls(monitor_id, vertical=vertical, variant=variant)
 
 def create_surface_from_widget(widget: Gtk.Widget) -> cairo.ImageSurface:
@@ -1528,11 +1530,12 @@ class DraggableSection(Box):
         if key in self.bar.get_monitor_active_keys():
             Gtk.drag_finish(ctx, False, False, time)
             return
-        widget = build_widget(key, self.bar.monitor_id, self.bar.vertical)
+        var = "single" if key == "Settings" else None
+        widget = build_widget(key, self.bar.monitor_id, self.bar.vertical, var)
         if widget is None:
             Gtk.drag_finish(ctx, False, False, time)
             return
-        wrapper = WidgetWrapper(key, widget)
+        wrapper = WidgetWrapper(key, widget, variant=var)
         drop_index = self._drop_index_excluding_placeholder(x, y)
         self.add(wrapper)
         self.reorder_child(wrapper, drop_index)
@@ -1678,9 +1681,10 @@ class Bar(Window):
         )
         for entry in entries:
             if isinstance(entry, str):
-                widget = build_widget(entry, self.monitor_id, self.vertical)
+                v = "single" if entry == "Settings" else None
+                widget = build_widget(entry, self.monitor_id, self.vertical, v)
                 if widget is not None:
-                    section.add(WidgetWrapper(entry, widget))
+                    section.add(WidgetWrapper(entry, widget, variant=v))
             elif isinstance(entry, dict) and entry.get("type") == "group":
                 keys, variants, children = [], [], []
                 valid = True

@@ -7,7 +7,8 @@ from gi.repository import Gdk
 
 class QuickSettingsButton(Box):
     VARIANTS=["single", "default", "battery", "battery+percent"]
-    def __init__(self, monitor_id, vertical, variant=None, **kwargs):
+    def __init__(self, monitor_id, vertical, variant="single", **kwargs):
+        variant = variant or "single"
         self._record_icon = Icon(icon_name="record-duotone", icon_size=16, visible=False, style_classes=["recording-indicator"])
         self._bluetooth_icon = BluetoothIcon(16)
         self._scroll_accumulator = 0.0

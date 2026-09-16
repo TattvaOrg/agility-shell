@@ -28,7 +28,7 @@ WIDGET_ICONS: dict[str, str] = {
     "Tray":          "caret-up-duotone",
     "Calendar":      "calendar-blank-duotone",
     "Clock":         "clock-duotone",
-    "Settings":      "gear-six-duotone",
+    "Settings":      "sliders-horizontal-duotone",
     "Notifications": "bell-duotone",
     "Energy":        "battery-charging-duotone",
     "Bluetooth":     "bluetooth-duotone",
@@ -1610,7 +1610,8 @@ class DashSettingsPage(Box):
         if section_name not in bar_cfg:
             bar_cfg[section_name] = []
 
-        bar_cfg[section_name].append(widget_name)
+        item = {"widget": widget_name, "variant": "single"} if widget_name == "Settings" else widget_name
+        bar_cfg[section_name].append(item)
         user_options.save()
 
         bm = self._bar_manager or singletons.bar_manager

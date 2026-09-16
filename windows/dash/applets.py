@@ -613,7 +613,8 @@ class DashAppletPage(DashPage):
         bar_cfg = user_options.bars.configs[0]["bars"][0]
         if section_name not in bar_cfg:
             bar_cfg[section_name] = []
-        bar_cfg[section_name].append(key)
+        item = {"widget": key, "variant": "single"} if key == "Settings" else key
+        bar_cfg[section_name].append(item)
         user_options.save()
         if self._bar_manager and hasattr(self._bar_manager, "reload_bars"):
             self._bar_manager.reload_bars()

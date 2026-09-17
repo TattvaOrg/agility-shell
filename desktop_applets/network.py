@@ -94,9 +94,16 @@ class DesktopNetwork(Box):
         if hasattr(network, "wifi") and network.wifi:
             network.wifi.connect("changed", self._on_network_changed)
 
-        self._timer = GLib.timeout_add(1000, self._update_stats)
+        self.connect("destroy", self._on_destroy)
+
+        self._timer = GLib.timeout_add(1500, self._update_stats)
         self._update_stats()
         self._on_network_changed()
+
+    def _on_destroy(self, *_):
+        if self._timer:
+            GLib.source_remove(self._timer)
+            self._timer = None
 
     def _on_network_changed(self, *_):
         try:
@@ -123,6 +130,8 @@ class DesktopNetwork(Box):
             pass
 
     def _update_stats(self) -> bool:
+        if not self.get_mapped():
+            return True
         try:
             net = psutil.net_io_counters()
             now = time.time()

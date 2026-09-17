@@ -22,7 +22,7 @@ class SysMonService(Service):
     def mem_total_str(self) -> str:
         return self._mem_total_str
 
-    def __init__(self, interval_ms: int = 2000, **kwargs):
+    def __init__(self, interval_ms: int = 3000, **kwargs):
         super().__init__(**kwargs)
         self._cpu_usage = 0.0
         self._mem_usage = 0.0
@@ -30,9 +30,26 @@ class SysMonService(Service):
         self._mem_total_str = "0 MB"
         self._last_cpu_total = 0
         self._last_cpu_idle = 0
+        self._interval_ms = interval_ms
+        self._timer_id = None
 
         self._update()
-        GLib.timeout_add(interval_ms, self._poll)
+        self.start_polling(self._interval_ms)
+
+    def start_polling(self, interval_ms: int | None = None):
+        if interval_ms is not None:
+            self._interval_ms = interval_ms
+        if self._timer_id:
+            GLib.source_remove(self._timer_id)
+        self._timer_id = GLib.timeout_add(self._interval_ms, self._poll)
+
+    def stop_polling(self):
+        if self._timer_id:
+            GLib.source_remove(self._timer_id)
+            self._timer_id = None
+
+    def set_interval(self, interval_ms: int):
+        self.start_polling(interval_ms)
 
     def _poll(self) -> bool:
         self._update()

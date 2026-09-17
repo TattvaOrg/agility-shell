@@ -396,6 +396,10 @@ class Dash(Window):
 
     def toggle(self, active_monitor=None):
         if self.is_visible():
+            try:
+                GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
+            except Exception:
+                pass
             self.revealer.close(on_done=self._hide)
             if self.dismiss_layer._blur_ctx:
                 disable_blur(self.dismiss_layer._blur_ctx)
@@ -433,6 +437,12 @@ class Dash(Window):
 
             self.show()
             self.revealer.open()
+            try:
+                GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+            except Exception:
+                pass
+            if self._current_page_name() in _PAGES_WITH_SEARCH and hasattr(self.header, "_entry") and self.header._entry:
+                GLib.idle_add(lambda: (self.header._entry.grab_focus(), False)[1])
 
             if active_monitor is not None:
                 on_applets = (
@@ -457,6 +467,15 @@ class Dash(Window):
         if not self.is_visible():
             self.toggle(active_monitor)
         edit_mode.enable()
+
+    def open_settings(self, section=None, active_monitor=None):
+        self.h_group_1.set_visible_child(self.settings)
+        self.v_stack.set_visible_child(self.h_group_1)
+        self._sync_header()
+        if section and hasattr(self.settings, "switch_to_page"):
+            self.settings.switch_to_page(section)
+        if not self.is_visible():
+            self.toggle(active_monitor)
 
     def toggle_widgets(self, active_monitor=None):
         self.h_group_1.set_visible_child(self.widgets)
@@ -492,6 +511,11 @@ class Dash(Window):
             self.toggle(active_monitor)
 
     def _hide(self):
+        try:
+            GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
+        except Exception:
+            pass
+        self.set_visible(False)
         self.hide()
         self.launcher.exit_drag_receive_mode()
         if self._in_canvas_mode:

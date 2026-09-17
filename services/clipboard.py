@@ -19,15 +19,28 @@ class ClipboardService(Service):
         self._clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         self._last_text = ""
 
-        # Poll clipboard changes smoothly
-        GLib.timeout_add(1000, self._check_clipboard)
+        # Event-driven clipboard listening (zero CPU polling)
+        try:
+            self._clipboard.connect("owner-change", self._on_owner_change)
+            self._clipboard.request_text(self._on_text_received)
+        except Exception as e:
+            logger.warning(f"[ClipboardService] Failed to connect owner-change: {e}")
+            GLib.timeout_add(5000, self._check_clipboard)
+
+    def _on_owner_change(self, clipboard, event):
+        try:
+            clipboard.request_text(self._on_text_received)
+        except Exception:
+            pass
+
+    def _on_text_received(self, clipboard, text, data=None):
+        if text and text.strip() and text != self._last_text:
+            self._last_text = text
+            self.add_item(text)
 
     def _check_clipboard(self) -> bool:
         try:
-            text = self._clipboard.wait_for_text()
-            if text and text.strip() and text != self._last_text:
-                self._last_text = text
-                self.add_item(text)
+            self._clipboard.request_text(self._on_text_received)
         except Exception as e:
             logger.debug(f"[ClipboardService] Error reading clipboard: {e}")
         return True

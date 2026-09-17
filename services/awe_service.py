@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from loguru import logger
 from fabric.core.service import Service, Signal
-from gi.repository import GLib
+from gi.repository import GLib, Gio
 from user_options import user_options
 
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -130,10 +130,39 @@ class AweService(Service):
         self._widgets_visibility: dict[str, bool] = {}
         self._current_theme: str = "liquid_glass"
         self._last_mtime: float = 0.0
+        self._file_monitor = None
         self._load_visibility()
         self._load_theme()
         self._update_last_mtime()
-        GLib.timeout_add(400, self._poll_settings_mtime)
+        self._setup_settings_monitor()
+
+    def _setup_settings_monitor(self) -> None:
+        f = self._get_read_settings_file()
+        if f and os.path.exists(f):
+            try:
+                gfile = Gio.File.new_for_path(f)
+                self._file_monitor = gfile.monitor_file(Gio.FileMonitorFlags.NONE, None)
+                self._file_monitor.connect("changed", self._on_file_changed)
+                return
+            except Exception as e:
+                logger.debug(f"[desktop-widgets] File monitor fallback: {e}")
+        # Relaxed polling fallback only if file monitor fails
+        GLib.timeout_add(3000, self._poll_settings_mtime)
+
+    def _on_file_changed(self, monitor, file, other_file, event_type):
+        if event_type in (Gio.FileMonitorEvent.CHANGES_DONE_HINT, Gio.FileMonitorEvent.CREATED):
+            self._handle_settings_update()
+
+    def _handle_settings_update(self):
+        self._load_visibility()
+        self._load_theme()
+        f = self._get_read_settings_file()
+        if f == PRIMARY_SETTINGS_FILE and os.path.exists(PRIMARY_SETTINGS_FILE):
+            try:
+                shutil.copy2(PRIMARY_SETTINGS_FILE, LEGACY_SETTINGS_FILE)
+            except Exception:
+                pass
+        self.settings_changed()
 
     def _update_last_mtime(self) -> None:
         f = self._get_read_settings_file()
@@ -151,14 +180,7 @@ class AweService(Service):
             mt = os.path.getmtime(f)
             if mt > self._last_mtime:
                 self._last_mtime = mt
-                self._load_visibility()
-                self._load_theme()
-                if f == PRIMARY_SETTINGS_FILE and os.path.exists(PRIMARY_SETTINGS_FILE):
-                    try:
-                        shutil.copy2(PRIMARY_SETTINGS_FILE, LEGACY_SETTINGS_FILE)
-                    except Exception:
-                        pass
-                self.settings_changed()
+                self._handle_settings_update()
         except Exception:
             pass
         return GLib.SOURCE_CONTINUE

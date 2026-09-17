@@ -17,6 +17,22 @@ VARIANT_CSS = {
     VARIANT_SCALE_LABEL: "variant-scale-label",
 }
 
+def get_default_scale_size() -> int:
+    try:
+        from user_options import user_options
+        bh = getattr(user_options.settings, "bar_height", 36)
+        if bh >= 46:
+            return 32
+        elif bh >= 40:
+            return 28
+        elif bh >= 34:
+            return 24
+        elif bh >= 30:
+            return 22
+        return 20
+    except Exception:
+        return 24
+
 class BaseButton(EventBox):
     VARIANTS = [VARIANT_ICON, VARIANT_LABEL, VARIANT_ICON_LABEL]
 
@@ -53,11 +69,13 @@ class ProgressButton(Box):
     VARIANTS = [VARIANT_ICON, VARIANT_SCALE, VARIANT_ICON_LABEL, VARIANT_SCALE_LABEL]
 
     def __init__(self, icon, label="", variant=VARIANT_SCALE_LABEL,
-                size=32, icon_size=16, icon_size_standalone=16, line_width=2, **kwargs):
+                size=None, icon_size=16, icon_size_standalone=16, line_width=2, **kwargs):
         self._variant = variant
         self._label_widget = Label(label=label)
         # self._label_widget.set_yalign(0.55)
         self.scale = None
+        if size is None or size == 32:
+            size = get_default_scale_size()
 
         if callable(icon):
             built_icon = icon(icon_size) if variant in (VARIANT_SCALE, VARIANT_SCALE_LABEL) else icon(icon_size_standalone)
@@ -105,6 +123,27 @@ class ProgressButton(Box):
     def _update_label(self, text: str):
         self._label_widget.set_label(text)
 
+    def apply_bar_height(self, height: int):
+        if height >= 46:
+            new_size = 32
+        elif height >= 40:
+            new_size = 28
+        elif height >= 34:
+            new_size = 24
+        elif height >= 30:
+            new_size = 22
+        else:
+            new_size = 20
+        if self.scale:
+            self.scale.set_size_request(new_size, new_size)
+            try:
+                inner = self.scale.get_child()
+                if inner:
+                    inner_icon_sz = min(16, max(12, new_size - 4))
+                    inner.set_size_request(inner_icon_sz, inner_icon_sz)
+            except Exception:
+                pass
+
 class StatButton(Box):
     """
     Base class for scrollable stat buttons (volume, brightness, etc).
@@ -124,12 +163,14 @@ class StatButton(Box):
     VARIANTS = [VARIANT_ICON, VARIANT_SCALE, VARIANT_ICON_LABEL, VARIANT_SCALE_LABEL]
 
     def __init__(self, icon, label="", variant=VARIANT_ICON_LABEL,
-                size=32, icon_size=16, icon_size_standalone=16, line_width=2, **kwargs):
+                size=None, icon_size=16, icon_size_standalone=16, line_width=2, **kwargs):
         self._variant = variant
         self._label_widget = Label(label=label)
         # self._label_widget.set_yalign(0.55)
         self.scale = None
         self._scroll_accumulator = 0.0
+        if size is None or size == 32:
+            size = get_default_scale_size()
 
         if callable(icon):
             actual_icon_scale = icon(icon_size)
@@ -208,4 +249,24 @@ class StatButton(Box):
     def _update_value(self, value: float):
         if self.scale:
             self.scale.animate_value(value)
-            
+
+    def apply_bar_height(self, height: int):
+        if height >= 46:
+            new_size = 32
+        elif height >= 40:
+            new_size = 28
+        elif height >= 34:
+            new_size = 24
+        elif height >= 30:
+            new_size = 22
+        else:
+            new_size = 20
+        if self.scale:
+            self.scale.set_size_request(new_size, new_size)
+            try:
+                inner = self.scale.get_child()
+                if inner:
+                    inner_icon_sz = min(16, max(12, new_size - 4))
+                    inner.set_size_request(inner_icon_sz, inner_icon_sz)
+            except Exception:
+                pass

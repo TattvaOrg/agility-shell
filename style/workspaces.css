@@ -13,7 +13,7 @@
 }
 
 .workspace-dots-container {
-    padding: 15px 13px;
+    padding: 11px 13px;
     background-color: var(--surface_container);
     border-radius: apply(radius-m);
 }

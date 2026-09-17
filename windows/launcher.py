@@ -227,7 +227,7 @@ class LauncherApplet(Applet):
             h_expand=True,
             placeholder="Type to search...",
             on_changed=lambda e, *_: self._search(e.get_text()),
-            on_activate=lambda *_: self._list_box.get_children()[0].launch() if not self._grid_mode and self._list_box.get_children() else None,
+            on_activate=lambda *_: self._launch_first(),
         )
 
         entry_box = Box(
@@ -299,12 +299,35 @@ class LauncherApplet(Applet):
             self._entry.set_position(-1)
         return False
 
+    def _launch_first(self):
+        if self._grid_mode:
+            for child in self._grid_box.get_children():
+                if hasattr(child, "get_children"):
+                    items = child.get_children()
+                    if items:
+                        items[0].launch()
+                        return
+        else:
+            children = self._list_box.get_children()
+            if children:
+                children[0].launch()
+                return
+
     def _on_entry_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            if self._entry.get_text():
+                self._entry.set_text("")
+                return True
+            if hasattr(self.window, "toggle"):
+                self.window.toggle()
+            return True
         if event.keyval == Gdk.KEY_Down:
             if self._grid_mode:
                 grid = self._grid_box.get_children()
-                if grid:
-                    grid[0].get_children()[-1].grab_focus()
+                if grid and hasattr(grid[0], "get_children"):
+                    children = grid[0].get_children()
+                    if children:
+                        children[0].grab_focus()
             else:
                 children = self._list_box.get_children()
                 if children:
@@ -347,6 +370,7 @@ class LauncherApplet(Applet):
                 self._search(current_text)
             else:
                 self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
+            GLib.idle_add(lambda: (self._entry.grab_focus(), False)[1])
 
     def _sorted_by_usage(self, apps: list) -> list:
         usage = load_usage()

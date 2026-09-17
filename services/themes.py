@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import threading
 
 from fabric.core.service import Service, Signal, Property
 from gi.repository import GLib
@@ -10,7 +11,7 @@ from user_options import user_options
 from .wallpaper import WallpaperService
 from .templates import template_service, MATUGEN_CONFIG_CACHE
 
-from services.paths import get_cache_path, get_theme_dirs
+from services.paths import get_cache_path, get_theme_dirs, get_user_config_dir
 
 CACHE_THEME_PATH = get_cache_path("theme.json")
 
@@ -104,6 +105,9 @@ class ThemeService(Service):
         self._connect_wallpaper_service()
 
         self._load_current_theme()
+        user_colors = os.path.join(get_user_config_dir(), "style", "colors.css")
+        if not os.path.isfile(user_colors) or os.path.getsize(user_colors) == 0:
+            self.apply()
         logger.info("[ThemeService] initialised")
 
     def _connect_wallpaper_service(self) -> None:
@@ -218,7 +222,7 @@ class ThemeService(Service):
             if getattr(self, "_matugen_timer_id", None) is not None:
                 GLib.source_remove(self._matugen_timer_id)
                 self._matugen_timer_id = None
-            self._matugen_timer_id = GLib.timeout_add(300, self._apply_debounced)
+            self._matugen_timer_id = GLib.timeout_add(50, self._apply_debounced)
 
     def _apply_debounced(self) -> bool:
         self._matugen_timer_id = None
@@ -322,8 +326,8 @@ class ThemeService(Service):
             if active_name == WALLPAPER_THEME:
                 wp_path = (
                     self._wallpaper_service.wallpaper_path
-                    if self._wallpaper_service
-                    else ""
+                    if (self._wallpaper_service and self._wallpaper_service.wallpaper_path)
+                    else getattr(user_options.wallpaper, "path", "")
                 )
                 if not wp_path or not os.path.isfile(wp_path):
                     logger.warning("[ThemeService] no wallpaper set, cannot apply Matugen mode")
@@ -359,7 +363,21 @@ class ThemeService(Service):
             cmd += ["-c", MATUGEN_CONFIG_CACHE]
 
             logger.info(f"[ThemeService] running: {' '.join(cmd)}")
-            subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            def _run_matugen():
+                try:
+                    res = subprocess.run(cmd, capture_output=True, text=True)
+                    if res.returncode != 0:
+                        logger.error(f"[ThemeService] matugen failed (code {res.returncode}): {res.stderr}")
+                    else:
+                        logger.info(f"[ThemeService] matugen generated theme successfully")
+                        from . import singletons
+                        if hasattr(singletons, "style_service") and singletons.style_service:
+                            GLib.idle_add(singletons.style_service.reload)
+                except Exception as e:
+                    logger.error(f"[ThemeService] unexpected error running matugen: {e}")
+
+            threading.Thread(target=_run_matugen, daemon=True).start()
             logger.info(f"[ThemeService] launched matugen: mode={mode}, theme={active_name}")
 
         except FileNotFoundError:

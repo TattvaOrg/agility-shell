@@ -159,9 +159,107 @@ Mod+Space { spawn "fabric-cli" "exec" "agility-shell" "bar_manager.toggle('Launc
 Mod+N     { spawn "fabric-cli" "exec" "agility-shell" "bar_manager.toggle('Notifications')"; }
 ```
 
-### Available Applets & Dash Views
-You can pass any of these identifier handles into `bar_manager.toggle('<Applet>')`:
-* `Dash`, `Launcher`, `Settings`, `Wallpapers`, `Themes`, `Notifications`, `Clock`, `Calendar`, `Weather`, `Media`, `Volume`, `Wifi`, `Bluetooth`, `Energy`, `Session`, `Calculator`, `Keyboard`, `Screenshot`, `Processes`.
+```mermaid
+flowchart TD
+
+subgraph group_lifecycle["Lifecycle"]
+  node_agl{{"agl CLI<br/>operations CLI"}}
+  node_startup["Startup wrappers<br/>launcher scripts<br/>[start.sh]"]
+  node_installer["Installer<br/>deployment script<br/>[install.sh]"]
+  node_systemd["User service<br/>systemd unit"]
+end
+
+subgraph group_ui["GTK Shell UI"]
+  node_main["Shell runtime<br/>Python entry point<br/>[main.py]"]
+  node_bar["Configurable bar<br/>panel builder<br/>[bar.py]"]
+  node_bar_widgets["Bar widgets<br/>panel components<br/>[base.py]"]
+  node_dock_state["Dock state<br/>widget state<br/>[dock_state.py]"]
+  node_quick_settings["Quick settings<br/>overlay window<br/>[quick_settings.py]"]
+  node_dash["Dashboard<br/>overlay window<br/>[dash.py]"]
+  node_notifications["Notifications UI<br/>overlay window<br/>[notifications.py]"]
+end
+
+subgraph group_services["Service Boundaries"]
+  node_shell_services["Shared services<br/>OS integration layer<br/>[singletons.py]"]
+  node_player["Media service<br/>service adapter<br/>[player.py]"]
+  node_network["Network service<br/>service adapter<br/>[network.py]"]
+  node_notification_store[("Notification store<br/>service state")]
+end
+
+subgraph group_wm["Compositor Adaptation"]
+  node_wm_base["WM abstraction<br/>compositor interface<br/>[service.py]"]
+  node_wm_adapters["Compositor adapters<br/>[service.py]"]
+end
+
+subgraph group_appearance["Appearance &amp; Effects"]
+  node_wallpaper_theme["Wallpaper and themes<br/>personalization services<br/>[wallpaper.py]"]
+  node_styles["Shared CSS<br/>GTK stylesheets<br/>[style.css]"]
+  node_native_effects["Native visual effects<br/>GTK / C extensions<br/>[blur.py]"]
+end
+
+node_quickshell["Alternate QML shell<br/>experimental surface<br/>[shell.qml]"]
+
+node_installer -->|"registers"| node_systemd
+node_agl -->|"starts"| node_startup
+node_agl -->|"manages"| node_systemd
+node_systemd -->|"launches"| node_startup
+node_startup -->|"invokes"| node_main
+node_main -->|"builds"| node_bar
+node_main -->|"hosts"| node_quick_settings
+node_main -->|"hosts"| node_dash
+node_main -->|"hosts"| node_notifications
+node_bar -->|"composes"| node_bar_widgets
+node_bar_widgets -->|"uses"| node_dock_state
+node_bar_widgets -->|"consumes"| node_shell_services
+node_quick_settings -->|"consumes"| node_shell_services
+node_dash -->|"consumes"| node_shell_services
+node_notifications -->|"renders"| node_notification_store
+node_shell_services -->|"includes"| node_player
+node_shell_services -->|"includes"| node_network
+node_shell_services -->|"includes"| node_notification_store
+node_shell_services -->|"uses"| node_wm_base
+node_wm_base -->|"implemented by"| node_wm_adapters
+node_main -->|"loads"| node_styles
+node_wallpaper_theme -->|"drives colors"| node_styles
+node_main -->|"uses"| node_wallpaper_theme
+node_main -.->|"uses"| node_native_effects
+
+click node_agl "https://github.com/tattvaorg/agility-shell/blob/main/bin/agl"
+click node_startup "https://github.com/tattvaorg/agility-shell/blob/main/scripts/start.sh"
+click node_installer "https://github.com/tattvaorg/agility-shell/blob/main/scripts/install.sh"
+click node_systemd "https://github.com/tattvaorg/agility-shell/blob/main/systemd/agility-shell.service"
+click node_main "https://github.com/tattvaorg/agility-shell/blob/main/main.py"
+click node_bar "https://github.com/tattvaorg/agility-shell/blob/main/bar.py"
+click node_bar_widgets "https://github.com/tattvaorg/agility-shell/blob/main/bar_widgets/base.py"
+click node_dock_state "https://github.com/tattvaorg/agility-shell/blob/main/bar_widgets/dock/dock_state.py"
+click node_quick_settings "https://github.com/tattvaorg/agility-shell/blob/main/windows/quick_settings/quick_settings.py"
+click node_dash "https://github.com/tattvaorg/agility-shell/blob/main/windows/dash/dash.py"
+click node_notifications "https://github.com/tattvaorg/agility-shell/blob/main/windows/notifications.py"
+click node_shell_services "https://github.com/tattvaorg/agility-shell/blob/main/services/singletons.py"
+click node_player "https://github.com/tattvaorg/agility-shell/blob/main/services/player.py"
+click node_network "https://github.com/tattvaorg/agility-shell/blob/main/services/network.py"
+click node_notification_store "https://github.com/tattvaorg/agility-shell/blob/main/services/notification_store.py"
+click node_wm_base "https://github.com/tattvaorg/agility-shell/blob/main/services/wm/base/service.py"
+click node_wm_adapters "https://github.com/tattvaorg/agility-shell/blob/main/services/wm/niri/service.py"
+click node_wallpaper_theme "https://github.com/tattvaorg/agility-shell/blob/main/services/wallpaper.py"
+click node_styles "https://github.com/tattvaorg/agility-shell/blob/main/style/style.css"
+click node_native_effects "https://github.com/tattvaorg/agility-shell/blob/main/snippets/blur/blur.py"
+click node_quickshell "https://github.com/tattvaorg/agility-shell/blob/main/quickshell/agility/shell.qml"
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
+classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
+class node_agl,node_startup,node_installer,node_systemd toneBlue
+class node_main,node_bar,node_bar_widgets,node_dock_state,node_quick_settings,node_dash,node_notifications toneAmber
+class node_shell_services,node_player,node_network,node_notification_store toneMint
+class node_wm_base,node_wm_adapters toneRose
+class node_wallpaper_theme,node_styles,node_native_effects toneIndigo
+class node_quickshell toneNeutral
+```
 
 ---
 

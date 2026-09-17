@@ -20,18 +20,19 @@ PILL_BEZIER_SLIDE = (0.4, 0.0, 0.2, 1.0)
 PILL_BEZIER_MORPH = (0.4, 0.0, 1.0, 1.0)
 
 class WorkspaceButton(EventBox):
-    def __init__(self, workspace, windows, variant):
+    def __init__(self, workspace, windows, variant, icon_size: int = 16):
         self.variant = variant
         self.workspace = workspace
+        self._icon_size = icon_size
         self.icon_map: dict[int, Image] = {}
-        self._icon_box = Box(spacing=8)
+        self._icon_box = Box(spacing=6)
 
         for w in windows:
             if w.workspace_id == workspace.id:
                 icon = Image(
                     css_classes=["icon"],
                     icon_name=self._get_icon(w),
-                    icon_size=20,
+                    icon_size=self._icon_size,
                 )
                 self.icon_map[w.id] = icon
                 self._icon_box.add(icon)
@@ -40,11 +41,27 @@ class WorkspaceButton(EventBox):
             child=Box(
                 style_classes=["workspace"] + (["active"] if workspace.is_active else []),
                 orientation="v",
-                spacing=8,
+                spacing=6,
                 children=[self._icon_box],
             ),
         )
         self.connect("button-release-event", self._on_click)
+
+    def apply_bar_height(self, height: int):
+        if height <= 28:
+            sz = 14
+        elif height <= 34:
+            sz = 16
+        elif height <= 40:
+            sz = 18
+        else:
+            sz = 20
+        self._icon_size = sz
+        for icon in self.icon_map.values():
+            try:
+                icon.set_pixel_size(sz)
+            except Exception:
+                pass
 
     def _on_click(self, _, event):
         if edit_mode.edit_mode:
@@ -73,7 +90,7 @@ class WorkspaceButton(EventBox):
         icon = Image(
             css_classes=["icon"],
             icon_name=self._get_icon(window),
-            icon_size=20,
+            icon_size=getattr(self, "_icon_size", 16),
         )
         self.icon_map[window.id] = icon
 
@@ -549,3 +566,8 @@ class Workspaces(EventBox):
         else:
             next_idx = (current_idx + 1) % len(monitor_workspaces)
         monitor_workspaces[next_idx].switch_to()
+
+    def apply_bar_height(self, height: int):
+        for btn in self._ws_buttons.values():
+            if hasattr(btn, "apply_bar_height"):
+                btn.apply_bar_height(height)

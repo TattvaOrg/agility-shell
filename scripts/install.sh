@@ -475,6 +475,22 @@ seed_user_configuration() {
         fi
     done
 
+    # Prune stale legacy component stylesheets in user style dir that shadow updated system stylesheets
+    for f in "$USER_CONFIG/style"/*.css; do
+        [[ -f "$f" ]] || continue
+        local fname
+        fname="$(basename "$f")"
+        case "$fname" in
+            borders.css|fonts.css|colors.css|agility-shell-colors.css|custom*.css)
+                ;;
+            *)
+                if [[ -f "$src_data/style/$fname" ]]; then
+                    rm -f "$f"
+                fi
+                ;;
+        esac
+    done
+
     # Seed baseline niri.kdl if not present
     if [[ -f "$src_data/config/niri.kdl" ]]; then
         mkdir -p "$USER_CONFIG/config"

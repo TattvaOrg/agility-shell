@@ -69,6 +69,10 @@ class Icon(Svg):
         self._icon_name = value
         self.set_from_file(get_svg_path(value))
 
+    def set_size(self, size: int):
+        self.set_size_request(size, size)
+        self.queue_draw()
+
     def do_finalize_handle(self):
         if not self._handle:
             return

@@ -84,6 +84,23 @@ class DockItem(EventBox):
         if event.detail != Gdk.NotifyType.INFERIOR:
             self._icon_container.remove_style_class("hovered")
 
+    def apply_bar_height(self, height: int):
+        if height <= 28:
+            sz = 16
+        elif height <= 34:
+            sz = 18
+        elif height <= 40:
+            sz = 20
+        elif height <= 44:
+            sz = 22
+        else:
+            sz = 24
+        if hasattr(self, "_icon") and self._icon:
+            try:
+                self._icon.set_pixel_size(sz)
+            except Exception:
+                pass
+
     def _resolve_icon(self) -> str:
         return (
             get_app_icon_name(self.app_id)

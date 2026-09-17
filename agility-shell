@@ -52,6 +52,16 @@ if [[ -f "$SELF_DIR/main.py" && -f "$SELF_DIR/bar.py" ]]; then
     else
         PYTHON_EXEC="python3"
     fi
+elif [[ -d "${XDG_DATA_HOME:-$HOME/.local/share}/agility-shell" && -f "${XDG_DATA_HOME:-$HOME/.local/share}/agility-shell/main.py" ]]; then
+    # User data directory installation (non-root)
+    SOURCE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/agility-shell"
+    if [[ -x "$SOURCE_DIR/venv/bin/python3" ]]; then
+        PYTHON_EXEC="$SOURCE_DIR/venv/bin/python3"
+    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
+        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
+    else
+        PYTHON_EXEC="python3"
+    fi
 elif [[ -d "$SYSTEM_DATA" && -f "$SYSTEM_DATA/main.py" ]]; then
     # Standard system-wide FHS installation
     SOURCE_DIR="$SYSTEM_DATA"

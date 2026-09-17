@@ -22,6 +22,7 @@ class Dock(EventBox):
         self._vertical = vertical
         self._monitor_output = get_connector_from_monitor_id(monitor_id)
         self._state = DockState(user_options)
+        self._current_bar_height = getattr(user_options.settings, "bar_height", 36)
 
         super().__init__(
             style_classes=["dock"],
@@ -93,6 +94,8 @@ class Dock(EventBox):
                 on_pin_toggle=self._on_pin_toggle,
             )
             item._icon_container.add_style_class("pinned")
+            if hasattr(item, "apply_bar_height"):
+                item.apply_bar_height(self._current_bar_height)
             self._pinned_box.add(item)
             # item._setup_drag()
             item.show_all()
@@ -130,12 +133,23 @@ class Dock(EventBox):
                     on_workspace_move=self._on_workspace_move,
                     on_pin_toggle=self._on_pin_toggle,
                 )
+                if hasattr(item, "apply_bar_height"):
+                    item.apply_bar_height(self._current_bar_height)
                 self._workspace_box.add(item)
                 item.show_all()
 
         self._workspace_box.set_visible(len(self._workspace_box.children) > 0)
         self._pinned_container.set_visible(len(pinned_items) > 0)
         self._update_pill()
+
+    def apply_bar_height(self, height: int) -> None:
+        self._current_bar_height = height
+        for item in self._pinned_box.get_children():
+            if hasattr(item, "apply_bar_height"):
+                item.apply_bar_height(height)
+        for item in self._workspace_box.get_children():
+            if hasattr(item, "apply_bar_height"):
+                item.apply_bar_height(height)
 
     def _update_pill(self, _retries: int = 0) -> None:
         active = wm.active_window

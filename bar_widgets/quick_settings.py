@@ -13,10 +13,12 @@ class QuickSettingsButton(Box):
         self._bluetooth_icon = BluetoothIcon(16)
         self._scroll_accumulator = 0.0
 
+        self._single_icon = Icon(icon_name="sliders-horizontal-duotone", icon_size=16) if variant == "single" else None
+
         inner = Box(
             style_classes=["bar-button"],
             spacing=4,
-            children=[Icon(icon_name="sliders-horizontal-duotone")] if variant == "single" else [
+            children=[self._single_icon] if variant == "single" else [
                 NetworkIcon(16),
                 self._bluetooth_icon,
                 VolumeIcon(16),
@@ -64,3 +66,16 @@ class QuickSettingsButton(Box):
         self._bluetooth_icon.set_visible(obj.enabled)
     def _on_recorder_changed(self, obj, _):
         self._record_icon.set_visible(obj.active)
+
+    def apply_bar_height(self, height: int):
+        sz = 14 if height <= 28 else (16 if height <= 34 else 18)
+        if hasattr(self, "_single_icon") and self._single_icon:
+            try:
+                self._single_icon.set_size(sz)
+            except Exception:
+                pass
+        if hasattr(self, "_bluetooth_icon") and self._bluetooth_icon:
+            try:
+                self._bluetooth_icon.set_pixel_size(sz)
+            except Exception:
+                pass

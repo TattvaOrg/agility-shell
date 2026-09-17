@@ -65,6 +65,30 @@ class BaseButton(EventBox):
     def _update_icon(self, icon_name: str):
         self._icon.set_property("icon-name", icon_name)
 
+    def apply_bar_height(self, height: int):
+        if height <= 28:
+            icon_sz = 14
+        elif height <= 34:
+            icon_sz = 16
+        else:
+            icon_sz = 18
+        if hasattr(self, "_icon") and self._icon is not None:
+            if hasattr(self._icon, "set_size"):
+                try:
+                    self._icon.set_size(icon_sz)
+                except Exception:
+                    pass
+            elif hasattr(self._icon, "set_pixel_size"):
+                try:
+                    self._icon.set_pixel_size(icon_sz)
+                except Exception:
+                    pass
+            elif hasattr(self._icon, "set_size_request"):
+                try:
+                    self._icon.set_size_request(icon_sz, icon_sz)
+                except Exception:
+                    pass
+
 class ProgressButton(Box):
     VARIANTS = [VARIANT_ICON, VARIANT_SCALE, VARIANT_ICON_LABEL, VARIANT_SCALE_LABEL]
 

@@ -8,6 +8,36 @@ set -euo pipefail
 SYSTEM_DATA="/usr/share/agility-shell"
 SYSTEM_VENV="/usr/lib/agility-shell/venv"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
+LOG_FILE="$STATE_DIR/shell.log"
+
+# Parse arguments
+FOREGROUND=false
+PASS_ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == "--foreground" || "$arg" == "-f" ]]; then
+        FOREGROUND=true
+    else
+        PASS_ARGS+=("$arg")
+    fi
+done
+
+# Check if Agility Shell is already running
+is_running() {
+    pgrep -x "agility-shell" >/dev/null 2>&1 || \
+    pgrep -f "python.*agility-shell/main\.py" >/dev/null 2>&1 || \
+    (command -v fabric-cli >/dev/null 2>&1 && fabric-cli list-all 2>/dev/null | grep -q "agility-shell:")
+}
+
+if is_running; then
+    # Already active: toggle Dash/Settings gracefully as requested
+    if command -v fabric-cli >/dev/null 2>&1; then
+        fabric-cli exec agility-shell "bar_manager.open_settings()" >/dev/null 2>&1 || \
+        fabric-cli exec agility-shell "bar_manager.toggle('Dash')" >/dev/null 2>&1 || true
+    fi
+    echo "[agility-shell] Agility Shell is already running. Toggling Dash / Settings."
+    exit 0
+fi
 
 # Determine source and python binary
 SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" 2>/dev/null && pwd || echo "")"
@@ -47,6 +77,28 @@ fi
 
 export PYTHONPATH="$SOURCE_DIR${PYTHONPATH:+:$PYTHONPATH}"
 export AGILITY_DIR="$SOURCE_DIR"
-
 cd "$SOURCE_DIR"
-exec "$PYTHON_EXEC" main.py "$@"
+
+# If running directly inside systemd (INVOCATION_ID set) or in foreground:
+if [[ -n "${INVOCATION_ID:-}" || "$FOREGROUND" == true ]]; then
+    exec "$PYTHON_EXEC" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}
+fi
+
+# Prefer systemd user unit when available outside systemd
+if systemctl --user list-unit-files agility-shell.service &>/dev/null; then
+    echo "[agility-shell] Starting Agility Shell via systemd user unit..."
+    systemctl --user reset-failed agility-shell.service 2>/dev/null || true
+    systemctl --user start agility-shell.service
+    exit 0
+fi
+
+# Fallback clean background daemonization
+mkdir -p "$STATE_DIR"
+if command -v setsid >/dev/null 2>&1; then
+    setsid "$PYTHON_EXEC" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
+else
+    nohup "$PYTHON_EXEC" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
+fi
+disown
+echo "[agility-shell] Started Agility Shell daemon in background."
+exit 0

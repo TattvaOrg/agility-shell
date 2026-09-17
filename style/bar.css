@@ -2,7 +2,7 @@
 
 .bar {
     background-color: var(--background);
-    padding: 6px;
+    padding: 4px;
 }
 
 @keyframes bar-slide-in-top {
@@ -335,7 +335,7 @@
 .bar-button {
     border-radius: apply(radius-m);
     padding: 0px 10px;
-    min-height: 36px;
+    min-height: 28px;
 }
 
 .bar-button.variant-scale-label {
@@ -418,11 +418,11 @@
 
 .draggable-section {
     transition: 0.3s ease;
-    min-height: 36px;
+    min-height: 28px;
 }
 
 .draggable-section.edit-mode {
-    min-width: 36px;
+    min-width: 28px;
 }
 
 .draggable-section.center {
@@ -467,8 +467,8 @@
 }
 
 .drop-placeholder {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 28px;
+    min-height: 28px;
     border-radius: apply(radius-m);
     background: alpha(var(--on_surface), 0.1);
     transition: all 0.3s ease;

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import cairo
 import math
+from loguru import logger
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
@@ -140,6 +141,85 @@ TARGET = Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)
 open_applet: AppletWindow | None = None
 _dragging_key: str | None = None
 _dragging_widget: Gtk.Widget | None = None
+_bar_height_provider: Gtk.CssProvider | None = None
+
+def get_bar_dimensions(total_height: int) -> tuple[int, int, int]:
+    """
+    Given total_height in [26, 48]:
+    Returns (v_padding, widget_height, scale_size)
+    """
+    total_height = max(26, min(48, int(total_height)))
+    if total_height >= 46:
+        v_padding = 6
+    elif total_height >= 40:
+        v_padding = 5
+    elif total_height >= 34:
+        v_padding = 4
+    elif total_height >= 30:
+        v_padding = 3
+    else:
+        v_padding = 2
+    widget_height = total_height - (2 * v_padding)
+    scale_size = max(18, widget_height - 4)
+    return v_padding, widget_height, scale_size
+
+def update_bar_height_css(height: int):
+    global _bar_height_provider
+    v_padding, widget_h, scale_sz = get_bar_dimensions(height)
+    dot_pad = max(2, (widget_h - 6) // 2)
+    ws_size = max(18, widget_h - 4)
+    ws_margin = max(1, (widget_h - ws_size) // 2)
+    ws_pad = max(2, (widget_h - 20) // 2)
+    dock_pad = max(0, (widget_h - 24) // 2)
+
+    css = f"""
+    .bar {{
+        padding-top: {v_padding}px;
+        padding-bottom: {v_padding}px;
+    }}
+    .bar-button {{
+        min-height: {widget_h}px;
+    }}
+    .draggable-section {{
+        min-height: {widget_h}px;
+    }}
+    .draggable-section.edit-mode {{
+        min-width: {widget_h}px;
+    }}
+    .drop-placeholder {{
+        min-width: {widget_h}px;
+        min-height: {widget_h}px;
+    }}
+    .workspace-dots-container {{
+        padding-top: {dot_pad}px;
+        padding-bottom: {dot_pad}px;
+    }}
+    .workspace-numbers-container .workspace {{
+        min-height: {ws_size}px;
+        min-width: {ws_size}px;
+        margin-top: {ws_margin}px;
+        margin-bottom: {ws_margin}px;
+    }}
+    .workspace {{
+        padding: {ws_pad}px 7px;
+    }}
+    .dock-item {{
+        padding: {dock_pad}px 6px;
+    }}
+    """
+    if _bar_height_provider is None:
+        _bar_height_provider = Gtk.CssProvider()
+        screen = Gdk.Screen.get_default()
+        if screen:
+            Gtk.StyleContext.add_provider_for_screen(
+                screen,
+                _bar_height_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 10,
+            )
+    try:
+        _bar_height_provider.load_from_data(css.encode("utf-8"))
+    except Exception as e:
+        logger.error(f"[Bar] Failed to update bar height CSS: {e}")
 
 def set_open_applet(applet: AppletWindow | None):
     global open_applet
@@ -319,24 +399,50 @@ class AppletWindow(PopupWindow):
         return False
 
     def toggle(self):
-        if self.is_visible():
+        if self.get_visible():
+            try:
+                GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
+            except Exception:
+                pass
             self.revealer.close(
                 on_done=lambda: self._finish_close()
             )
 
             self.dismiss_layer.set_visible(False)
-            self.revealer._progress_cb = None
+            if hasattr(self.revealer, "progress_cb"):
+                self.revealer.progress_cb = None
 
         else:
             set_open_applet(self)
             self.dismiss_layer.update_margin()
             self.dismiss_layer.set_visible(True)
+            self.set_visible(True)
             self.show()
-            self.revealer.open()
-            self.set_focus(None)
+
+            entry_to_focus = None
+            if hasattr(self, "_content_box"):
+                for child in self._content_box.get_children():
+                    if hasattr(child, "_entry") and child._entry:
+                        entry_to_focus = child._entry
+                        try:
+                            GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.EXCLUSIVE)
+                        except Exception:
+                            pass
+                        self.set_focus(entry_to_focus)
+                        break
+
+            def _after_open():
+                if entry_to_focus:
+                    entry_to_focus.grab_focus()
+                else:
+                    self.set_focus(None)
+
+            self.revealer.open(on_done=_after_open)
 
     def _finish_close(self):
-        GLib.timeout_add(50, self.hide)
+        self.set_visible(False)
+        self.hide()
+        return False
 
     def destroy(self):
         self.dismiss_layer.destroy()
@@ -1645,6 +1751,11 @@ class Bar(Window):
         current_theme = getattr(user_options.settings, "bar_theme", "default")
         self._set_theme_classes(current_theme)
 
+        current_bar_height = getattr(user_options.settings, "bar_height", 36)
+        update_bar_height_css(current_bar_height)
+        v_padding, widget_h, scale_sz = get_bar_dimensions(current_bar_height)
+        self.apply_bar_height(current_bar_height, widget_h, scale_sz)
+
         if hasattr(wm, "connect"):
             try:
                 wm.connect("notify::windows", lambda *_: self._update_smart_autohide())
@@ -1657,6 +1768,46 @@ class Bar(Window):
             GLib.idle_add(self._revealer.set_reveal_child, True)
         else:
             GLib.idle_add(self._update_smart_autohide)
+
+    def apply_bar_height(self, height: int, widget_h: int = None, scale_sz: int = None) -> None:
+        if widget_h is None or scale_sz is None:
+            _, widget_h, scale_sz = get_bar_dimensions(height)
+        for section in self.sections.values():
+            for child in section.get_children():
+                self._update_child_bar_height(child, height, widget_h, scale_sz)
+        self.queue_resize()
+
+    def _update_child_bar_height(self, wrapper, height: int, widget_h: int, scale_sz: int):
+        def _apply_to_widget(w):
+            if not w:
+                return
+            if hasattr(w, "apply_bar_height"):
+                try:
+                    w.apply_bar_height(height)
+                    return
+                except Exception:
+                    pass
+            if hasattr(w, "scale") and w.scale is not None:
+                try:
+                    w.scale.set_size_request(scale_sz, scale_sz)
+                    inner_box = w.scale.get_child()
+                    if inner_box:
+                        inner_icon_sz = min(16, max(12, scale_sz - 4))
+                        inner_box.set_size_request(inner_icon_sz, inner_icon_sz)
+                except Exception:
+                    pass
+            elif hasattr(w, "get_children"):
+                for c in w.get_children():
+                    _apply_to_widget(c)
+
+        if isinstance(wrapper, WidgetWrapper):
+            _apply_to_widget(wrapper.event_box.get_child())
+        elif isinstance(wrapper, GroupWrapper):
+            for eb in wrapper._event_boxes:
+                _apply_to_widget(eb.get_child())
+        elif hasattr(wrapper, "get_children"):
+            for c in wrapper.get_children():
+                _apply_to_widget(c)
 
     def _on_realize(self, *_):
         should_blur = getattr(user_options.settings, "bar_blur", True)
@@ -2145,6 +2296,8 @@ class BarManager:
         self._fallback_popups: dict[str, AppletWindow] = {}
         self._display = Gdk.Display.get_default()
         self._standalone_windows: dict[str, object] = {}
+        current_bar_height = getattr(user_options.settings, "bar_height", 36)
+        update_bar_height_css(current_bar_height)
         for i in range(self._display.get_n_monitors()):
             monitor = self._display.get_monitor(i)
             self._add_bar(monitor, i)
@@ -2241,6 +2394,11 @@ class BarManager:
                 self._dash.toggle(active_monitor)
             return
 
+        if key in ("Settings", "DashSettings"):
+            if self._dash:
+                self._dash.open_settings(None, active_monitor)
+            return
+
         if key == "WallpaperPicker":
             if self._wallpaper_picker is None:
                 self._wallpaper_picker = WallpaperPicker()
@@ -2308,7 +2466,52 @@ class BarManager:
             )
             self._fallback_popups[key]._keys = [key]
 
-        self._fallback_popups[key].toggle()
+        popup = self._fallback_popups[key]
+        if active_monitor is not None:
+            try:
+                popup.set_monitor(active_monitor)
+                if hasattr(popup, "dismiss_layer"):
+                    popup.dismiss_layer.set_monitor(active_monitor)
+            except Exception:
+                pass
+
+        bottom_offset = 16
+        top_offset = 16
+        is_bottom = True
+        for (mon, _), b in self._bars.items():
+            if get_connector_from_monitor_id(b.monitor_id) == active_output:
+                h = b.get_allocated_height()
+                if getattr(b, "alignment", "bottom") == "bottom":
+                    is_bottom = True
+                    if h > 1:
+                        bottom_offset = max(bottom_offset, h + 12)
+                else:
+                    is_bottom = False
+                    if h > 1:
+                        top_offset = max(top_offset, h + 12)
+        if is_bottom:
+            popup.margin = (0, 0, bottom_offset, 0)
+        else:
+            popup.margin = (top_offset, 0, 0, 0)
+
+        popup.toggle()
+
+    def open_settings(self, section: str | None = None):
+        active_output = wm.active_output
+        active_monitor = None
+        for i in range(self._display.get_n_monitors()):
+            monitor = self._display.get_monitor(i)
+            if get_connector_from_monitor_id(i) == active_output:
+                active_monitor = monitor
+                break
+        if self._dash:
+            self._dash.open_settings(section, active_monitor)
+
+    def apply_bar_height(self, height: int) -> None:
+        update_bar_height_css(height)
+        v_padding, widget_h, scale_sz = get_bar_dimensions(height)
+        for bar in self._bars.values():
+            bar.apply_bar_height(height, widget_h, scale_sz)
 
     def apply_bar_opacity(self, opacity: float) -> None:
         for bar in self._bars.values():

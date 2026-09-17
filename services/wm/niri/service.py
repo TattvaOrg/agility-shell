@@ -227,14 +227,21 @@ class Niri(WMService):
         self.notify("active-window", "windows")
 
     def __update_window_layouts(self, data: dict) -> None:
-        for id_, layout in data["changes"]:
+        active_changed = False
+        for id_, layout in data.get("changes", []):
             if id_ in self._windows:
                 self._windows[id_].sync({"layout": layout})
             if id_ == self._active_window.id:
                 self._active_window.sync({"layout": layout})
-                self.notify("active-window")
+                active_changed = True
+
+        old_order = list(self._windows.keys())
         self.__sort_windows()
-        self.notify("windows")
+        new_order = list(self._windows.keys())
+        if old_order != new_order:
+            self.notify("windows")
+        if active_changed:
+            self.notify("active-window")
 
     def __sort_workspaces(self) -> None:
         self._workspaces = dict(

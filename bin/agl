@@ -97,6 +97,9 @@ show_help() {
     echo -e "    ${CYAN}update${RESET}        Update Agility Shell in-place (preserves configs)"
     echo -e "    ${CYAN}uninstall${RESET}     Uninstall Agility Shell (--purge to wipe user configs)"
     echo -e "    ${CYAN}suits${RESET}         Manage desktop suites (list, next, prev, toggle, switch <id>)"
+    echo -e "    ${CYAN}profile${RESET}       Switch/view performance profile (optimized, balanced, dedicated)"
+    echo -e "    ${CYAN}bar${RESET}           Adjust bar dimensions and thickness (agl bar height <26-48>)"
+    echo -e "    ${CYAN}toggle${RESET}        Toggle shell surfaces (dash, settings, launcher, suits, widgets)"
     echo -e ""
     echo -e "${BOLD}OPTIONS:${RESET}"
     echo -e "    ${CYAN}-h, --help${RESET}    Show this help message"
@@ -322,6 +325,140 @@ else:
     esac
 }
 
+cmd_profile() {
+    local target="${1:-}"
+    case "$target" in
+        optimized|balanced|dedicated)
+            if command -v fabric-cli &>/dev/null; then
+                fabric-cli exec agility-shell "profile_service.set_profile('$target')" 2>/dev/null && \
+                success "Performance profile switched to '$target'." || \
+                warn "Shell not currently active. Config updated."
+            fi
+            python3 -c "
+import json, os
+paths = [os.path.expanduser('~/.config/agility-shell/config/config.json'), os.path.expanduser('~/.config/agility-shell/config.json')]
+for p in paths:
+    if os.path.exists(p):
+        try:
+            with open(p, 'r') as f:
+                d = json.load(f)
+            if 'settings' in d:
+                d['settings']['agility_profile'] = '$target'
+                with open(p, 'w') as f:
+                    json.dump(d, f, indent=2)
+        except Exception:
+            pass
+" 2>/dev/null || true
+            ;;
+        "")
+            local current
+            current=$(python3 -c "
+import json, os
+paths = [os.path.expanduser('~/.config/agility-shell/config/config.json'), os.path.expanduser('~/.config/agility-shell/config.json')]
+found = False
+for p in paths:
+    if os.path.exists(p):
+        try:
+            with open(p) as f:
+                print(json.load(f).get('settings', {}).get('agility_profile', 'optimized'))
+                found = True
+                break
+        except Exception:
+            pass
+if not found:
+    print('optimized')
+" 2>/dev/null || echo "optimized")
+            echo -e "${BOLD}Current Agility Performance Profile:${RESET} ${CYAN}$current${RESET}"
+            echo -e "Available profiles: ${GREEN}optimized${RESET}, ${YELLOW}balanced${RESET}, ${RED}dedicated${RESET}"
+            echo -e "Usage: agl profile <optimized|balanced|dedicated>"
+            ;;
+        *)
+            die "Unknown profile: '$target'. Choose from: optimized, balanced, dedicated."
+            ;;
+    esac
+}
+
+cmd_toggle() {
+    local target="${1:-Dash}"
+    case "${target,,}" in
+        dash)
+            fabric-cli exec agility-shell "bar_manager.toggle('Dash')" 2>/dev/null || info "Shell not active."
+            ;;
+        settings)
+            fabric-cli exec agility-shell "bar_manager.open_settings()" 2>/dev/null || info "Shell not active."
+            ;;
+        launcher)
+            fabric-cli exec agility-shell "bar_manager.toggle('Launcher')" 2>/dev/null || info "Shell not active."
+            ;;
+        suits)
+            fabric-cli exec agility-shell "bar_manager.toggle('Suits')" 2>/dev/null || info "Shell not active."
+            ;;
+        applets)
+            fabric-cli exec agility-shell "bar_manager._dash.toggle_applets()" 2>/dev/null || info "Shell not active."
+            ;;
+        widgets)
+            fabric-cli exec agility-shell "bar_manager._dash.toggle_widgets()" 2>/dev/null || info "Shell not active."
+            ;;
+        *)
+            fabric-cli exec agility-shell "bar_manager.toggle('$target')" 2>/dev/null || info "Shell not active."
+            ;;
+    esac
+}
+
+cmd_bar() {
+    local action="${1:-height}"
+    shift || true
+    case "$action" in
+        height|size|thickness)
+            local val="${1:-}"
+            if [[ -n "$val" ]]; then
+                if command -v fabric-cli &>/dev/null; then
+                    fabric-cli exec agility-shell "bar_manager.apply_bar_height($val)" 2>/dev/null || true
+                fi
+                python3 -c "
+import json, os
+paths = [os.path.expanduser('~/.config/agility-shell/config/config.json'), os.path.expanduser('~/.config/agility-shell/config.json')]
+for p in paths:
+    if os.path.exists(p):
+        try:
+            with open(p, 'r') as f:
+                d = json.load(f)
+            if 'settings' in d:
+                d['settings']['bar_height'] = int($val)
+                with open(p, 'w') as f:
+                    json.dump(d, f, indent=2)
+        except Exception:
+            pass
+" 2>/dev/null || true
+                success "Bar height set to ${val}px."
+            else
+                local cur
+                cur=$(python3 -c "
+import json, os
+paths = [os.path.expanduser('~/.config/agility-shell/config/config.json'), os.path.expanduser('~/.config/agility-shell/config.json')]
+found = False
+for p in paths:
+    if os.path.exists(p):
+        try:
+            with open(p) as f:
+                print(json.load(f).get('settings', {}).get('bar_height', 36))
+                found = True
+                break
+        except Exception:
+            pass
+if not found:
+    print(36)
+" 2>/dev/null || echo "36")
+                echo -e "${BOLD}Current Bar Height (Thickness):${RESET} ${CYAN}${cur}px${RESET} (range: 26px to 48px)"
+                echo -e "Usage: agl bar height <26-48>"
+            fi
+            ;;
+        *)
+            echo -e "${BOLD}Usage:${RESET} agl bar height <26-48>"
+            ;;
+    esac
+}
+
 # Subcommand routing
 COMMAND="${1:-}"
 if [[ -n "$COMMAND" ]]; then
@@ -355,6 +492,15 @@ case "$COMMAND" in
         ;;
     suits)
         cmd_suits "$@"
+        ;;
+    profile)
+        cmd_profile "$@"
+        ;;
+    bar)
+        cmd_bar "$@"
+        ;;
+    toggle)
+        cmd_toggle "$@"
         ;;
     -v|--version|version)
         echo -e "Agility Shell CLI (agl) v$VERSION"

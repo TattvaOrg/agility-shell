@@ -157,9 +157,15 @@ class DesktopSysMon(Box):
         self._last_net_time = None
 
         self.connect("size-allocate", self._on_size_allocate)
+        self.connect("destroy", self._on_destroy)
 
-        self._timer_id = GLib.timeout_add(1000, self._update_stats)
+        self._timer_id = GLib.timeout_add(1500, self._update_stats)
         self._update_stats()
+
+    def _on_destroy(self, *_):
+        if self._timer_id:
+            GLib.source_remove(self._timer_id)
+            self._timer_id = None
 
     def _on_size_allocate(self, widget, alloc):
         w = alloc.width
@@ -182,6 +188,8 @@ class DesktopSysMon(Box):
             self.container.set_orientation(Gtk.Orientation.VERTICAL)
 
     def _update_stats(self) -> bool:
+        if not self.get_mapped():
+            return True
         try:
             # CPU
             cpu_pct = psutil.cpu_percent(interval=None)

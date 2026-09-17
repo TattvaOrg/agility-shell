@@ -24,6 +24,7 @@ class AppletReveal(Box):
         self._progress = 0.0
         self._target = 0.0
         self._on_close_callbacks: list = []
+        self._on_open_callbacks: list = []
         self.progress_cb: Callable[[float], None] | None = None
 
         self.open_bezier = open_bezier
@@ -54,9 +55,18 @@ class AppletReveal(Box):
     def _clear_cache(self):
         self._cached_surface = None
 
-    def open(self):
+    def open(self, on_done=None):
         """Animate the applet in. Safe to call mid-close."""
         self._target = 1.0
+
+        if on_done:
+            def _once(*_):
+                on_done()
+                try:
+                    self._on_open_callbacks.remove(_once)
+                except ValueError:
+                    pass
+            self._on_open_callbacks.append(_once)
 
         if self.active_animator:
             self.active_animator.pause()
@@ -71,6 +81,8 @@ class AppletReveal(Box):
         if distance < 0.001:
             self._set_progress(1.0)
             self._clear_cache()
+            for cb in list(self._on_open_callbacks):
+                cb()
             return
 
         effective_duration = max(0.01, self.open_duration * distance)
@@ -163,12 +175,15 @@ class AppletReveal(Box):
     def _on_open_finished(self, *_):
         self._set_progress(1.0)
         self._clear_cache()
+        if self._target == 1.0:
+            for cb in list(self._on_open_callbacks):
+                cb()
 
     def _on_close_finished(self, *_):
         self._set_progress(0.0)
         self._clear_cache()
         if self._target == 0.0:
-            for cb in self._on_close_callbacks:
+            for cb in list(self._on_close_callbacks):
                 cb()
 
     def do_draw(self, cr: cairo.Context) -> bool:

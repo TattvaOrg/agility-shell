@@ -24,7 +24,7 @@ class Brightness(Service):
     DDCUTIL_PARAMS = "--disable-dynamic-sleep --sleep-multiplier=0.05"
     MIN_CHANGE_THRESHOLD = 2
     CACHE_INTERVAL = 3
-    POLL_INTERVAL = 500
+    POLL_INTERVAL = 2500
 
     @staticmethod
     def get_initial():

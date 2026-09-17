@@ -511,6 +511,7 @@ class DashSettingsPage(Box):
 
         # Build pages
         page_behavior = self._build_page_behavior()
+        page_performance = self._build_page_performance()
         page_appearance = self._build_page_appearance()
         page_theme = self._build_page_theme()
         page_widgets = self._build_page_widgets()
@@ -527,6 +528,7 @@ class DashSettingsPage(Box):
         self._stack.set_size_request(822, 604)
         self._stack.set_homogeneous(False)
         self._stack.add_named(self._wrap_scroll(page_behavior), "bar_behavior")
+        self._stack.add_named(self._wrap_scroll(page_performance), "performance")
         self._stack.add_named(self._wrap_scroll(page_appearance), "bar_appearance")
         self._stack.add_named(self._wrap_scroll(page_theme), "system_theme")
         self._stack.add_named(self._wrap_scroll(page_widgets), "bar_widgets")
@@ -624,6 +626,7 @@ class DashSettingsPage(Box):
 
         nav_items = [
             ("bar_behavior",   "Bar Behaviour",             "Hover trigger & timing",          "sliders-duotone"),
+            ("performance",    "Engine & Performance",      "Power, CPU & telemetry profiles", "gauge-duotone"),
             ("bar_appearance", "Bar Themes & Appearance",   "Styles, blur & opacities",         "palette-duotone"),
             ("system_theme",   "System Theme",              "Palettes, mode, accents & fonts",  "swatches-duotone"),
             ("bar_widgets",    "Active Bar Widgets",        "Left, center & right slots",      "puzzle-piece-duotone"),
@@ -654,6 +657,89 @@ class DashSettingsPage(Box):
         for pid, btn in self._nav_buttons.items():
             btn.set_active_state(pid == page_id)
         self._stack.set_visible_child_name(page_id)
+
+    def _build_page_performance(self) -> Box:
+        header = create_page_header(
+            title="Agility Engine & Performance",
+            description="Tune CPU usage, background polling, telemetry intervals, and power efficiency",
+            icon_name="gauge-duotone",
+        )
+
+        content = Box(
+            orientation="v",
+            spacing=14,
+            style_classes=["dash-settings-content"],
+        )
+        content.add(header)
+
+        profiles = [
+            (
+                "optimized",
+                "Optimized (Power Saver)",
+                "Ultra-low CPU drain, dormant pollers, ~0% idle usage for older hardware or laptops",
+                "battery-charging-duotone",
+            ),
+            (
+                "balanced",
+                "Balanced (Default)",
+                "Fluid 60/120fps animations, standard blur, relaxed background monitoring",
+                "scales-duotone",
+            ),
+            (
+                "dedicated",
+                "Dedicated (High Performance)",
+                "Continuous real-time telemetry, full per-core graphs, and maximum visual fidelity",
+                "lightning-duotone",
+            ),
+        ]
+
+        active_prof = getattr(user_options.settings, "agility_profile", "optimized")
+        self._profile_buttons: dict[str, Button] = {}
+
+        profile_rows = []
+        for pid, title, desc, icon in profiles:
+            btn = Button(
+                style_classes=["dash-settings-choice-btn"] + (["active"] if pid == active_prof else []),
+                on_clicked=lambda *_, p=pid: self._select_agility_profile(p),
+            )
+            icon_w = Icon(icon_name=icon, icon_size=20)
+            text_box = Box(
+                orientation="v",
+                spacing=2,
+                h_align="start",
+                children=[
+                    Label(label=title, style="font-size: 13px; font-weight: 600;", h_align="start"),
+                    Label(label=desc, style="font-size: 11px; opacity: 0.65;", h_align="start", line_wrap="word-char"),
+                ],
+            )
+            btn_box = Box(
+                orientation="h",
+                spacing=12,
+                children=[icon_w, text_box],
+            )
+            btn.add(btn_box)
+            self._profile_buttons[pid] = btn
+            profile_rows.append(btn)
+
+        profile_card = create_settings_card(
+            title="Engine Optimization Presets",
+            description="Select the engine mode that best matches your hardware constraints",
+            rows=profile_rows,
+        )
+        content.add(profile_card)
+
+        return content
+
+    def _select_agility_profile(self, profile_name: str):
+        from services.singletons import profile_service
+        if profile_service:
+            profile_service.set_profile(profile_name)
+        for pid, btn in getattr(self, "_profile_buttons", {}).items():
+            ctx = btn.get_style_context()
+            if pid == profile_name:
+                ctx.add_class("active")
+            else:
+                ctx.remove_class("active")
 
     def _build_page_behavior(self) -> Box:
         header = create_page_header(
@@ -894,6 +980,34 @@ class DashSettingsPage(Box):
             control_min_width=240,
         )
 
+        current_bar_height = getattr(user_options.settings, "bar_height", 36)
+        self._bar_height_badge = Label(label=f"{round(current_bar_height)}px", style="font-size: 11px; font-weight: 600;")
+        self._bar_height_slider = FlatScale(
+            size=(170, 24),
+            style_classes=["scale"],
+            min_value=26.0,
+            max_value=48.0,
+            step=2.0,
+            value=float(current_bar_height),
+            value_formatter=lambda val: f"{round(val)}px",
+            h_expand=True,
+        )
+        self._bar_height_slider.connect("value-changed", self._on_bar_height_changed)
+
+        bar_height_row = create_slider_row(
+            title="Bar Thickness (Height)",
+            subtitle="Adjust vertical bar thickness from compact lite (26px) to wide (48px)",
+            slider=self._bar_height_slider,
+            value_badge=self._bar_height_badge,
+            control_min_width=240,
+        )
+
+        dimensions_card = self._create_card(
+            title="Bar Dimensions & Thickness",
+            description="Control bar thickness and vertical scaling across all applets, widgets, and workspaces",
+            rows=[bar_height_row],
+        )
+
         transparency_card = self._create_card(
             title="Blur & Transparency Levels",
             description="Fine-tune transparency layers for bar containers and placed desktop widgets",
@@ -906,7 +1020,7 @@ class DashSettingsPage(Box):
             h_align="fill",
             h_expand=True,
             style="padding: 6px 12px 24px 4px;",
-            children=[header, theme_card, transparency_card],
+            children=[header, theme_card, dimensions_card, transparency_card],
         )
         return page_box
 
@@ -1762,6 +1876,17 @@ class DashSettingsPage(Box):
         bm = self._bar_manager or singletons.bar_manager
         if bm and hasattr(bm, "apply_blur"):
             bm.apply_blur(state)
+
+    def _on_bar_height_changed(self, _scale, val: float):
+        height = int(round(max(26.0, min(48.0, float(val)))))
+        if hasattr(self, "_bar_height_badge"):
+            self._bar_height_badge.set_label(f"{height}px")
+        user_options.settings.bar_height = height
+        user_options.save()
+
+        bm = self._bar_manager or singletons.bar_manager
+        if bm and hasattr(bm, "apply_bar_height"):
+            bm.apply_bar_height(height)
 
     def _on_bar_opacity_changed(self, _scale, val: float):
         opacity = max(0.0, min(1.0, float(val)))

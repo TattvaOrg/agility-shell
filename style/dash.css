@@ -661,6 +661,29 @@ tooltip label {
     margin: 0;
 }
 
+.dash-settings-choice-btn {
+    background-color: transparent;
+    border-radius: apply(radius-m);
+    padding: 12px 14px;
+    border: 1px solid var(--outline_variant);
+    transition: all 0.2s ease;
+    margin: 4px 0;
+}
+
+.dash-settings-choice-btn:hover {
+    background-color: var(--surface_container_high);
+    border-color: alpha(var(--primary), 0.3);
+}
+
+.dash-settings-choice-btn.active {
+    background-color: alpha(var(--primary), 0.15);
+    border-color: var(--primary);
+}
+
+.dash-settings-choice-btn.active * {
+    color: var(--primary);
+}
+
 /* ----- Desktop Widget Theme Chips in Widgets Tab ----- */
 .widget-theme-chip {
     background-color: var(--surface_container);

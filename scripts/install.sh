@@ -415,22 +415,13 @@ scan_and_remove_old_shell() {
         cp -r "$USER_CONFIG" "$backup_dir"
         success "Backup created at $backup_dir"
 
-        local tmp_data
-        tmp_data="$(mktemp -d)"
-        [[ -d "$USER_CONFIG/config" ]] && cp -r "$USER_CONFIG/config" "$tmp_data/"
-        [[ -d "$USER_CONFIG/wallpapers" ]] && cp -r "$USER_CONFIG/wallpapers" "$tmp_data/"
-        [[ -d "$USER_CONFIG/style" ]] && cp -r "$USER_CONFIG/style" "$tmp_data/"
-        [[ -d "$USER_CONFIG/themes" ]] && cp -r "$USER_CONFIG/themes" "$tmp_data/"
-        [[ -f "$USER_CONFIG/widget_settings.json" ]] && cp "$USER_CONFIG/widget_settings.json" "$tmp_data/"
-
-        info "Deleting old shell Python source files, venv, and scripts from $USER_CONFIG..."
-        rm -rf "$USER_CONFIG"
-        mkdir -p "$USER_CONFIG"
-
-        # Restore user custom data
-        cp -r "$tmp_data"/* "$USER_CONFIG/" 2>/dev/null || true
-        rm -rf "$tmp_data"
-        success "Old shell deleted. ~/.config/agility-shell now cleanly holds user configurations only."
+        info "Removing obsolete shell source files from $USER_CONFIG while preserving all user configurations..."
+        rm -rf "$USER_CONFIG/main.py" "$USER_CONFIG/bar.py" "$USER_CONFIG/bar_widgets" \
+               "$USER_CONFIG/venv" "$USER_CONFIG/services" "$USER_CONFIG/desktop_applets" \
+               "$USER_CONFIG/windows" "$USER_CONFIG/utils" "$USER_CONFIG/snippets" \
+               "$USER_CONFIG/quickshell" "$USER_CONFIG/scripts" "$USER_CONFIG/agility-shell" \
+               "$USER_CONFIG/requirements.txt" "$USER_CONFIG/Makefile" "$USER_CONFIG/PKGBUILD" 2>/dev/null || true
+        success "Preserved user configs. ~/.config/agility-shell now cleanly holds configurations only."
     fi
 }
 
@@ -484,12 +475,15 @@ seed_user_configuration() {
         fi
     done
 
-    # Seed baseline niri.kdl if not present or outdated
+    # Seed baseline niri.kdl if not present
     if [[ -f "$src_data/config/niri.kdl" ]]; then
         mkdir -p "$USER_CONFIG/config"
-        if [[ ! -f "$USER_CONFIG/config/niri.kdl" ]] || grep -q '~/.config/agility-shell/start.sh' "$USER_CONFIG/config/niri.kdl"; then
+        if [[ ! -f "$USER_CONFIG/config/niri.kdl" ]]; then
             cp "$src_data/config/niri.kdl" "$USER_CONFIG/config/niri.kdl"
-            info "Synchronized niri.kdl configuration."
+            info "Seeded default niri.kdl configuration."
+        elif grep -q '~/.config/agility-shell/start.sh' "$USER_CONFIG/config/niri.kdl"; then
+            sed -i 's|spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$USER_CONFIG/config/niri.kdl"
+            info "Migrated startup command in existing niri.kdl while preserving all custom keybindings."
         fi
     fi
     success "User configuration initialized."
@@ -497,16 +491,21 @@ seed_user_configuration() {
 
 # -- Compositor Integration ---------------------------------------------------
 inject_niri_include() {
-    local niri_config_dir="$HOME/.config/niri"
-    local niri_config="$niri_config_dir/config.kdl"
     local startup_line='spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service || exec agility-shell"'
     local include_line='include "~/.config/agility-shell/config/niri.kdl"'
 
-    mkdir -p "$niri_config_dir"
+    local target_dirs=("$HOME/.config/niri")
+    if [[ -d "$HOME/.config/Lniri" || -f "$HOME/.config/Lniri/config.kdl" ]]; then
+        target_dirs+=("$HOME/.config/Lniri")
+    fi
 
-    if [[ ! -f "$niri_config" ]]; then
-        info "Creating clean base Niri config..."
-        cat << 'BASE_NIRI_EOF' > "$niri_config"
+    for niri_config_dir in "${target_dirs[@]}"; do
+        local niri_config="$niri_config_dir/config.kdl"
+        mkdir -p "$niri_config_dir"
+
+        if [[ ! -f "$niri_config" ]]; then
+            info "Creating clean base Niri config in $niri_config..."
+            cat << 'BASE_NIRI_EOF' > "$niri_config"
 // Niri Base Configuration
 prefer-no-csd
 
@@ -526,26 +525,27 @@ binds {
     Mod+Shift+E { quit; }
 }
 BASE_NIRI_EOF
-    fi
+        fi
 
-    # Remove old includes if any
-    sed -i '/caffyne-shell/d' "$niri_config" 2>/dev/null || true
+        # Remove old deprecated caffyne-shell includes if any
+        sed -i '/caffyne-shell/d' "$niri_config" 2>/dev/null || true
 
-    # Update startup line if old one exists
-    if grep -qF '~/.config/agility-shell/start.sh' "$niri_config"; then
-        info "Updating Niri startup command to use guarded agility-shell launcher..."
-        sed -i 's|spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$niri_config"
-    elif grep -qF 'command -v agility-shell' "$niri_config"; then
-        info "Updating Niri startup command to use guarded agility-shell launcher..."
-        sed -i 's|spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null \&\& exec agility-shell \|\| exec ~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$niri_config"
-    fi
+        # Update startup line if old one exists
+        if grep -qF '~/.config/agility-shell/start.sh' "$niri_config"; then
+            info "Updating Niri startup command in $niri_config..."
+            sed -i 's|spawn-at-startup "bash" "-c" "~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$niri_config"
+        elif grep -qF 'command -v agility-shell' "$niri_config"; then
+            info "Updating Niri startup command in $niri_config..."
+            sed -i 's|spawn-at-startup "bash" "-c" "command -v agility-shell >/dev/null \&\& exec agility-shell \|\| exec ~/.config/agility-shell/start.sh"|spawn-at-startup "bash" "-c" "systemctl --user is-active --quiet agility-shell.service \|\| exec agility-shell"|g' "$niri_config"
+        fi
 
-    if ! grep -qF "$include_line" "$niri_config"; then
-        info "Appending Agility Shell include to existing Niri config..."
-        echo "" >> "$niri_config"
-        echo "$include_line" >> "$niri_config"
-    fi
-    success "Niri config integrated."
+        if ! grep -qF "$include_line" "$niri_config"; then
+            info "Appending Agility Shell include to existing Niri config ($niri_config)..."
+            echo "" >> "$niri_config"
+            echo "$include_line" >> "$niri_config"
+        fi
+    done
+    success "Niri config integrated safely."
 }
 
 setup_matugen() {

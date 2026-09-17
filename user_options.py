@@ -33,6 +33,8 @@ class UserOptions:
             self.awe_widgets_enabled = False
             self.bluetooth_on_startup = False
             self.pinned_apps = []
+            self.agility_profile = "optimized"  # "optimized", "balanced", "dedicated"
+            self.bar_height = 36  # Default lite bar thickness (range 26 to 48, current max 48)
 
     class Bars:
         def __init__(self):

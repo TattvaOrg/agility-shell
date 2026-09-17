@@ -35,7 +35,6 @@ class IconResolver:
             with self._lock:
                 cached = self._mem_cache.get(key)
             if cached:
-                logger.debug(f"[ICONS] cache hit: '{app_id}' -> '{cached}'")
                 return cached
 
         # Nothing cached — resolve now and store the result.

@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import signal
+from loguru import logger
 
 from services.paths import (
     get_user_config_dir,
@@ -16,6 +17,11 @@ def _on_signal(*_):
 
 signal.signal(signal.SIGTERM, _on_signal)
 signal.signal(signal.SIGINT, _on_signal)
+
+# Configure clean production logging (INFO default, DEBUG with AGILITY_DEBUG=1 or --debug)
+log_level = "DEBUG" if os.getenv("AGILITY_DEBUG", "").lower() in ("1", "true", "yes") or "--debug" in sys.argv else "INFO"
+logger.remove()
+logger.add(sys.stderr, level=log_level, format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>")
 
 def seed_user_environment():
     user_dir = get_user_config_dir()
@@ -81,6 +87,7 @@ wallpaper_service = WallpaperService.get_instance()
 # wallpaper_service.set_bar_manager(bar_manager)
 
 from services.suits_service import SuitsService, suits_service
+profile_service = singletons.profile_service
 
 AweService.get_instance().init_startup()
 

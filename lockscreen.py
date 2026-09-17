@@ -558,9 +558,11 @@ def lock():
         )
         return None
 
-    from services.paths import resolve_style_file
+    from services.style import compile_resolved_stylesheet
     app = Application("lock")
-    app.set_stylesheet_from_file(resolve_style_file("style.css"))
+    resolved_css = compile_resolved_stylesheet()
+    if resolved_css:
+        app.set_stylesheet_from_string(resolved_css, compile=True)
     manager = LockManager()
     app.run()
 

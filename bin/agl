@@ -416,7 +416,17 @@ cmd_bar() {
             local val="${1:-}"
             if [[ -n "$val" ]]; then
                 if command -v fabric-cli &>/dev/null; then
-                    fabric-cli exec agility-shell "bar_manager.apply_bar_height($val)" 2>/dev/null || true
+                    fabric-cli exec agility-shell "
+import services.singletons as s, user_options
+try:
+    bm = s.bar_manager
+    if bm and hasattr(bm, 'apply_bar_height'):
+        bm.apply_bar_height(int($val))
+    user_options.user_options.settings.bar_height = int($val)
+    user_options.user_options.save()
+except Exception:
+    pass
+" 2>/dev/null || true
                 fi
                 python3 -c "
 import json, os

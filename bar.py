@@ -167,23 +167,24 @@ def update_bar_height_css(height: int):
     global _bar_height_provider
     v_padding, widget_h, scale_sz = get_bar_dimensions(height)
     dot_pad = max(2, (widget_h - 6) // 2)
-    ws_size = max(18, widget_h - 4)
+    ws_size = max(16, widget_h - 4)
     ws_margin = max(1, (widget_h - ws_size) // 2)
-    ws_pad = max(2, (widget_h - 20) // 2)
-    dock_pad = max(0, (widget_h - 24) // 2)
+    ws_pad = max(2, (widget_h - 18) // 2)
+    dock_pad = max(0, (widget_h - 22) // 2)
+    dock_icon_sz = 16 if height <= 28 else (18 if height <= 34 else (20 if height <= 40 else (22 if height <= 44 else 24)))
 
     css = f"""
-    .bar {{
+    box.bar, CenterBox.bar, .bar {{
         padding-top: {v_padding}px;
         padding-bottom: {v_padding}px;
     }}
-    .bar-button {{
+    box.bar-button, .bar-button {{
         min-height: {widget_h}px;
     }}
-    .draggable-section {{
+    box.draggable-section, .draggable-section {{
         min-height: {widget_h}px;
     }}
-    .draggable-section.edit-mode {{
+    box.draggable-section.edit-mode, .draggable-section.edit-mode {{
         min-width: {widget_h}px;
     }}
     .drop-placeholder {{
@@ -201,10 +202,19 @@ def update_bar_height_css(height: int):
         margin-bottom: {ws_margin}px;
     }}
     .workspace {{
-        padding: {ws_pad}px 7px;
+        padding-top: {ws_pad}px;
+        padding-bottom: {ws_pad}px;
+        padding-left: 6px;
+        padding-right: 6px;
     }}
     .dock-item {{
-        padding: {dock_pad}px 6px;
+        padding-top: {dock_pad}px;
+        padding-bottom: {dock_pad}px;
+        padding-left: 4px;
+        padding-right: 4px;
+    }}
+    .dock-item .icon {{
+        min-height: {dock_icon_sz}px;
     }}
     """
     if _bar_height_provider is None:
@@ -214,7 +224,7 @@ def update_bar_height_css(height: int):
             Gtk.StyleContext.add_provider_for_screen(
                 screen,
                 _bar_height_provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 10,
+                Gtk.STYLE_PROVIDER_PRIORITY_USER + 50,
             )
     try:
         _bar_height_provider.load_from_data(css.encode("utf-8"))
@@ -1775,7 +1785,14 @@ class Bar(Window):
         for section in self.sections.values():
             for child in section.get_children():
                 self._update_child_bar_height(child, height, widget_h, scale_sz)
+            section.queue_resize()
+        if hasattr(self, "_centerbox"):
+            self._centerbox.reset_style()
+            self._centerbox.queue_resize()
         self.queue_resize()
+        self.resize(1, 1)
+        if hasattr(self, "_blur_ctx") and self._blur_ctx:
+            GLib.timeout_add(250, self._update_blur_region)
 
     def _update_child_bar_height(self, wrapper, height: int, widget_h: int, scale_sz: int):
         def _apply_to_widget(w):

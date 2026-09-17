@@ -42,6 +42,20 @@ curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/instal
 >[!NOTE]
 >The installer automatically scans `~/.config/agility-shell` for any old monolithic shell installations, removes old source files and venvs, and safely migrates your custom configs, themes, wallpapers, and styles to the new clean config directory.
 
+### 3. Update Agility Shell (One-Liner Delta Update)
+To update Agility Shell without re-cloning the entire repository:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/update.sh | bash
+```
+
+> **Channel Selection**: The updater interactively asks whether to update to the **Latest Release** (stable tag) or the bleeding-edge **`main` branch**. It reuses the persistent local repository cache (`~/.cache/agility-shell/repo`), downloads only new commits/deltas instead of full re-clones, compiles updated snippets, and preserves all user configurations (`config.json`, `suits.json`, `style/`, `wallpapers/`).
+>
+> **Direct Channel Flags**:
+> - Update to Latest Release: `curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/update.sh | bash -s -- --release`
+> - Update to Bleeding-Edge Main: `curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/update.sh | bash -s -- --main`
+> - Or directly from terminal: `agl update`
+
 ---
 
 ## Filesystem Layout & Architecture ("Where & Why")
@@ -82,6 +96,7 @@ agl <command> [options]
 | `agl uninstall` | Cleanly uninstall Agility Shell | `agl uninstall` (or `agl uninstall --purge`) |
 | `agl install` | Run or rerun system installer | `agl install` |
 | `agl suits` | Manage desktop suites (switch, list, next, prev) | `agl suits next` |
+| `agl bar` | Adjust bar thickness dynamically (`agl bar height <26-48>`) | `agl bar height 36` |
 
 ---
 

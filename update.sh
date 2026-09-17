@@ -12,9 +12,21 @@ if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/scripts/update.sh" ]]; then
     exec "$SCRIPT_DIR/scripts/update.sh" "$@"
 fi
 
-# Fallback when running piped via curl/stdin without a git clone
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
-curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/scripts/update.sh -o "$TMP_DIR/update.sh"
-chmod +x "$TMP_DIR/update.sh"
-exec "$TMP_DIR/update.sh" "$@"
+# Fallback when running piped via curl/stdin without an in-tree git clone:
+# Reuse persistent cache (~/.cache/agility-shell/repo) so only delta changes are downloaded
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
+REPO_DIR="$CACHE_DIR/repo"
+REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
+
+if [[ -d "$REPO_DIR/.git" ]]; then
+    echo "[agility] Reusing repository cache at $REPO_DIR (fetching deltas only)..."
+    cd "$REPO_DIR"
+    git remote set-url origin "$REPO_URL" 2>/dev/null || true
+    git fetch --prune --tags origin
+else
+    echo "[agility] Initializing repository cache at $REPO_DIR..."
+    mkdir -p "$CACHE_DIR"
+    git clone "$REPO_URL" "$REPO_DIR"
+fi
+
+exec "$REPO_DIR/scripts/update.sh" "$@"

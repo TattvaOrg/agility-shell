@@ -245,12 +245,15 @@ cmd_update() {
     elif [[ -f "/usr/share/agility-shell/scripts/update.sh" ]]; then
         exec "/usr/share/agility-shell/scripts/update.sh" "$@"
     else
-        local tmp_dir
-        tmp_dir="$(mktemp -d)"
-        trap 'rm -rf "$tmp_dir"' EXIT
-        curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/scripts/update.sh -o "$tmp_dir/update.sh"
-        chmod +x "$tmp_dir/update.sh"
-        exec "$tmp_dir/update.sh" "$@"
+        local cache_repo="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell/repo"
+        if [[ -d "$cache_repo/.git" ]]; then
+            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin)
+            exec "$cache_repo/scripts/update.sh" "$@"
+        else
+            mkdir -p "$(dirname "$cache_repo")"
+            git clone "https://github.com/TattvaOrg/agility-shell.git" "$cache_repo"
+            exec "$cache_repo/scripts/update.sh" "$@"
+        fi
     fi
 }
 

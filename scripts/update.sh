@@ -87,15 +87,104 @@ check_not_root() {
 }
 
 do_update() {
-    info "Checking for Agility Shell updates..."
-    local tmp_clone
-    tmp_clone="$(mktemp -d)"
-    trap 'rm -rf "$tmp_clone"' EXIT
+    local target_channel=""
 
-    info "Cloning latest sources from $REPO_URL..."
-    git clone --depth 1 "$REPO_URL" "$tmp_clone/repo"
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --main|-m)
+                target_channel="main"
+                shift
+                ;;
+            --release|-r|--stable)
+                target_channel="release"
+                shift
+                ;;
+            --help|-h)
+                echo -e "${BOLD}Usage:${RESET} update.sh [options]"
+                echo -e "  ${CYAN}--release, -r${RESET}  Update to latest stable release tag"
+                echo -e "  ${CYAN}--main, -m${RESET}     Update to bleeding-edge main branch"
+                echo -e "  ${CYAN}--help, -h${RESET}     Show this help message"
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
 
-    cd "$tmp_clone/repo"
+    info "Locating Agility Shell repository..."
+    local repo_dir=""
+    if [[ -d "$SCRIPT_DIR/../.git" ]]; then
+        repo_dir="$(cd "$SCRIPT_DIR/.." && pwd)"
+        info "Using in-tree repository at $repo_dir"
+    else
+        local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
+        repo_dir="$cache_dir/repo"
+        if [[ -d "$repo_dir/.git" ]]; then
+            info "Reusing persistent repository cache at $repo_dir"
+        else
+            info "Initializing repository cache at $repo_dir..."
+            mkdir -p "$cache_dir"
+            git clone "$REPO_URL" "$repo_dir"
+        fi
+    fi
+
+    cd "$repo_dir"
+    info "Fetching delta changes and release tags from remote..."
+    git remote set-url origin "$REPO_URL" 2>/dev/null || true
+    git fetch --prune --tags origin
+
+    # Discover available latest release tag and current checkout state
+    local latest_tag
+    latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1)
+    if [[ -z "$latest_tag" ]]; then
+        latest_tag=$(git tag -l --sort=-v:refname | head -n 1)
+    fi
+    latest_tag="${latest_tag:-1.0.1}"
+
+    local current_desc
+    current_desc=$(git describe --tags --always 2>/dev/null || echo "unknown")
+
+    echo ""
+    echo -e "  ${BOLD}Current local version:${RESET} ${CYAN}$current_desc${RESET}"
+    echo -e "  ${BOLD}Latest release tag:${RESET}   ${GREEN}v$latest_tag${RESET}"
+    echo ""
+
+    if [[ -z "$target_channel" ]]; then
+        echo -e "${BOLD}Select update channel:${RESET}"
+        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM}Recommended: Tested, stable version${RESET}"
+        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}bleeding edge${RESET}) - ${DIM}Latest commits & newest features${RESET}"
+        echo ""
+        prompt_user "  Enter choice [1/2] (default: 1): " channel_choice "1"
+        case "$channel_choice" in
+            2|[mM]|[mM][aA][iI][nN])
+                target_channel="main"
+                ;;
+            *)
+                target_channel="release"
+                ;;
+        esac
+    fi
+
+    local target_ref=""
+    local target_name=""
+    if [[ "$target_channel" == "main" ]]; then
+        target_ref="origin/main"
+        target_name="main (latest development)"
+        info "Switching to $target_name..."
+        git checkout -f main 2>/dev/null || git checkout -b main origin/main
+        git reset --hard origin/main
+    else
+        target_ref="tags/$latest_tag"
+        target_name="Release v$latest_tag (stable)"
+        info "Switching to $target_name..."
+        git checkout -f "$target_ref"
+    fi
+
+    local updated_desc
+    updated_desc=$(git describe --tags --always 2>/dev/null || git rev-parse --short HEAD)
+    success "Repository updated to: $updated_desc"
 
     local is_pacman=false
     if pacman -Q agility-shell-git &>/dev/null || pacman -Q agility-shell &>/dev/null; then
@@ -106,10 +195,19 @@ do_update() {
         info "Updating native Arch pacman package via makepkg..."
         makepkg -sif --noconfirm
     else
-        info "Rebuilding and updating system files via make install..."
+        info "Compiling native snippet libraries..."
         make
+        info "Updating system files via make install..."
         sudo make PREFIX="/usr" install
-        sudo make PREFIX="/usr" install-venv
+
+        local venv_pip="/usr/lib/agility-shell/venv/bin/pip"
+        if [[ -x "$venv_pip" ]]; then
+            info "Synchronizing runtime Python dependencies (delta only)..."
+            sudo "$venv_pip" install -r requirements.txt -q
+        else
+            info "Provisioning virtual environment..."
+            sudo make PREFIX="/usr" install-venv
+        fi
     fi
 
     if command -v systemctl &>/dev/null; then
@@ -117,12 +215,12 @@ do_update() {
     fi
 
     echo
-    success "Agility Shell updated successfully!"
+    success "Agility Shell successfully updated!"
     echo
     prompt_user "  Would you like to restart Agility Shell now? [Y/n]: " restart_choice "y"
     case "$restart_choice" in
         [nN]|[nN][oO])
-            info "Restart skipped. Run 'agl restart' when ready."
+            info "Restart skipped. Run 'agl restart' whenever you are ready."
             ;;
         *)
             if command -v agl &>/dev/null; then

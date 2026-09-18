@@ -376,12 +376,25 @@
     background-color: var(--surface_container);
 }
 
+.bar-widget.active-popout {
+    background-color: var(--primary);
+    color: var(--on_primary);
+    box-shadow: 0 0 14px alpha(var(--primary), 0.5);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bar-widget.active-popout * {
+    color: var(--on_primary);
+    transition: color 0.2s ease;
+}
+
 .bar-widget.applet-open {
-    background-color: var(--surface_container_highest);
+    background-color: var(--primary);
+    color: var(--on_primary);
 }
 
 .bar-widget.applet-open.hovered {
-    background-color: var(--surface_container_high);
+    background-color: mix(var(--primary), var(--surface_container_high), 0.2);
 }
 
 .bar-widget.group-drop-target {

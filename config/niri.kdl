@@ -16,10 +16,17 @@ layer-rule {
 }
 
 binds {
-    Mod+Space   hotkey-overlay-title="Open Launcher" { spawn "fabric-cli" "exec" "agility-shell" "bar_manager.toggle('Launcher')"; }
-    Mod+D       hotkey-overlay-title="Open Dash" { spawn "fabric-cli" "exec" "agility-shell" "bar_manager.toggle('Dash')"; }
-    Mod+Shift+W hotkey-overlay-title="Wallpaper Gallery" { spawn "fabric-cli" "exec" "agility-shell" "bar_manager.toggle('WallpaperPicker')"; }
-    Alt+C       hotkey-overlay-title="Wallpaper Switcher" { spawn "fabric-cli" "exec" "agility-shell" "bar_manager.toggle('WallpaperDrawer')"; }
+    Mod+Space   hotkey-overlay-title="Open Launcher" { spawn "agl" "toggle" "launcher"; }
+    Mod+C       hotkey-overlay-title="Control Center" { spawn "agl" "toggle" "cc"; }
+    Mod+D       hotkey-overlay-title="Open Dash" { spawn "agl" "toggle" "dash"; }
+    Mod+Shift+W hotkey-overlay-title="Wallpaper Gallery" { spawn "agl" "toggle" "WallpaperPicker"; }
+    Alt+C       hotkey-overlay-title="Wallpaper Switcher" { spawn "agl" "toggle" "WallpaperDrawer"; }
     Mod+Alt+X   hotkey-overlay-title="Random Wallpaper" { spawn "fabric-cli" "exec" "agility-shell" "wallpaper_service.random_wallpaper()"; }
     Alt+X       hotkey-overlay-title="Random Wallpaper" { spawn "fabric-cli" "exec" "agility-shell" "wallpaper_service.random_wallpaper()"; }
+
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "agl" "volume" "up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "agl" "volume" "down"; }
+    XF86AudioMute        allow-when-locked=true { spawn "agl" "volume" "mute"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "agl" "brightness" "up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "agl" "brightness" "down"; }
 }

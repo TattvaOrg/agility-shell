@@ -387,11 +387,29 @@ cmd_toggle() {
         dash)
             fabric-cli exec agility-shell "bar_manager.toggle('Dash')" 2>/dev/null || info "Shell not active."
             ;;
-        settings)
-            fabric-cli exec agility-shell "bar_manager.open_settings()" 2>/dev/null || info "Shell not active."
+        settings|control-center|cc|quicksettings|quick-settings)
+            fabric-cli exec agility-shell "bar_manager.toggle('Settings')" 2>/dev/null || info "Shell not active."
             ;;
         launcher)
             fabric-cli exec agility-shell "bar_manager.toggle('Launcher')" 2>/dev/null || info "Shell not active."
+            ;;
+        calendar)
+            fabric-cli exec agility-shell "bar_manager.toggle('Calendar')" 2>/dev/null || info "Shell not active."
+            ;;
+        audio|volume)
+            fabric-cli exec agility-shell "bar_manager.toggle('Volume')" 2>/dev/null || info "Shell not active."
+            ;;
+        network|wifi)
+            fabric-cli exec agility-shell "bar_manager.toggle('Wifi')" 2>/dev/null || info "Shell not active."
+            ;;
+        bluetooth)
+            fabric-cli exec agility-shell "bar_manager.toggle('Bluetooth')" 2>/dev/null || info "Shell not active."
+            ;;
+        media)
+            fabric-cli exec agility-shell "bar_manager.toggle('Media')" 2>/dev/null || info "Shell not active."
+            ;;
+        weather)
+            fabric-cli exec agility-shell "bar_manager.toggle('Weather')" 2>/dev/null || info "Shell not active."
             ;;
         suits)
             fabric-cli exec agility-shell "bar_manager.toggle('Suits')" 2>/dev/null || info "Shell not active."
@@ -404,6 +422,41 @@ cmd_toggle() {
             ;;
         *)
             fabric-cli exec agility-shell "bar_manager.toggle('$target')" 2>/dev/null || info "Shell not active."
+            ;;
+    esac
+}
+
+cmd_volume() {
+    local action="${1:-up}"
+    local step="${2:-0.05}"
+    case "${action,,}" in
+        up|raise|+)
+            fabric-cli exec agility-shell "import services.singletons as s; s.audio.speaker.volume = min(1.0, round(s.audio.speaker.volume + float($step), 2)) if s.audio and s.audio.speaker else None" 2>/dev/null || info "Shell not active."
+            ;;
+        down|lower|-)
+            fabric-cli exec agility-shell "import services.singletons as s; s.audio.speaker.volume = max(0.0, round(s.audio.speaker.volume - float($step), 2)) if s.audio and s.audio.speaker else None" 2>/dev/null || info "Shell not active."
+            ;;
+        mute|toggle-mute)
+            fabric-cli exec agility-shell "import services.singletons as s; s.audio.speaker.muted = not s.audio.speaker.muted if s.audio and s.audio.speaker else None" 2>/dev/null || info "Shell not active."
+            ;;
+        *)
+            echo "Usage: agl volume <up|down|mute> [step]"
+            ;;
+    esac
+}
+
+cmd_brightness() {
+    local action="${1:-up}"
+    local step="${2:-5}"
+    case "${action,,}" in
+        up|raise|+)
+            fabric-cli exec agility-shell "import services.singletons as s; s.brightness.screen_brightness = min(100, int(s.brightness.screen_brightness + int($step))) if s.brightness and s.brightness.backend else None" 2>/dev/null || info "Shell not active."
+            ;;
+        down|lower|-)
+            fabric-cli exec agility-shell "import services.singletons as s; s.brightness.screen_brightness = max(0, int(s.brightness.screen_brightness - int($step))) if s.brightness and s.brightness.backend else None" 2>/dev/null || info "Shell not active."
+            ;;
+        *)
+            echo "Usage: agl brightness <up|down> [step]"
             ;;
     esac
 }
@@ -514,6 +567,18 @@ case "$COMMAND" in
         ;;
     toggle)
         cmd_toggle "$@"
+        ;;
+    volume)
+        cmd_volume "$@"
+        ;;
+    brightness)
+        cmd_brightness "$@"
+        ;;
+    launcher)
+        cmd_toggle "launcher"
+        ;;
+    cc|control-center)
+        cmd_toggle "control-center"
         ;;
     -v|--version|version)
         echo -e "Agility Shell CLI (agl) v$VERSION"

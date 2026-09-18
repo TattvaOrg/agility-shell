@@ -106,6 +106,46 @@ class LauncherAppItem(Button):
         self._launcher.toggle()
 
 
+class LauncherActionItem(Button):
+    def __init__(self, title: str, subtitle: str, icon_name: str, on_action):
+        self._on_action = on_action
+        self.box = Box(
+            orientation="h",
+            spacing=10,
+            children=[
+                Icon(icon_name=icon_name, icon_size=28),
+                Box(
+                    orientation="v",
+                    children=[
+                        Label(
+                            label=title,
+                            h_align="start",
+                            ellipsization="end",
+                            max_chars_width=30,
+                            style="font-size: 14px; font-weight: bold;",
+                        ),
+                        Label(
+                            label=subtitle,
+                            h_align="start",
+                            ellipsization="end",
+                            max_chars_width=35,
+                            style="font-size: 11px; opacity: 0.7;",
+                        ),
+                    ],
+                ),
+            ],
+        )
+        super().__init__(
+            style_classes=["launcher-app", "launcher-action-item"],
+            on_clicked=lambda *_: self.launch(),
+            child=self.box,
+        )
+
+    def launch(self):
+        if self._on_action:
+            self._on_action()
+
+
 class LauncherGridItem(Button):
     def __init__(self, app: DesktopApp, launcher):
         self._app = app
@@ -431,10 +471,81 @@ class LauncherApplet(Applet):
 
         threading.Thread(target=load, daemon=True).start()
 
+    def _render_calc_result(self, expr: str, val: str):
+        target = self._list_box
+        for child in target.get_children():
+            child.destroy()
+        self._app_count.set_text("Calculator")
+
+        def _copy_calc():
+            from services.singletons import clipboard
+            if clipboard:
+                try:
+                    clipboard.set_text(val)
+                except Exception:
+                    pass
+            if hasattr(self.window, "toggle"):
+                self.window.toggle()
+
+        item = LauncherActionItem(
+            title=f"= {val}",
+            subtitle=f"Result for '{expr}' · Press Enter to copy",
+            icon_name="calculator-duotone",
+            on_action=_copy_calc,
+        )
+        target.add(item)
+        target.show_all()
+        self._view_stack.set_visible_child_name("list")
+
+    def _render_command_item(self, cmd: str):
+        target = self._list_box
+        for child in target.get_children():
+            child.destroy()
+        self._app_count.set_text("Run Command")
+
+        def _run_cmd():
+            import subprocess
+            try:
+                subprocess.Popen(cmd, shell=True)
+            except Exception:
+                pass
+            if hasattr(self.window, "toggle"):
+                self.window.toggle()
+
+        item = LauncherActionItem(
+            title=f"Run: {cmd}",
+            subtitle="Execute in shell · Press Enter to run",
+            icon_name="terminal-window-duotone",
+            on_action=_run_cmd,
+        )
+        target.add(item)
+        target.show_all()
+        self._view_stack.set_visible_child_name("list")
+
     def _search(self, query: str):
         if not query:
             self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
             return
+
+        # Inline math evaluation: query starts with "="
+        if query.startswith("="):
+            expr = query[1:].strip()
+            if expr:
+                try:
+                    allowed = set("0123456789+-*/().,% eE")
+                    if all(c in allowed for c in expr):
+                        val = eval(expr, {"__builtins__": None}, {})
+                        self._render_calc_result(expr, str(val))
+                        return
+                except Exception:
+                    pass
+
+        # Terminal command execution: query starts with ">"
+        if query.startswith(">"):
+            cmd = query[1:].strip()
+            if cmd:
+                self._render_command_item(cmd)
+                return
 
         usage = load_usage()
         raw_results = process.extract(

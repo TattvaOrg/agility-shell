@@ -21,6 +21,7 @@ from .flat_scale import FlatScale
 from .applet_reveal import AppletReveal
 from .dashreveal import DashReveal
 from .entry import StyleAwareEntry
+from .popout_manager import UnifiedPopoutManager
 __all__ = [
     "HackedRevealer",
     "HackedStack",
@@ -50,5 +51,6 @@ __all__ = [
     "FlatScale",
     "AppletReveal",
     "DashReveal",
-    "StyleAwareEntry"
+    "StyleAwareEntry",
+    "UnifiedPopoutManager",
 ]

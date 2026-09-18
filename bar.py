@@ -6,7 +6,7 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
-from snippets import HackedRevealer, enable_blur, set_blur_regions_from_widget, disable_blur, free_blur, AppletReveal
+from snippets import HackedRevealer, enable_blur, set_blur_regions_from_widget, disable_blur, free_blur, AppletReveal, UnifiedPopoutManager
 from gi.repository import Gdk, Gtk, GLib, GtkLayerShell
 from bar_widgets import (
     LauncherButton, BluetoothButton, BatteryButton, CalendarButton, ClockButton,
@@ -547,6 +547,11 @@ class WidgetWrapper(Box):
             GLib.source_remove(self._leave_timer)
             self._leave_timer = None
 
+        bar = self._get_bar()
+        if bar and hasattr(bar, "popout_manager") and bar.popout_manager.is_open and self.widget_key in APPLET_WIDGETS:
+            bar.popout_manager.open(self.widget_key, self.event_box)
+            return False
+
         if not _is_hover_enabled_for_key(self.widget_key):
             return False
         if self._hover_timer is not None:
@@ -602,6 +607,11 @@ class WidgetWrapper(Box):
                     singletons.bar_manager._dash.toggle(active_monitor)
                     self._hook_dash_hover_leave()
         elif self.widget_key in APPLET_WIDGETS:
+            bar = self._get_bar()
+            if bar and hasattr(bar, "popout_manager"):
+                self._opened_by_hover = True
+                bar.popout_manager.open(self.widget_key, self.event_box)
+                return False
             popup = self._ensure_popup()
             if popup and not popup.is_visible():
                 self._opened_by_hover = True
@@ -735,6 +745,10 @@ class WidgetWrapper(Box):
             return False
         if event.button != 1:
             return False
+        bar = self._get_bar()
+        if bar and hasattr(bar, "popout_manager") and self.widget_key in APPLET_WIDGETS:
+            bar.popout_manager.toggle(self.widget_key, self.event_box)
+            return True
         popup = self._ensure_popup()
         if popup is None:
             return False
@@ -1215,6 +1229,19 @@ class GroupWrapper(Box):
             return False
         if event.button != 1:
             return False
+
+        bar = self._get_bar()
+        if bar and hasattr(bar, "popout_manager"):
+            try:
+                idx = self._event_boxes.index(_widget)
+                if 0 <= idx < len(self.widget_keys):
+                    key = self.widget_keys[idx]
+                    if key in APPLET_WIDGETS:
+                        bar.popout_manager.toggle(key, _widget)
+                        return True
+            except ValueError:
+                pass
+
         popup = self._ensure_popup()
         if popup is None:
             return False
@@ -1233,6 +1260,13 @@ class GroupWrapper(Box):
 
         if event.button != 1:
             return False
+
+        bar = self._get_bar()
+        if bar and hasattr(bar, "popout_manager"):
+            valid_keys = [k for k in self.widget_keys if k in APPLET_WIDGETS]
+            if valid_keys:
+                bar.popout_manager.toggle(valid_keys[0], self._outer_eb)
+                return True
 
         popup = self._ensure_popup()
         if popup is None:
@@ -1773,6 +1807,8 @@ class Bar(Window):
                 wm.connect("notify::active-window", lambda *_: self._update_smart_autohide())
             except Exception:
                 pass
+
+        self.popout_manager = UnifiedPopoutManager(bar=self, applet_factories=APPLET_WIDGETS)
 
         if not self.auto_hide:
             GLib.idle_add(self._revealer.set_reveal_child, True)
@@ -2455,11 +2491,17 @@ class BarManager:
             for section in bar.sections.values():
                 for child in section.get_children():
                     if isinstance(child, WidgetWrapper) and child.widget_key == key:
+                        if hasattr(bar, "popout_manager") and bar.popout_manager:
+                            bar.popout_manager.toggle(key, child.event_box)
+                            return
                         popup = child._ensure_popup()
                         if popup:
                             popup.toggle()
                         return
                     elif isinstance(child, GroupWrapper) and key in child.widget_keys:
+                        if hasattr(bar, "popout_manager") and bar.popout_manager:
+                            bar.popout_manager.toggle(key, child._outer_eb)
+                            return
                         popup = child._ensure_popup()
                         if popup:
                             popup.toggle()
@@ -2467,6 +2509,12 @@ class BarManager:
 
         if key not in APPLET_WIDGETS:
             return
+
+        for (monitor, _), bar in self._bars.items():
+            if get_connector_from_monitor_id(bar.monitor_id) == active_output:
+                if hasattr(bar, "popout_manager") and bar.popout_manager:
+                    bar.popout_manager.toggle(key, bar._centerbox)
+                    return
 
         if key not in self._fallback_popups:
             widget_class = APPLET_WIDGETS[key]

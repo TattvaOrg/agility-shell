@@ -98,7 +98,7 @@ show_help() {
     echo -e "    ${CYAN}uninstall${RESET}     Uninstall Agility Shell (--purge to wipe user configs)"
     echo -e "    ${CYAN}suits${RESET}         Manage desktop suites (list, next, prev, toggle, switch <id>)"
     echo -e "    ${CYAN}profile${RESET}       Switch/view performance profile (optimized, balanced, dedicated)"
-    echo -e "    ${CYAN}bar${RESET}           Adjust bar dimensions and thickness (agl bar height <26-48>)"
+    echo -e "    ${CYAN}bar${RESET}           Adjust bar dimensions (agl bar height <26-48> | agl bar width [toggle|min|full])"
     echo -e "    ${CYAN}toggle${RESET}        Toggle shell surfaces (dash, settings, launcher, suits, widgets)"
     echo -e ""
     echo -e "${BOLD}OPTIONS:${RESET}"
@@ -519,8 +519,55 @@ if not found:
                 echo -e "Usage: agl bar height <26-48>"
             fi
             ;;
+        width|min_width|min-width)
+            local mode="${1:-toggle}"
+            case "${mode,,}" in
+                min|minimal|compact)
+                    if command -v fabric-cli &>/dev/null; then
+                        fabric-cli exec agility-shell "
+import services.singletons as s
+try:
+    bm = s.bar_manager
+    if bm and hasattr(bm, 'set_min_width'):
+        bm.set_min_width(True)
+except Exception:
+    pass
+" 2>/dev/null || true
+                    fi
+                    success "Bar width set to minimal."
+                    ;;
+                full|expand|max)
+                    if command -v fabric-cli &>/dev/null; then
+                        fabric-cli exec agility-shell "
+import services.singletons as s
+try:
+    bm = s.bar_manager
+    if bm and hasattr(bm, 'set_min_width'):
+        bm.set_min_width(False)
+except Exception:
+    pass
+" 2>/dev/null || true
+                    fi
+                    success "Bar width set to full width."
+                    ;;
+                toggle|*)
+                    if command -v fabric-cli &>/dev/null; then
+                        fabric-cli exec agility-shell "
+import services.singletons as s
+try:
+    bm = s.bar_manager
+    if bm and hasattr(bm, 'toggle_min_width'):
+        bm.toggle_min_width()
+except Exception:
+    pass
+" 2>/dev/null || true
+                    fi
+                    success "Bar width toggled."
+                    ;;
+            esac
+            ;;
         *)
-            echo -e "${BOLD}Usage:${RESET} agl bar height <26-48>"
+            echo -e "${BOLD}Usage:${RESET} agl bar <height <26-48> | width [toggle|min|full]>"
             ;;
     esac
 }

@@ -2593,6 +2593,15 @@ class BarManager:
         for bar in self._bars.values():
             bar._set_alignment(alignment)
 
+    def toggle_min_width(self) -> None:
+        for bar in self._bars.values():
+            bar._toggle_min_width()
+
+    def set_min_width(self, min_width: bool) -> None:
+        for bar in self._bars.values():
+            if bar.min_width != min_width:
+                bar._toggle_min_width()
+
     def reload_bars(self) -> None:
         for bar in list(self._bars.values()):
             bar.destroy()

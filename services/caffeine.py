@@ -29,8 +29,28 @@ class CaffeineService(Service):
 
     def _start_inhibit(self):
         try:
+            from services.singletons import idle
+            if idle:
+                idle.stop()
+        except Exception as e:
+            logger.debug(f"[CaffeineService] Error stopping idle service: {e}")
+
+        try:
+            subprocess.run(["pkill", "-x", "swayidle"], check=False, capture_output=True)
+        except Exception:
+            pass
+
+        try:
+            from services.idle import _get_screen_commands
+            _, screen_on = _get_screen_commands()
+            if screen_on:
+                subprocess.Popen(screen_on, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+        try:
             self._process = subprocess.Popen(
-                ["systemd-inhibit", "--what=idle:sleep", "--why=Caffeine keep-awake", "--mode=block", "sleep", "infinity"],
+                ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--why=Caffeine keep-awake", "--mode=block", "sleep", "infinity"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -39,16 +59,22 @@ class CaffeineService(Service):
             logger.warning(f"[CaffeineService] Failed to start inhibitor: {e}")
 
     def _stop_inhibit(self):
-        if self._process is None:
-            return
-        try:
-            self._process.terminate()
-            self._process.wait(timeout=1)
-        except Exception:
+        if self._process is not None:
             try:
-                self._process.kill()
+                self._process.terminate()
+                self._process.wait(timeout=1)
             except Exception:
-                pass
-        finally:
-            self._process = None
-            logger.info("[CaffeineService] Inhibitor stopped")
+                try:
+                    self._process.kill()
+                except Exception:
+                    pass
+            finally:
+                self._process = None
+                logger.info("[CaffeineService] Inhibitor stopped")
+
+        try:
+            from services.singletons import idle
+            if idle:
+                idle.start()
+        except Exception as e:
+            logger.debug(f"[CaffeineService] Error starting idle service: {e}")

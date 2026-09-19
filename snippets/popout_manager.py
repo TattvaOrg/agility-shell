@@ -113,7 +113,7 @@ class UnifiedPopoutManager:
         # Content Stack
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        self.stack.set_transition_duration(180)
+        self.stack.set_transition_duration(140)
 
         self.container = Box(
             style_classes=["applet-popout-container"],
@@ -247,7 +247,7 @@ class UnifiedPopoutManager:
         else:
             self.window.margin = (offset, 0, 0, left)
 
-    def _animate_to_left(self, target_left: int, duration_ms: int = 180):
+    def _animate_to_left(self, target_left: int, duration_ms: int = 120):
         if self._slide_timer is not None:
             GLib.source_remove(self._slide_timer)
             self._slide_timer = None

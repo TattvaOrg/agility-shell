@@ -62,16 +62,6 @@
     transition: 0.3s ease;
 }
 
-.launcher-action-item {
-    background-color: alpha(var(--primary_container), 0.35);
-    border: 1px solid alpha(var(--primary), 0.3);
-}
-
-.launcher-action-item:hover {
-    background-color: alpha(var(--primary_container), 0.6);
-    border-color: var(--primary);
-}
-
 .launcher-app:hover {
     background-color: var(--surface_container_high);
     transition: 0.3s ease;

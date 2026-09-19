@@ -437,6 +437,28 @@ class LauncherApplet(Applet):
             return
 
         usage = load_usage()
+        query_clean = query.strip().lower()
+
+        # Fast substring & prefix matching (instant sub-millisecond response)
+        prefix_matches = []
+        substring_matches = []
+        for app in self._all_apps:
+            display = (app.display_name or "").lower()
+            name = (app.name or "").lower()
+            if display.startswith(query_clean) or name.startswith(query_clean):
+                prefix_matches.append(app)
+            elif query_clean in display or query_clean in name:
+                substring_matches.append(app)
+
+        if prefix_matches or substring_matches:
+            combined = prefix_matches + [a for a in substring_matches if a not in prefix_matches]
+            sorted_apps = sorted(combined, key=lambda a: get_usage_count(a, usage), reverse=True)
+            adj = self._scrolled_window.get_vadjustment()
+            adj.set_value(adj.get_lower())
+            self._load_async(sorted_apps[:50], self._grid_mode)
+            return
+
+        # Fallback to fuzzy matching if no direct substring match
         raw_results = process.extract(
             query,
             self._all_apps,

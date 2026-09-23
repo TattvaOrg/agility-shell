@@ -1,5 +1,5 @@
-cffi>=1.15.0
-click>=8.5.0
+cffi>=2.1.1
+click>=8.0.0
 loguru>=0.7.0
 pam>=0.2.0
 pillow>=10.0.0

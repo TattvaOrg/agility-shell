@@ -600,12 +600,13 @@ class WidgetWrapper(Box):
             return False
         if self.widget_key == "Dash":
             import services.singletons as singletons
-            if singletons.bar_manager and singletons.bar_manager._dash:
-                if not singletons.bar_manager._dash.is_visible():
+            if singletons.bar_manager:
+                dash = singletons.bar_manager.get_dash()
+                if not dash.is_visible():
                     self._opened_by_hover = True
                     bar = self._get_bar()
                     active_monitor = bar.gdk_monitor if bar and hasattr(bar, "gdk_monitor") else None
-                    singletons.bar_manager._dash.toggle(active_monitor)
+                    dash.toggle(active_monitor)
                     self._hook_dash_hover_leave()
         elif self.widget_key in APPLET_WIDGETS:
             bar = self._get_bar()
@@ -2295,10 +2296,10 @@ class Bar(Window):
                 self._hide_timeout = GLib.timeout_add(350, self._try_hide)
 
     def _open_edit_applets(self):
-        if self._bar_manager is None or self._bar_manager._dash is None:
+        if self._bar_manager is None:
             return
         active_monitor = self.gdk_monitor
-        self._bar_manager._dash.toggle_applets(active_monitor)
+        self._bar_manager.get_dash().toggle_applets(active_monitor)
 
     def _on_menu_deactivate(self, _):
         if not self.auto_hide:
@@ -2400,6 +2401,8 @@ class BarManager:
         self._standalone_windows: dict[str, object] = {}
         current_bar_height = getattr(user_options.settings, "bar_height", 36)
         update_bar_height_css(current_bar_height)
+
+        # Critical path: construct and display all bars first (~70ms)
         for i in range(self._display.get_n_monitors()):
             monitor = self._display.get_monitor(i)
             self._add_bar(monitor, i)
@@ -2410,23 +2413,43 @@ class BarManager:
         )
         self._display.connect("monitor-removed", self._on_monitor_removed)
 
-    def _add_bar(self, monitor: Gdk.Monitor, monitor_id: int) -> None:
-        if monitor not in self._notifications:
-            self._notifications[monitor] = NotificationWindow(monitor_id)
+        # Defer heavy secondary windows (Dash, OSD, Notifications) to idle preload
+        GLib.idle_add(self._deferred_init)
 
+    def _deferred_init(self) -> bool:
+        # Preload OSDs and notifications
+        for i in range(self._display.get_n_monitors()):
+            monitor = self._display.get_monitor(i)
+            if monitor not in self._notifications:
+                try:
+                    self._notifications[monitor] = NotificationWindow(i)
+                except Exception as e:
+                    logger.debug(f"[BarManager] NotificationWindow init error: {e}")
+            if monitor not in self._osds:
+                try:
+                    self._osds[monitor] = OSD(i)
+                except Exception as e:
+                    logger.debug(f"[BarManager] OSD init error: {e}")
+
+        # Preload Dash in background so it's ready when user opens it
+        if self._dash is None:
+            try:
+                self.get_dash()
+            except Exception as e:
+                logger.error(f"[BarManager] Dash preload error: {e}")
+
+        return GLib.SOURCE_REMOVE
+
+    def get_dash(self):
         if self._dash is None:
             from windows.dash.dash import Dash
             self._dash = Dash(self)
+            for bar in self._bars.values():
+                bar.register_dash_callback(self._dash.applets.refresh_bar_state)
+            self._dash.applets.refresh_bar_state()
+        return self._dash
 
-        if self._wallpaper_picker is None:
-            self._wallpaper_picker = WallpaperPicker()
-
-        if self._wallpaper_drawer is None:
-            self._wallpaper_drawer = WallpaperDrawer()
-
-        if monitor not in self._osds:
-            self._osds[monitor] = OSD(monitor_id)
-
+    def _add_bar(self, monitor: Gdk.Monitor, monitor_id: int) -> None:
         monitor_cfg = next(
             (c for c in user_options.bars.configs if c.get("monitor") == monitor_id),
             None,
@@ -2448,9 +2471,11 @@ class BarManager:
                 on_remove=lambda m=monitor, bi=bar_index: self._remove_bar(m, bi),
             )
             self._bars[key] = new_bar
-            new_bar.register_dash_callback(self._dash.applets.refresh_bar_state)
+            if self._dash:
+                new_bar.register_dash_callback(self._dash.applets.refresh_bar_state)
 
-        self._dash.applets.refresh_bar_state()
+        if self._dash:
+            self._dash.applets.refresh_bar_state()
 
     def _remove_bar(self, monitor: Gdk.Monitor, bar_index: int = None) -> None:
         self.reload_bars()
@@ -2492,13 +2517,11 @@ class BarManager:
             toggleable_windows[key].toggle(active_monitor)
             return
         if key == "Dash":
-            if self._dash:
-                self._dash.toggle(active_monitor)
+            self.get_dash().toggle(active_monitor)
             return
 
         if key in ("Settings", "DashSettings"):
-            if self._dash:
-                self._dash.open_settings(None, active_monitor)
+            self.get_dash().open_settings(None, active_monitor)
             return
 
         if key == "WallpaperPicker":
@@ -2514,23 +2537,19 @@ class BarManager:
             return
 
         if key == "Wallpapers":
-            if self._dash:
-                self._dash.toggle_wallpapers(active_monitor)
+            self.get_dash().toggle_wallpapers(active_monitor)
             return
 
         if key == "Themes":
-            if self._dash:
-                self._dash.toggle_themes(active_monitor)
+            self.get_dash().toggle_themes(active_monitor)
             return
 
         if key == "Settings":
-            if self._dash:
-                self._dash.toggle_settings(active_monitor)
+            self.get_dash().toggle_settings(active_monitor)
             return
 
         if key == "EditApplets":
-            if self._dash:
-                self._dash.toggle_applets(active_monitor)
+            self.get_dash().toggle_applets(active_monitor)
             return
 
         if key == "Launcher":
@@ -2630,8 +2649,7 @@ class BarManager:
             if get_connector_from_monitor_id(i) == active_output:
                 active_monitor = monitor
                 break
-        if self._dash:
-            self._dash.open_settings(section, active_monitor)
+        self.get_dash().open_settings(section, active_monitor)
 
     def apply_bar_height(self, height: int) -> None:
         update_bar_height_css(height)

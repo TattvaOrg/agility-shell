@@ -32,6 +32,15 @@ def seed_user_environment():
     legacy_style_dir = os.path.join(user_dir, "style")
     state_dir = get_user_state_dir()
 
+    # Fast-path: if environment is already initialized, skip redundant filesystem traversal
+    if (
+        os.path.isfile(os.path.join(cfg_dir, "config.json"))
+        and os.path.isfile(os.path.join(custom_style_dir, "border.css"))
+        and not os.path.exists(legacy_style_dir)
+        and os.path.isdir(state_dir)
+    ):
+        return
+
     os.makedirs(cfg_dir, exist_ok=True)
     os.makedirs(custom_style_dir, exist_ok=True)
     os.makedirs(state_dir, exist_ok=True)
@@ -136,10 +145,24 @@ singletons.bar_manager = bar_manager
 wallpaper_service = WallpaperService.get_instance()
 # wallpaper_service.set_bar_manager(bar_manager)
 
+from gi.repository import GLib
 from services.suits_service import SuitsService, suits_service
 profile_service = singletons.profile_service
 
-AweService.get_instance().init_startup()
+def _post_startup():
+    try:
+        singletons.idle.start()
+    except Exception as e:
+        logger.warning(f"Failed to start idle service: {e}")
+    try:
+        AweService.get_instance().init_startup()
+    except Exception as e:
+        logger.warning(f"Failed to start AweService: {e}")
+    try:
+        play_sound("session-start")
+    except Exception as e:
+        logger.warning(f"Failed to play session-start sound: {e}")
+    return False
 
-play_sound("session-start")
+GLib.idle_add(_post_startup)
 app.run()

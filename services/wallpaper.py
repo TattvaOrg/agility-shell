@@ -319,11 +319,15 @@ class WallpaperService(Service):
             # display.connect("monitor-added",  self._on_monitor_added)
             # display.connect("monitor-removed", self._on_monitor_removed)
 
-        self._ensure_awww_daemon()
-        # self._sync_monitors()
+        def _async_init_wallpaper():
+            try:
+                self._ensure_awww_daemon()
+                if self._wallpaper_path and os.path.isfile(self._wallpaper_path):
+                    _awww_set(self._wallpaper_path)
+            except Exception as err:
+                logger.error(f"[WallpaperService] Async init error: {err}")
 
-        if self._wallpaper_path and os.path.isfile(self._wallpaper_path):
-            _awww_set(self._wallpaper_path)
+        threading.Thread(target=_async_init_wallpaper, daemon=True).start()
 
     def _ensure_awww_daemon(self) -> None:
         """Start awww-daemon if it isn't already running."""

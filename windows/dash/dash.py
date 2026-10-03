@@ -16,7 +16,6 @@ import bar
 from user_options import user_options
 from services.desktop_applets import DesktopAppletService
 
-DesktopAppletService.get_instance()
 display = Gdk.Display.get_default()
 
 REVEAL_DURATION = 300

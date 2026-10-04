@@ -251,7 +251,10 @@ class FlatScale(Gtk.DrawingArea, Widget):
 
     def set_value(self, value: float) -> None:
         new = clamp(value, self._min_value, self._max_value)
-        if new != self._value:
+        if self._step and self._step > 0:
+            steps = round((new - self._min_value) / self._step)
+            new = clamp(self._min_value + steps * self._step, self._min_value, self._max_value)
+        if abs(new - self._value) > 1e-6:
             self._value = new
             self.emit("value-changed", self._value)
             self.queue_draw()
@@ -353,7 +356,11 @@ class FlatScale(Gtk.DrawingArea, Widget):
             ratio = clamp(x / width, 0.0, 1.0)
         else:
             ratio = clamp(1.0 - (y / height), 0.0, 1.0)
-        return self._min_value + ratio * (self._max_value - self._min_value)
+        raw_val = self._min_value + ratio * (self._max_value - self._min_value)
+        if self._step and self._step > 0:
+            steps = round((raw_val - self._min_value) / self._step)
+            return clamp(self._min_value + steps * self._step, self._min_value, self._max_value)
+        return raw_val
 
     # ------------------------------------------------------------------ #
     #  Bubble animation helpers                                            #

@@ -429,6 +429,7 @@ def create_slider_row(
     Pairs a FlatScale with an inline value badge (e.g. '60%', '180ms')
     and sets proper layout constraints so it can be dragged smoothly.
     """
+    slider.connect("button-release-event", lambda *_: user_options.flush_save())
     badge_box = Box(
         orientation="h",
         h_align="center",
@@ -500,6 +501,7 @@ class DashSettingsPage(Box):
         self._setting_trans_buttons: dict[str, Button] = {}
         self._pool_chips: dict[str, Button] = {}
         self._all_cards: list[Box] = []
+        self._bar_height_apply_timer = None
 
         # Theme page instance variables
         self._theme_active_thumb: ThemeThumb | MatugenThumb | None = None
@@ -1064,6 +1066,7 @@ class DashSettingsPage(Box):
             h_expand=True,
         )
         self._bar_height_slider.connect("value-changed", self._on_bar_height_changed)
+        self._bar_height_slider.connect("button-release-event", self._on_bar_height_released)
 
         bar_height_row = create_slider_row(
             title="Bar Thickness (Height)",
@@ -1903,7 +1906,7 @@ class DashSettingsPage(Box):
         if hasattr(self, "_delay_badge"):
             self._delay_badge.set_label(f"{int_val}ms")
         user_options.settings.hover_delay = int_val
-        user_options.save()
+        user_options.save_debounced(300)
 
     def _on_bar_theme_selected(self, theme_id: str):
         preset = next((p for p in BAR_THEME_PRESETS if p["id"] == theme_id), None)
@@ -1952,19 +1955,48 @@ class DashSettingsPage(Box):
         height = int(round(max(26.0, min(48.0, float(val)))))
         if hasattr(self, "_bar_height_badge"):
             self._bar_height_badge.set_label(f"{height}px")
+        if getattr(user_options.settings, "bar_height", 36) == height:
+            return
         user_options.settings.bar_height = height
-        user_options.save()
+        user_options.save_debounced(300)
 
+        # Smooth throttled live preview (~30ms) for instant feedback without choking GTK event loop
+        if getattr(self, "_bar_height_apply_timer", None) is not None:
+            try:
+                GLib.source_remove(self._bar_height_apply_timer)
+            except Exception:
+                pass
+            self._bar_height_apply_timer = None
+
+        def _apply():
+            self._bar_height_apply_timer = None
+            bm = self._bar_manager or singletons.bar_manager
+            if bm and hasattr(bm, "apply_bar_height"):
+                bm.apply_bar_height(height)
+            return False
+
+        self._bar_height_apply_timer = GLib.timeout_add(30, _apply)
+
+    def _on_bar_height_released(self, _scale, _event):
+        if getattr(self, "_bar_height_apply_timer", None) is not None:
+            try:
+                GLib.source_remove(self._bar_height_apply_timer)
+            except Exception:
+                pass
+            self._bar_height_apply_timer = None
+        height = int(round(getattr(user_options.settings, "bar_height", 36)))
         bm = self._bar_manager or singletons.bar_manager
         if bm and hasattr(bm, "apply_bar_height"):
             bm.apply_bar_height(height)
+        user_options.flush_save()
+        return False
 
     def _on_bar_opacity_changed(self, _scale, val: float):
         opacity = max(0.0, min(1.0, float(val)))
         if hasattr(self, "_bar_opacity_badge"):
             self._bar_opacity_badge.set_label(f"{round(opacity * 100)}%")
         user_options.settings.bar_opacity = opacity
-        user_options.save()
+        user_options.save_debounced(300)
 
         bm = self._bar_manager or singletons.bar_manager
         if bm and hasattr(bm, "apply_bar_opacity"):
@@ -1975,7 +2007,7 @@ class DashSettingsPage(Box):
         if hasattr(self, "_widget_opacity_badge"):
             self._widget_opacity_badge.set_label(f"{round(opacity * 100)}%")
         user_options.settings.widget_opacity = opacity
-        user_options.save()
+        user_options.save_debounced(300)
 
         bm = self._bar_manager or singletons.bar_manager
         if bm and hasattr(bm, "apply_widget_opacity"):
@@ -1986,7 +2018,7 @@ class DashSettingsPage(Box):
         if hasattr(self, "_desktop_opacity_badge"):
             self._desktop_opacity_badge.set_label(f"{round(opacity * 100)}%")
         user_options.settings.desktop_widget_opacity = opacity
-        user_options.save()
+        user_options.save_debounced(300)
 
         from services.desktop_applets import DesktopAppletService
         das = DesktopAppletService.get_instance()
@@ -2002,7 +2034,7 @@ class DashSettingsPage(Box):
         if hasattr(self, "_dim_badge"):
             self._dim_badge.set_label(f"{round(opacity * 100)}%")
         user_options.settings.dash_dim_opacity = opacity
-        user_options.save()
+        user_options.save_debounced(300)
 
         bm = self._bar_manager or singletons.bar_manager
         if bm and getattr(bm, "_dash", None) and hasattr(bm._dash, "dismiss_layer"):
@@ -2013,7 +2045,7 @@ class DashSettingsPage(Box):
         if hasattr(self, "_card_opacity_badge"):
             self._card_opacity_badge.set_label(f"{round(opacity * 100)}%")
         user_options.settings.dash_card_opacity = opacity
-        user_options.save()
+        user_options.save_debounced(300)
 
         self.set_card_opacity(opacity)
 
@@ -2448,11 +2480,13 @@ class DashSettingsPage(Box):
         opacity = max(0.2, min(1.0, float(val)))
         if hasattr(self, "_theme_opacity_badge"):
             self._theme_opacity_badge.set_label(f"{round(opacity * 100)}%")
+        user_options.theme.opacity = round(opacity, 2)
+        user_options.save_debounced(300)
 
     def _on_theme_opacity_released(self, scale, event):
         value = round(scale.get_value(), 2)
         user_options.theme.opacity = value
-        user_options.save()
+        user_options.flush_save()
         theme_service.apply()
 
     def _on_theme_font_clicked(self, key: str):

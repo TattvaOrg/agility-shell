@@ -1,6 +1,7 @@
 import os
 import json
 from loguru import logger
+from gi.repository import GLib
 from services.paths import get_config_path, resolve_asset
 
 CONFIG_PATH = get_config_path("config.json")
@@ -347,6 +348,7 @@ class UserOptions:
         self.desktop_applets = self.DesktopApplets()
         self.desktop_canvas = self.DesktopCanvas()
         self._save_callbacks = []
+        self._save_timer = None
         self._load()
 
     def _load(self) -> None:
@@ -375,6 +377,13 @@ class UserOptions:
             logger.error(f"[UserOptions] failed to load config: {e}")
 
     def save(self) -> None:
+        if self._save_timer is not None:
+            try:
+                GLib.source_remove(self._save_timer)
+            except Exception:
+                pass
+            self._save_timer = None
+
         try:
             os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
 
@@ -412,6 +421,32 @@ class UserOptions:
 
         except Exception as e:
             logger.error(f"[UserOptions] failed to save config: {e}")
+
+    def save_debounced(self, delay_ms: int = 300) -> None:
+        """Coalesce rapid successive saves into a single disk write after delay_ms."""
+        if self._save_timer is not None:
+            try:
+                GLib.source_remove(self._save_timer)
+            except Exception:
+                pass
+            self._save_timer = None
+
+        def _do_save():
+            self._save_timer = None
+            self.save()
+            return False
+
+        self._save_timer = GLib.timeout_add(delay_ms, _do_save)
+
+    def flush_save(self) -> None:
+        """Immediately commit any pending debounced save to disk."""
+        if self._save_timer is not None:
+            try:
+                GLib.source_remove(self._save_timer)
+            except Exception:
+                pass
+            self._save_timer = None
+            self.save()
 
     def register_save_callback(self, cb) -> None:
         if cb not in self._save_callbacks:

@@ -19,10 +19,12 @@ REPO_DIR="$CACHE_DIR/repo"
 REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
 
 if [[ -d "$REPO_DIR/.git" ]]; then
-    echo "[agility] Reusing repository cache at $REPO_DIR (fetching deltas only)..."
+    echo "[agility] Reusing repository cache at $REPO_DIR (fetching deltas and latest updater)..."
     cd "$REPO_DIR"
     git remote set-url origin "$REPO_URL" 2>/dev/null || true
     git fetch --prune --tags origin
+    git checkout -f main 2>/dev/null || git checkout -b main origin/main
+    git reset --hard origin/main
 else
     echo "[agility] Initializing repository cache at $REPO_DIR..."
     mkdir -p "$CACHE_DIR"

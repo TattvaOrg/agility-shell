@@ -330,8 +330,8 @@ do_update() {
 
     if [[ -z "$target_channel" ]]; then
         echo -e "${BOLD}Select update channel:${RESET}"
-        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM}Tested, stable version${RESET}"
-        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM}Newest features & bug fixes (Recommended)${RESET}"
+        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM:-}Tested, stable version${RESET}"
+        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM:-}Newest features & bug fixes (Recommended)${RESET}"
         echo ""
         prompt_user "  Enter choice [1/2] (default: 2): " channel_choice "2"
         case "$channel_choice" in

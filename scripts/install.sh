@@ -39,6 +39,7 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 BLUE='\033[0;34m'
 BOLD='\033[1m'
+DIM='\033[2m'
 RESET='\033[0m'
 
 info()    { echo -e "${CYAN}${BOLD}[agility]${RESET} $*"; }
@@ -251,7 +252,7 @@ test_and_install_deps_step_by_step() {
             prompt_user "         -> Install '${pkg}' via pacman now? [Y/n]: " inst_choice "y"
             case "$inst_choice" in
                 [nN]|[nN][oO])
-                    echo -e "         ${DIM}Skipped ${pkg}.${RESET}"
+                    echo -e "         ${DIM:-}Skipped ${pkg}.${RESET}"
                     ;;
                 *)
                     info "Installing ${pkg}..."
@@ -272,7 +273,7 @@ test_and_install_deps_step_by_step() {
             prompt_user "         -> Update '${pkg}' via pacman now? [Y/n]: " upd_choice "y"
             case "$upd_choice" in
                 [nN]|[nN][oO])
-                    echo -e "         ${DIM}Skipped update for ${pkg}.${RESET}"
+                    echo -e "         ${DIM:-}Skipped update for ${pkg}.${RESET}"
                     ;;
                 *)
                     info "Updating ${pkg}..."
@@ -322,7 +323,7 @@ test_and_install_deps_step_by_step() {
             prompt_user "         -> Install '${pkg}' using ${aur_helper}? [Y/n]: " aur_choice "y"
             case "$aur_choice" in
                 [nN]|[nN][oO])
-                    echo -e "         ${DIM}Skipped ${pkg}.${RESET}"
+                    echo -e "         ${DIM:-}Skipped ${pkg}.${RESET}"
                     ;;
                 *)
                     info "Installing ${pkg} via ${aur_helper}..."
@@ -343,7 +344,7 @@ test_and_install_deps_step_by_step() {
             prompt_user "         -> Update '${pkg}' using ${aur_helper}? [Y/n]: " aur_upd_choice "y"
             case "$aur_upd_choice" in
                 [nN]|[nN][oO])
-                    echo -e "         ${DIM}Skipped update for ${pkg}.${RESET}"
+                    echo -e "         ${DIM:-}Skipped update for ${pkg}.${RESET}"
                     ;;
                 *)
                     info "Updating ${pkg} via ${aur_helper}..."
@@ -786,8 +787,8 @@ do_install() {
 
         echo ""
         echo -e "${BOLD}Select installation version / channel:${RESET}"
-        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM}Tested, stable version${RESET}"
-        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM}Newest features & bug fixes (Recommended)${RESET}"
+        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM:-}Tested, stable version${RESET}"
+        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM:-}Newest features & bug fixes (Recommended)${RESET}"
         echo ""
         prompt_user "  Enter choice [1/2] (default: 2): " inst_channel "2"
         case "$inst_channel" in

@@ -2,9 +2,9 @@
 pkgname=agility-shell-git
 pkgver=1.3.0.r366.ge270d87
 pkgrel=1
-pkgdesc="Next-generation Wayland desktop shell powered by Fabric and GTK3"
+pkgdesc="Next-generation Wayland desktop shell powered by Rust daemon and Quickshell"
 arch=('x86_64' 'aarch64')
-url="https://github.com/AbsolOrg/agility-shell"
+url="https://github.com/TattvaOrg/agility-shell"
 license=('GPL-3.0-or-later')
 depends=(
     'gtk3'
@@ -39,14 +39,16 @@ depends=(
     'wayland'
     'awww'
     'niri'
+    'quickshell'
+    'pam'
+    'libpulse'
 )
-makedepends=('git' 'gcc' 'make' 'pkgconf')
+makedepends=('git' 'gcc' 'make' 'pkgconf' 'cargo')
 optdepends=(
-    'quickshell: for advanced desktop applets and awe widgets'
     'pipewire: for audio playback support'
     'wireplumber: for audio device and volume management'
 )
-provides=('agility-shell')
+provides=('agility-shell' 'agilityd' 'agl')
 conflicts=('agility-shell')
 if [[ -f "${startdir}/main.py" && -f "${startdir}/Makefile" ]]; then
     _intree=true

@@ -483,12 +483,12 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 1: Workspace Scaffolding & Build System Setup
-- [ ] 1.1 Create Cargo workspace configuration at repository root with members `crates/agilityd` and `crates/agility-cli`.
-- [ ] 1.2 Define dependency manifests (`tokio`, `zbus`, `serde`, `serde_json`, `sysinfo`, `nucleo`, `pam-sys`, `libpulse-binding`, `tracing`, `tracing-subscriber`).
-- [ ] 1.3 Configure release build profile (`lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`) for minimal binary size and maximum performance.
-- [ ] 1.4 Update root `Makefile` with targets for building and installing `agilityd` and `agl` (`make build`, `make install`).
-- [ ] 1.5 Update `PKGBUILD` to compile the Rust daemon and CLI tool via `cargo build --release` and install to `/usr/bin/agilityd` and `/usr/bin/agl`.
-- [ ] 1.6 Verify clean compilation and zero-warning build on Arch Linux.
+- [X] 1.1 Create Cargo workspace configuration at repository root with members `crates/agilityd` and `crates/agility-cli`.
+- [X] 1.2 Define dependency manifests (`tokio`, `zbus`, `serde`, `serde_json`, `sysinfo`, `nucleo`, `pam-sys`, `libpulse-binding`, `tracing`, `tracing-subscriber`).
+- [X] 1.3 Configure release build profile (`lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`) for minimal binary size and maximum performance.
+- [X] 1.4 Update root `Makefile` with targets for building and installing `agilityd` and `agl` (`make build`, `make install`).
+- [X] 1.5 Update `PKGBUILD` to compile the Rust daemon and CLI tool via `cargo build --release` and install to `/usr/bin/agilityd` and `/usr/bin/agl`.
+- [X] 1.6 Verify clean compilation and zero-warning build on Arch Linux.
 
 ---
 

@@ -35,6 +35,8 @@ depends=(
     'python-loguru'
     'python-setproctitle'
     'python-rapidfuzz'
+    'python-pam'
+    'wayland'
     'awww'
     'niri'
 )
@@ -52,7 +54,7 @@ if [[ -f "${startdir}/main.py" && -f "${startdir}/Makefile" ]]; then
     sha256sums=()
 else
     _intree=false
-    source=("${pkgname}::git+https://github.com/TattvaOrg/agility-shell.git#branch=expansions")
+    source=("${pkgname}::git+https://github.com/TattvaOrg/agility-shell.git#branch=main")
     sha256sums=('SKIP')
 fi
 
@@ -85,6 +87,5 @@ package() {
         cd "${srcdir}/${pkgname}"
     fi
     make DESTDIR="${pkgdir}" PREFIX="/usr" install
-    make DESTDIR="${pkgdir}" PREFIX="/usr" install-venv
 }
 

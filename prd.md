@@ -322,6 +322,15 @@ The Rust daemon communicates with Quickshell and external CLI tools over the D-B
 - **Signals:**
   - `UpdateAvailable(u32 count)`
 
+### 3.19 `org.freedesktop.impl.portal.Settings` (XDG Desktop Portal Settings & Color Scheme Bridge)
+- **Object Path:** `/org/freedesktop/portal/desktop`
+- **Description:** Implements standard portal Settings interface broadcasting dark/light appearance tokens to sandboxed Flatpaks and native GTK/Qt applications.
+- **Methods:**
+  - `ReadAll(as namespaces) -> (a{sa{sv}})`
+  - `Read(s namespace, s key) -> (v)`
+- **Signals:**
+  - `SettingChanged(s namespace, s key, v value)` (`org.freedesktop.appearance`, `color-scheme`: `1` for dark, `2` for light)
+
 ---
 
 ## 4. Configuration & User Options Schema
@@ -483,12 +492,12 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 1: Workspace Scaffolding & Build System Setup
-- [ ] 1.1 Create Cargo workspace configuration at repository root with members `crates/agilityd` and `crates/agility-cli`.
-- [ ] 1.2 Define dependency manifests (`tokio`, `zbus`, `serde`, `serde_json`, `sysinfo`, `nucleo`, `pam-sys`, `libpulse-binding`, `tracing`, `tracing-subscriber`).
-- [ ] 1.3 Configure release build profile (`lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`) for minimal binary size and maximum performance.
-- [ ] 1.4 Update root `Makefile` with targets for building and installing `agilityd` and `agl` (`make build`, `make install`).
-- [ ] 1.5 Update `PKGBUILD` to compile the Rust daemon and CLI tool via `cargo build --release` and install to `/usr/bin/agilityd` and `/usr/bin/agl`.
-- [ ] 1.6 Verify clean compilation and zero-warning build on Arch Linux.
+- [X] 1.1 Create Cargo workspace configuration at repository root with members `crates/agilityd` and `crates/agility-cli`.
+- [X] 1.2 Define dependency manifests (`tokio`, `zbus`, `serde`, `serde_json`, `sysinfo`, `nucleo`, `pam-sys`, `libpulse-binding`, `tracing`, `tracing-subscriber`).
+- [X] 1.3 Configure release build profile (`lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`) for minimal binary size and maximum performance.
+- [X] 1.4 Update root `Makefile` with targets for building and installing `agilityd` and `agl` (`make build`, `make install`).
+- [X] 1.5 Update `PKGBUILD` to compile the Rust daemon and CLI tool via `cargo build --release` and install to `/usr/bin/agilityd` and `/usr/bin/agl`.
+- [X] 1.6 Verify clean compilation and zero-warning build on Arch Linux.
 
 ---
 
@@ -569,6 +578,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 9.5 Provide fallback static color presets (Dark, Light, TokyoNight, Catppuccin, Gruvbox) when wallpaper extraction is disabled.
 - [ ] 9.6 Implement template generator applying extracted tokens to terminal configurations (Kitty, Alacritty, Foot) and Niri borders.
 - [ ] 9.7 Implement fast Rust-native blurred wallpaper generator using `image` crate, producing `~/.cache/agility-shell/wallpaper_blurred` in < 15ms for lockscreen and UI glass backgrounds.
+- [ ] 9.8 Implement XDG Desktop Portal Settings backend (`org.freedesktop.impl.portal.Settings`) synchronizing `color-scheme` (0: default, 1: dark, 2: light) across Flatpaks and native GTK/Qt applications.
 
 ---
 
@@ -659,6 +669,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 19.4 Implement Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
 - [ ] 19.5 Render blurred wallpaper surface, clock, date, avatar, and secure password input connected to PAM worker.
 - [ ] 19.6 Ensure screen remains fully locked across monitor connect/disconnect events.
+- [ ] 19.7 Implement User Plugin & Custom Applets dynamic loader: scan `~/.local/share/agility-shell/plugins/` and load user-defined QML applets into the Desktop Canvas and Status Bar menus.
 
 ---
 
@@ -688,6 +699,14 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 20.7 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
 - [ ] 20.8 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
 - [ ] 20.9 Update `README.md` documentation, architecture diagrams, and quick-start guides.
+
+---
+
+### Step 21: Headless CI/CD, Automated Mock Testing Harness & Benchmarks
+- [ ] 21.1 Implement headless test harness with mock Niri socket and virtual D-Bus session bus in `tests/` or `crates/agility-test-harness`.
+- [ ] 21.2 Add integration tests verifying all 19 D-Bus endpoints respond within SLA (< 2ms for Launcher, < 4ms for Workspaces).
+- [ ] 21.3 Implement automated GitHub Actions CI pipeline running `cargo test`, `cargo clippy --all-targets`, and formatting checks on push.
+- [ ] 21.4 Implement automated memory benchmark test asserting `agilityd` idle RSS < 15MB.
 
 ---
 

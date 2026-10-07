@@ -66,12 +66,17 @@ The Rust daemon communicates with Quickshell and external CLI tools over the D-B
   - `workspaces` (`s` / JSON): Array of workspace objects `{id, idx, name, output, is_active, window_count}`.
   - `focused_window_title` (`s`): Title of currently focused window.
   - `focused_app_id` (`s`): Application ID / class of focused window.
+  - `keyboard_layouts` (`as`): Array of available keyboard layout names (e.g. `["us", "de"]`).
+  - `current_keyboard_layout` (`s`): Name of current active layout.
+  - `current_keyboard_layout_idx` (`u32`): Index of active layout.
 - **Methods:**
   - `ActivateWorkspace(u32 id) -> ()`
   - `CloseFocusedWindow() -> ()`
+  - `SwitchKeyboardLayout(u32 idx) -> ()`
 - **Signals:**
   - `WorkspaceChanged(u32 id)`
   - `WindowChanged(s title, s app_id)`
+  - `KeyboardLayoutChanged(s name, u32 idx)`
 
 ### 3.2 `org.agility.Daemon.Audio`
 - **Object Path:** `/org/agility/Daemon/Audio`
@@ -280,6 +285,43 @@ The Rust daemon communicates with Quickshell and external CLI tools over the D-B
 - **Methods:**
   - `Play(s sound_name) -> ()`: Dispatches system sound (`"session-start"`, `"session-quit"`, `"notification"`, `"battery-low"`, `"battery-warning"`, `"battery-charge"`, `"error"`, `"confirm"`, `"alarm"`, `"widget-placed"`, `"widget-removed"`).
 
+### 3.17 `org.agility.Daemon.Timer`
+- **Object Path:** `/org/agility/Daemon/Timer`
+- **Properties:**
+  - `stopwatch_running` (`b`): Stopwatch active state.
+  - `stopwatch_elapsed` (`d`): Elapsed seconds with centisecond precision.
+  - `stopwatch_laps` (`s` / JSON): Array of recorded lap split objects `{lap_number, time, lap_time}`.
+  - `alarm_set` (`b`): Whether a countdown alarm is currently armed.
+  - `alarm_triggered` (`b`): Whether the active alarm is currently firing.
+  - `alarm_remaining_sec` (`d`): Seconds remaining until alarm triggers.
+- **Methods:**
+  - `StartStopwatch() -> ()`
+  - `PauseStopwatch() -> ()`
+  - `ResetStopwatch() -> ()`
+  - `AddLap() -> (s)`
+  - `SetAlarm(u32 hours, u32 minutes, u32 seconds) -> ()`
+  - `CancelAlarm() -> ()`
+  - `SnoozeAlarm(u32 minutes) -> ()`
+- **Signals:**
+  - `AlarmTriggered()`
+  - `StopwatchUpdated(d elapsed)`
+
+### 3.18 `org.agility.Daemon.System`
+- **Object Path:** `/org/agility/Daemon/System`
+- **Properties:**
+  - `top_processes` (`s` / JSON): Live array of processes `{pid, name, cpu_percent, memory_mb}` sorted descending by CPU.
+  - `updates_available` (`u32`): Number of commits behind remote or pending system updates.
+- **Methods:**
+  - `KillProcess(u32 pid) -> (b)`: Gracefully terminates (or force kills) a target process by PID.
+  - `CheckUpdates() -> (u32)`: Queries git remote / package manager asynchronously.
+  - `PowerOff() -> ()`: Triggers system shutdown via logind D-Bus.
+  - `Reboot() -> ()`: Triggers system reboot via logind D-Bus.
+  - `Suspend() -> ()`: Triggers system suspend via logind D-Bus.
+  - `Hibernate() -> ()`: Triggers system hibernation via logind D-Bus.
+  - `Logout() -> ()`: Terminates active Wayland user session cleanly.
+- **Signals:**
+  - `UpdateAvailable(u32 count)`
+
 ---
 
 ## 4. Configuration & User Options Schema
@@ -465,7 +507,8 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 3.2 Implement asynchronous JSON stream reader for Niri event stream (`WorkspacesChanged`, `WorkspaceActivated`, `WindowOpenedOrChanged`, `WindowClosed`, `WindowFocusChanged`).
 - [ ] 3.3 Create `Compositor` trait abstraction allowing future extension to Hyprland and generic wlroots protocols.
 - [ ] 3.4 Implement D-Bus interface `org.agility.Daemon.Workspaces` exposing active workspace, window titles, and workspace switching methods.
-- [ ] 3.5 Test workspace switching latency and event reliability under rapid switching (< 4ms response).
+- [ ] 3.5 Implement keyboard layout synchronization observing compositor IPC events and expose `SwitchKeyboardLayout(idx)` on `org.agility.Daemon.Workspaces`.
+- [ ] 3.6 Test workspace switching latency and event reliability under rapid switching (< 4ms response).
 
 ---
 
@@ -476,6 +519,8 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 4.4 Implement thermal temperature monitor inspecting `/sys/class/thermal/` and `/sys/class/hwmon/`.
 - [ ] 4.5 Implement filesystem storage monitor calculating mounted root and home directory usage.
 - [ ] 4.6 Expose telemetry via `org.agility.Daemon.Hardware` with configurable polling frequencies (fast: 1s for CPU/RAM, slow: 10s for battery/storage).
+- [ ] 4.7 Implement top process scanner sorted by CPU/memory and `KillProcess(pid)` method on `org.agility.Daemon.System`.
+
 
 ---
 
@@ -503,6 +548,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 7.4 Integrate `nucleo` for fuzzy matching with match scoring and character highlighting.
 - [ ] 7.5 Expose D-Bus interface `org.agility.Daemon.Launcher` with `Query()`, `Launch()`, and `ListAll()`.
 - [ ] 7.6 Benchmark search response: guarantee < 2ms latency for 500+ installed applications.
+- [ ] 7.7 Implement high-speed Icon Resolver engine matching reverse-DNS app IDs to Freedesktop icons and local `svgs/` duotones, backed by in-memory and disk cache (`~/.cache/agility-shell/icons.json`).
 
 ---
 
@@ -511,6 +557,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 8.2 Load, validate, and save suites from `~/.config/agility-shell/config/suits.json`.
 - [ ] 8.3 Expose D-Bus interface `org.agility.Daemon.Suits` (`GetSuits()`, `SwitchSuite()`, `CycleNextSuite()`, `CyclePrevSuite()`).
 - [ ] 8.4 Load base user settings from `~/.config/agility-shell/config/config.json` with fallback defaults.
+- [ ] 8.5 Implement Doom Vertical Melt screen transition overlay (`DoomMeltOverlay`) playing staggered column melt animation across monitors when switching suites.
 
 ---
 
@@ -521,6 +568,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 9.4 Expose D-Bus interface `org.agility.Daemon.Theme` streaming dynamic theme tokens directly to QML without file writes.
 - [ ] 9.5 Provide fallback static color presets (Dark, Light, TokyoNight, Catppuccin, Gruvbox) when wallpaper extraction is disabled.
 - [ ] 9.6 Implement template generator applying extracted tokens to terminal configurations (Kitty, Alacritty, Foot) and Niri borders.
+- [ ] 9.7 Implement fast Rust-native blurred wallpaper generator using `image` crate, producing `~/.cache/agility-shell/wallpaper_blurred` in < 15ms for lockscreen and UI glass backgrounds.
 
 ---
 
@@ -599,7 +647,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 18.2 Implement interactive sliders for Volume, Mic, and Screen Brightness.
 - [ ] 18.3 Implement quick toggle tiles for WiFi, Bluetooth, Caffeine, Night Light, and Power Profile.
 - [ ] 18.4 Implement standalone popout menus for WiFi network selection, Bluetooth pairing, Audio device mixer, and Power/Session logout.
-- [ ] 18.5 Implement On-Screen Display (OSD) overlay for hardware volume/backlight adjustments.
+- [ ] 18.5 Implement On-Screen Display (OSD) overlay for hardware Volume/Backlight adjustments, Keyboard Layout switching, Power Profile changes, and Update Available notification alerts.
 - [ ] 18.6 Implement centered modal Application Launcher / Dash with sub-2ms fuzzy search, categories, and calculator mode.
 
 ---
@@ -616,17 +664,22 @@ Use this checklist to track progress throughout the implementation. Mark items w
 
 ### Step 20: CLI Tool (`agl`), Systemd Integration, Backward Compatibility & Packaging
 - [ ] 20.1 Build `crates/agility-cli` (`agl`) binary in Rust dispatching high-speed D-Bus calls to `agilityd`:
-  - `agl start`: Start daemon and Quickshell.
+  - `agl start [--legacy]`: Start daemon and Quickshell (or legacy Python stack).
   - `agl stop`: Cleanly stop daemon and Quickshell.
-  - `agl restart`: Gracefully restart UI surfaces.
+  - `agl restart`: Gracefully restart UI surfaces and daemon in < 15ms.
   - `agl status`: Inspect daemon PID and D-Bus status.
   - `agl lock`: Trigger session lockscreen.
-  - `agl suits <list|next|prev|switch <id>>`: Manage desktop suites.
-  - `agl volume <up|down|mute>`: Audio control.
-  - `agl brightness <up|down>`: Backlight control.
-  - `agl screenshot <full|window|region>`: Trigger screenshot.
-  - `agl record <start|stop>`: Trigger screen recording.
-  - `agl caffeine <toggle>`: Toggle idle inhibitor.
+  - `agl toggle <launcher|control-center|dashboard|calendar|clipboard|weather|media|notifications|suits|applets-edit|wallpaper>`: Toggle overlays.
+  - `agl profile <balanced|performance|power-saver|get>`: Set or get system power profile.
+  - `agl bar <height <26-48> | width [toggle|min|full]>`: Dynamically adjust status bar thickness and width mode.
+  - `agl suits <list|next|prev|switch <id>>`: Manage and cycle desktop suites.
+  - `agl volume <up|down|mute> [step]`: Audio volume control.
+  - `agl brightness <up|down> [step]`: Display backlight control.
+  - `agl screenshot <full|window|region>`: Trigger screenshot capture.
+  - `agl record <start|stop>`: Trigger screen recording with PipeWire audio.
+  - `agl caffeine <toggle>`: Toggle idle inhibitor state.
+  - `agl deps`: Verify system runtime and compositor dependencies.
+  - `agl update`: Perform self-update check and upgrade.
 - [ ] 20.2 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
 - [ ] 20.3 Implement fallback switch: allow users to launch legacy Python shell via `agl start --legacy`.
 - [ ] 20.4 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.

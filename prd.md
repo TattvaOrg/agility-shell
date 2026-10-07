@@ -1,65 +1,425 @@
 # Agility Shell Next-Gen (Rust + QML) — Master Product Requirements Document & Implementation Plan
 
-**Document Version:** 2.0.0  
+**Document Version:** 2.1.0  
 **Target Architecture:** Rust Core Daemon (`agilityd`) + Quickshell (Qt6 / QML) Wayland Shell  
-**Primary Compositor:** Niri (with Extensible Wayland Compositor Trait)  
-**Status:** Architecture Approved / Ready for Execution  
+**Primary Compositor:** Niri (with Extensible Wayland Compositor Trait for Hyprland & MangoWC)  
+**Status:** Comprehensive Architecture Approved / Ready for Execution  
 
 ---
 
 ## 1. What is Agility Shell?
 
-**Agility Shell** is a modern, modular Wayland desktop shell designed to provide an integrated, fluid, and beautiful desktop user experience without desktop bloat. Originally built using Python, GTK3, and Fabric, Agility Shell is transitioning to a **compiled Rust backend daemon paired with a Quickshell (Qt6 / QML) frontend**.
+**Agility Shell** is a modern, modular, and blazing-fast Wayland desktop shell designed to provide an integrated, fluid, and beautiful desktop environment without desktop bloat. Originally built using Python, GTK3, and Fabric, Agility Shell is transitioning to a **compiled Rust backend daemon (`agilityd`) paired with a reactive Quickshell (Qt6 / QML) frontend**.
 
-### Core Philosophy
-1. **Extreme Efficiency & Low Latency:** Sub-35MB total system footprint, zero garbage collection pauses, and sub-10ms daemon startup.
-2. **Vintage & Modern Hardware Parity:** Seamless 60–144Hz performance on modern discrete GPUs, paired with universal CPU software rasterization fallback (`QT_QUICK_BACKEND=software`) for vintage Intel HD Graphics and legacy hardware.
-3. **Unified Out-of-the-Box Desktop:** Delivers a complete environment including a modular status bar, interactive control center, fuzzy application launcher, secure PAM lockscreen, desktop suites ("Suits"), and dynamic Material You wallpaper theming.
-4. **Declarative & Hackable:** The UI is written in clean, reactive QML with instant hot-reloading during development, while low-level system drivers run safely in compiled Rust.
-
----
-
-## 2. Architecture Overview & Data Flow
-
-```
-+-----------------------------------------------------------------------------------+
-|                           WAYLAND COMPOSITOR (Niri)                               |
-+--------------------------+------------------------------------+-------------------+
-                           | wlr-layer-shell / ext-session-lock | Unix Socket
-                           v                                    v
-+--------------------------+--------+   D-Bus Signals       +---+-------------------+
-|      QUICKSHELL FRONTEND          | <==================== |   RUST DAEMON         |
-|         (Qt6 / QML)               | ====================> |   (agilityd)          |
-|                                   |    D-Bus Methods      +---+-------------------+
-|  - Status Bar & Island Applets    |                           |
-|  - Control Center & Sliders       |                           | Native Systems
-|  - Fuzzy Search App Launcher      |                           v
-|  - Ext-Session-Lock Lockscreen    |               +-----------+-------------------+
-|  - Theme.qml (Material You)       |               | - Niri IPC Stream             |
-+-----------------------------------+               | - PipeWire / WirePlumber Audio|
-                                                    | - UPower & Sysfs Monitors     |
-                                                    | - NetworkManager & BlueZ      |
-                                                    | - PAM Auth Worker Thread      |
-                                                    | - Desktop Entry Indexer       |
-                                                    | - Suits Manager (suits.json)  |
-                                                    +-------------------------------+
-```
-
-### IPC Bridge Contract (`org.agility.Daemon`)
-The Rust daemon exposes high-speed, type-safe interfaces on the D-Bus session bus via `zbus`:
-- `org.agility.Daemon.Workspaces`: Real-time Niri workspaces, active column, and window focus tracking.
-- `org.agility.Daemon.Audio`: PipeWire default speaker/microphone volume and mute states.
-- `org.agility.Daemon.Hardware`: CPU %, RAM %, battery percentage, charging state, temperatures, and disk metrics.
-- `org.agility.Daemon.Network`: WiFi connection state, active SSID, signal strength, and network toggle.
-- `org.agility.Daemon.Bluetooth`: Adapter power state, paired devices, and connection toggles.
-- `org.agility.Daemon.Launcher`: Background `.desktop` entry index and sub-millisecond fuzzy query search.
-- `org.agility.Daemon.Lock`: Secure worker thread communicating with Linux PAM for authentication.
-- `org.agility.Daemon.Theme`: Material You extracted color palette broadcast directly into QML.
-- `org.agility.Daemon.Suits`: Desktop mode preset switching, persistent layout profiles, and suite exports.
+### 1.1 Core Philosophy & Design Pillars
+1. **Extreme Efficiency & Low Latency:** Sub-40MB total combined system footprint (< 15MB daemon RSS, < 25MB UI RSS), zero garbage collection pauses, and sub-15ms daemon cold-start.
+2. **Vintage & Modern Hardware Parity:** Seamless 60–144Hz performance on modern discrete GPUs (Vulkan/OpenGL), paired with universal CPU software rasterization fallback (`QT_QUICK_BACKEND=software`) for vintage Intel HD Graphics and legacy hardware.
+3. **Unified Out-of-the-Box Desktop Experience:** Delivers a complete environment including modular multi-monitor status bars, application dock, interactive control center, fuzzy application launcher, notification daemon & history, on-screen display (OSD), clipboard manager, desktop applet canvas, secure PAM lockscreen, desktop suites ("Suits"), and dynamic Material You wallpaper theming.
+4. **Declarative & Hackable UI:** The UI is written in clean, reactive QML with instant hot-reloading during development, while low-level system drivers, hardware monitors, and D-Bus services run safely in compiled Rust.
+5. **No Python Runtime Required:** The entire Next-Gen shell operates without Python, GTK3, PyGObject, or Fabric dependencies in production.
 
 ---
 
-## 3. Target Specifications & Performance KPIs
+## 2. Complete System Architecture & Data Flow
+
+```
++---------------------------------------------------------------------------------------------------+
+|                                     WAYLAND COMPOSITORS                                           |
+|                     [Niri (Primary)]  |  [Hyprland]  |  [MangoWC / generic wlroots]               |
++--------------------------------+-----------------------------------+------------------------------+
+                                 | wlr-layer-shell                   | Unix IPC Sockets
+                                 | ext-session-lock-v1               | (Niri Event Stream,
+                                 | ext-idle-notifier-v1              |  wl-roots protocols)
+                                 v                                   v
++--------------------------------+--------+   D-Bus Signals       +---+------------------------------+
+|        QUICKSHELL FRONTEND             | <==================== |   RUST CORE DAEMON           |
+|            (Qt6 / QML)                 | ====================> |       (agilityd)             |
+|                                        |    D-Bus Methods      +---+------------------------------+
+|  * Multi-Monitor Status Bar(s) & Dock  |                           |
+|  * Interactive Control Center          |                           | Native System Interfaces:
+|  * Sub-2ms Fuzzy Application Launcher  |                           +--> Niri IPC Socket
+|  * Freedesktop Notification Toasts     |                           +--> PipeWire / PulseAudio Mixer
+|  * Notification History Drawer         |                           +--> MPRIS2 Media Controller
+|  * On-Screen Display (OSD) Popouts     |                           +--> NetworkManager D-Bus
+|  * Freeform Desktop Applet Canvas      |                           +--> BlueZ Bluetooth D-Bus
+|  * Interactive Canvas Edit Mode        |                           +--> UPower & Sysfs Monitors
+|  * Ext-Session-Lock Secure Lockscreen  |                           +--> Linux PAM Auth Worker Thread
+|  * Dynamic Theme.qml Bridge            |                           +--> StatusNotifierWatcher (Tray)
+|  * Wallpaper Picker & Transitions      |                           +--> Open-Meteo & IP Geolocation
++----------------------------------------+                           +--> Ring-buffer Clipboard Listener
+                                                                     +--> Desktop Entry Indexer (.desktop)
+                                                                     +--> Matugen Palette Extractor
+                                                                     +--> Sound FX Player (pw-play)
+                                                                     +------------------------------+
+```
+
+---
+
+## 3. Comprehensive D-Bus IPC Specifications (`org.agility.Daemon.*`)
+
+The Rust daemon communicates with Quickshell and external CLI tools over the D-Bus session bus under the well-known name `org.agility.Daemon` (and standard freedesktop endpoints).
+
+### 3.1 `org.agility.Daemon.Workspaces`
+- **Object Path:** `/org/agility/Daemon/Workspaces`
+- **Properties:**
+  - `active_workspace` (`u32`): ID of active workspace.
+  - `workspaces` (`s` / JSON): Array of workspace objects `{id, idx, name, output, is_active, window_count}`.
+  - `focused_window_title` (`s`): Title of currently focused window.
+  - `focused_app_id` (`s`): Application ID / class of focused window.
+- **Methods:**
+  - `ActivateWorkspace(u32 id) -> ()`
+  - `CloseFocusedWindow() -> ()`
+- **Signals:**
+  - `WorkspaceChanged(u32 id)`
+  - `WindowChanged(s title, s app_id)`
+
+### 3.2 `org.agility.Daemon.Audio`
+- **Object Path:** `/org/agility/Daemon/Audio`
+- **Properties:**
+  - `volume` (`d`): Default audio sink volume (0.0 – 1.5).
+  - `muted` (`b`): Default audio sink mute state.
+  - `mic_volume` (`d`): Default microphone volume (0.0 – 1.0).
+  - `mic_muted` (`b`): Default microphone mute state.
+  - `sinks` (`s` / JSON): List of available output audio devices.
+  - `sources` (`s` / JSON): List of available input audio devices.
+- **Methods:**
+  - `SetVolume(d vol) -> ()`
+  - `AdjustVolume(d delta) -> ()`
+  - `ToggleMute() -> ()`
+  - `SetMicVolume(d vol) -> ()`
+  - `ToggleMicMute() -> ()`
+  - `SetDefaultSink(s name) -> ()`
+  - `SetDefaultSource(s name) -> ()`
+- **Signals:**
+  - `VolumeChanged(d vol, b muted)`
+  - `MicChanged(d vol, b muted)`
+
+### 3.3 `org.agility.Daemon.Media`
+- **Object Path:** `/org/agility/Daemon/Media`
+- **Properties:**
+  - `active_player` (`s`): Currently active MPRIS player name (e.g. `spotify`, `firefox`).
+  - `playback_status` (`s`): `"Playing"`, `"Paused"`, `"Stopped"`.
+  - `title` (`s`): Current track title.
+  - `artist` (`s`): Current track artist.
+  - `album` (`s`): Current track album name.
+  - `art_url` (`s`): Cover art URI / path.
+  - `position` (`x`): Current position in microseconds.
+  - `length` (`x`): Total duration in microseconds.
+- **Methods:**
+  - `PlayPause() -> ()`
+  - `Next() -> ()`
+  - `Previous() -> ()`
+  - `Seek(x offset_usec) -> ()`
+- **Signals:**
+  - `TrackChanged(s title, s artist, s art_url)`
+  - `StatusChanged(s status)`
+
+### 3.4 `org.agility.Daemon.Hardware`
+- **Object Path:** `/org/agility/Daemon/Hardware`
+- **Properties:**
+  - `cpu_usage` (`d`): Total CPU usage percentage (0.0 – 100.0).
+  - `cpu_cores` (`a(d)`): Per-core CPU usage percentages.
+  - `ram_used_bytes` (`t`): Memory currently used.
+  - `ram_total_bytes` (`t`): Total system memory.
+  - `swap_used_bytes` (`t`): Swap space used.
+  - `swap_total_bytes` (`t`): Total swap space.
+  - `battery_percentage` (`d`): Primary battery percentage.
+  - `battery_state` (`s`): `"Charging"`, `"Discharging"`, `"Full"`, `"Not Present"`.
+  - `battery_time_remaining` (`x`): Seconds until empty or full.
+  - `temperature_cpu` (`d`): CPU package temperature in °C.
+  - `storage_devices` (`s` / JSON): Array of filesystem mounts with used/total GB.
+- **Signals:**
+  - `TelemetryUpdated()` (Emitted on polling tick)
+
+### 3.5 `org.agility.Daemon.Connectivity`
+- **Object Path:** `/org/agility/Daemon/Connectivity`
+- **Properties:**
+  - `wifi_enabled` (`b`): WiFi radio power state.
+  - `wifi_connected` (`b`): Active WiFi connection state.
+  - `wifi_ssid` (`s`): Name of active SSID.
+  - `wifi_signal` (`u32`): Signal strength percentage (0 – 100).
+  - `ethernet_connected` (`b`): Wired ethernet connection state.
+  - `bluetooth_enabled` (`b`): Bluetooth adapter power state.
+  - `bluetooth_devices` (`s` / JSON): Paired and connected Bluetooth devices.
+- **Methods:**
+  - `ToggleWifi() -> ()`
+  - `ScanWifi() -> (s)` (Returns JSON list of available SSIDs)
+  - `ConnectWifi(s ssid, s password) -> (b)`
+  - `ToggleBluetooth() -> ()`
+  - `ConnectBluetoothDevice(s mac) -> (b)`
+  - `DisconnectBluetoothDevice(s mac) -> (b)`
+- **Signals:**
+  - `WifiStatusChanged(b connected, s ssid, u32 signal)`
+  - `BluetoothStatusChanged(b enabled, u32 connected_count)`
+
+### 3.6 `org.agility.Daemon.Launcher`
+- **Object Path:** `/org/agility/Daemon/Launcher`
+- **Methods:**
+  - `Query(s query) -> (s)`: Returns JSON array of ranked matching desktop entries `{id, name, exec, icon, comment, score}` in < 2ms.
+  - `ListAll() -> (s)`: Returns all indexed applications categorized.
+  - `Launch(s desktop_id) -> (b)`: Spawns application cleanly detached in its own process group.
+- **Signals:**
+  - `IndexRefreshed(u32 count)`
+
+### 3.7 `org.agility.Daemon.Suits`
+- **Object Path:** `/org/agility/Daemon/Suits`
+- **Properties:**
+  - `active_suite_id` (`s`): ID of active suite (e.g. `"minimal"`, `"focused"`, `"gaming"`).
+  - `available_suites` (`s` / JSON): Array of suite definitions loaded from `suits.json`.
+- **Methods:**
+  - `SwitchSuite(s id) -> (b)`
+  - `CycleNextSuite() -> (s)`
+  - `CyclePrevSuite() -> (s)`
+  - `ExportSuite(s id, s path) -> (b)`
+  - `ImportSuite(s path) -> (b)`
+- **Signals:**
+  - `SuiteChanged(s id, s name)`
+
+### 3.8 `org.agility.Daemon.Theme`
+- **Object Path:** `/org/agility/Daemon/Theme`
+- **Properties:**
+  - `is_dark` (`b`): Dark mode vs Light mode flag.
+  - `primary_color` (`s`): Primary Material You hex token (e.g. `"#8AB4F8"`).
+  - `secondary_color` (`s`): Secondary hex token.
+  - `surface_color` (`s`): Surface container hex token.
+  - `background_color` (`s`): Background hex token.
+  - `accent_colors` (`a(s)`): Array of active accent colors.
+  - `active_wallpaper` (`s`): Absolute path to active wallpaper image.
+  - `border_radius` (`u32`): UI corner radius in px.
+  - `font_family` (`s`): Primary UI font family.
+  - `font_mono` (`s`): Monospace font family.
+- **Methods:**
+  - `SetWallpaper(s path) -> (b)`
+  - `GenerateFromWallpaper(s path) -> (b)`
+  - `SetStaticPreset(s preset_name) -> (b)`
+  - `ToggleDarkMode() -> ()`
+- **Signals:**
+  - `ThemeTokensChanged()`
+
+### 3.9 `org.freedesktop.Notifications` (Notification Server)
+- **Object Path:** `/org/freedesktop/Notifications`
+- **Implemented Specifications:** Full Desktop Notifications v1.2.
+- **Methods:**
+  - `Notify(s app_name, u32 replaces_id, s app_icon, s summary, s body, as actions, a{sv} hints, i expire_timeout) -> (u32 id)`
+  - `CloseNotification(u32 id) -> ()`
+  - `GetCapabilities() -> (as)` (`["body", "body-markup", "actions", "icon-static", "persistence", "sound"]`)
+  - `GetServerInformation() -> (s name, s vendor, s version, s spec_version)`
+- **Internal Storage:**
+  - Persists all received notifications into a local SQLite/JSON history store (`~/.cache/agility-shell/notifications.db`).
+  - Dispatches `org.agility.Daemon.Notifications.HistoryChanged` signal for Quickshell Notification Drawer.
+
+### 3.10 `org.agility.Daemon.Clipboard`
+- **Object Path:** `/org/agility/Daemon/Clipboard`
+- **Properties:**
+  - `history` (`s` / JSON): Array of recent copied items `{id, text, preview, timestamp, byte_size}`.
+- **Methods:**
+  - `CopyText(s text) -> ()`
+  - `RemoveItem(u32 id) -> ()`
+  - `Clear() -> ()`
+- **Signals:**
+  - `ClipboardChanged()`
+
+### 3.11 `org.agility.Daemon.Power`
+- **Object Path:** `/org/agility/Daemon/Power`
+- **Properties:**
+  - `caffeine_active` (`b`): State of idle inhibitor.
+  - `power_profile` (`s`): Active profile (`"power-saver"`, `"balanced"`, `"performance"`).
+  - `night_light_active` (`b`): Night light color filter state.
+  - `night_light_temperature` (`u32`): Active Kelvin temperature (e.g. `4000`).
+- **Methods:**
+  - `ToggleCaffeine() -> (b)`
+  - `SetPowerProfile(s profile) -> (b)`
+  - `ToggleNightLight() -> (b)`
+  - `SetNightLightTemperature(u32 kelvin) -> ()`
+- **Signals:**
+  - `PowerStateChanged()`
+
+### 3.12 `org.agility.Daemon.Weather`
+- **Object Path:** `/org/agility/Daemon/Weather`
+- **Properties:**
+  - `temperature` (`d`): Current temperature in °C.
+  - `feels_like` (`d`): Apparent temperature.
+  - `condition_code` (`u32`): WMO weather code.
+  - `condition_text` (`s`): Human-readable weather description.
+  - `condition_icon` (`s`): Name of corresponding duotone icon.
+  - `city` (`s`): Detected or configured city name.
+  - `humidity` (`u32`): Humidity percentage.
+  - `wind_speed` (`d`): Wind speed in km/h.
+  - `hourly_forecast` (`s` / JSON): 24-hour forecast data.
+- **Methods:**
+  - `Refresh() -> ()`
+- **Signals:**
+  - `WeatherUpdated()`
+
+### 3.13 `org.agility.Daemon.MediaCapture`
+- **Object Path:** `/org/agility/Daemon/MediaCapture`
+- **Properties:**
+  - `is_recording` (`b`): Screen recording active state.
+  - `recording_duration` (`u32`): Elapsed seconds.
+- **Methods:**
+  - `TakeScreenshot(s mode) -> (s path)`: Modes: `"fullscreen"`, `"window"`, `"region"`.
+  - `StartRecording(b with_audio) -> (b)`
+  - `StopRecording() -> (s path)`
+- **Signals:**
+  - `ScreenshotSaved(s path)`
+  - `RecordingStateChanged(b active, s path)`
+
+### 3.14 `org.agility.Daemon.Lock`
+- **Object Path:** `/org/agility/Daemon/Lock`
+- **Methods:**
+  - `Authenticate(s password) -> (b)`: Verifies password via isolated Linux PAM worker thread.
+  - `LockSession() -> ()`: Emits lock request to Quickshell `WlrSessionLock`.
+- **Security:** Zeroes out password strings in memory immediately after verification. Rate limits failed attempts with exponential backoff.
+
+### 3.15 `org.kde.StatusNotifierWatcher` (System Tray Host)
+- **Object Path:** `/StatusNotifierWatcher`
+- **Description:** Implements SNI watcher allowing third-party tray applications (Discord, Steam, Telegram, OBS, etc.) to register items and stream icons/menus to Quickshell status bars.
+
+### 3.16 `org.agility.Daemon.Sounds`
+- **Object Path:** `/org/agility/Daemon/Sounds`
+- **Methods:**
+  - `Play(s sound_name) -> ()`: Dispatches system sound (`"session-start"`, `"session-quit"`, `"notification"`, `"battery-low"`, `"battery-warning"`, `"battery-charge"`, `"error"`, `"confirm"`, `"alarm"`, `"widget-placed"`, `"widget-removed"`).
+
+---
+
+## 4. Configuration & User Options Schema
+
+Agility Shell stores configuration in standard XDG paths (`~/.config/agility-shell/`):
+- `config/config.json`: Master shell configuration.
+- `config/suits.json`: Desktop suites presets.
+- `widget_settings.json`: Configuration and placement for desktop canvas applets.
+- `custom_style/`: User CSS/QML token overrides (`color.css`, `border.css`, `font.css`).
+
+### 4.1 Master `config.json` Structure
+```json
+{
+  "user": {
+    "avatar": "/var/lib/AccountsService/icons/$USER"
+  },
+  "settings": {
+    "dnd": false,
+    "hover_open": true,
+    "hover_delay": 150,
+    "bar_theme": "liquid-glass",
+    "bar_blur": true,
+    "bar_opacity": 0.35,
+    "widget_opacity": 0.55,
+    "desktop_widget_opacity": 0.60,
+    "dash_blur": true,
+    "dash_dim_opacity": 0.20,
+    "dash_card_opacity": 1.0,
+    "instant_dash": true,
+    "bluetooth_on_startup": false,
+    "pinned_apps": ["thunar.desktop", "brave-browser.desktop", "kitty.desktop"],
+    "agility_profile": "balanced",
+    "bar_height": 30
+  },
+  "bars": {
+    "configs": [
+      {
+        "monitor": 0,
+        "bars": [
+          {
+            "alignment": "top",
+            "horizontal_alignment": "center",
+            "floating_bar": true,
+            "floating_applets": true,
+            "rounded_edges": true,
+            "min_width": false,
+            "auto_hide": false,
+            "left": ["Dash", "Launcher", "Workspaces", "Processes", "Weather", "Media"],
+            "center": ["Clock"],
+            "right": ["Tray", "Energy", "Volume", "Brightness", "Wifi", "Bluetooth", "Settings", "Notifications"]
+          },
+          {
+            "alignment": "bottom",
+            "horizontal_alignment": "center",
+            "floating_bar": true,
+            "floating_applets": true,
+            "rounded_edges": true,
+            "min_width": true,
+            "auto_hide": true,
+            "left": [],
+            "center": ["Dock"],
+            "right": []
+          }
+        ]
+      }
+    ]
+  },
+  "timeouts": {
+    "list": [
+      {"name": "screen-off", "timeout_ac": 10, "timeout_bat": 2, "enabled": true},
+      {"name": "lock", "timeout_ac": 15, "timeout_bat": 5, "enabled": true},
+      {"name": "suspend", "timeout_ac": 30, "timeout_bat": 15, "enabled": true}
+    ]
+  },
+  "theme": {
+    "light_theme": "catppuccin-latte",
+    "dark_theme": "Matugen",
+    "active_accent": "accent4",
+    "is_dark": true,
+    "scheme_type": "scheme-tonal-spot",
+    "opacity": 0.35,
+    "border_style": "medium",
+    "font_family": "Inter",
+    "font_monospace": "JetBrainsMono Nerd Font"
+  },
+  "launcher": {
+    "grid": false,
+    "keybind_position": "center"
+  },
+  "dock": {
+    "entries": []
+  },
+  "world_clocks": {
+    "clocks": ["Europe/London", "America/New_York", "Asia/Tokyo"]
+  },
+  "wallpaper": {
+    "path": "~/.config/agility-shell/wallpapers/5.png",
+    "transition_type": "random",
+    "transition_duration": 0.7,
+    "transition_speed": "quick",
+    "transition_fps": 60,
+    "switcher_style": "mesh"
+  },
+  "desktop_canvas": {
+    "placements": {
+      "0": []
+    }
+  }
+}
+```
+
+---
+
+## 5. Quickshell Frontend Architecture & UI Hierarchy
+
+The Quickshell UI uses `wlr-layer-shell` surfaces divided into 7 distinct rendering layers:
+
+```
+[Layer 7] Wayland ext-session-lock-v1 Screen Lock Surface (Exclusive Security Barrier)
+    ^
+[Layer 6] On-Screen Display (OSD) Overlay (Volume, Backlight, Power Profile, Alarms)
+    ^
+[Layer 5] Notification Toasts & Dropdown Notification Center (Layer: Overlay)
+    ^
+[Layer 4] Modal Application Launcher / Dashboard Overlay (Layer: Top)
+    ^
+[Layer 3] Island Popout Applets (Control Center, Audio Mixer, WiFi, Calendar, Clocks)
+    ^
+[Layer 2] Status Bar(s) & Floating Application Dock (Layer: Top, Exclusive Zone)
+    ^
+[Layer 1] Desktop Background Canvas: Draggable Widgets & Visualizers (Layer: Bottom)
+```
+
+### Complete Widget Inventory to be Implemented in QML:
+1. **Bar Widgets (25+):** `Launcher`, `Processes` (CPU graph), `Energy` (Battery), `Bluetooth`, `Notifications`, `Settings`, `Clock`, `Media`, `Workspaces`, `Weather`, `Volume`, `Tray`, `Calendar`, `Focused` (Window Title), `Wifi`, `Session` (Power Menu), `Calculator`, `Keyboard`, `Screenshot`, `Dock`, `Brightness`, `Dash`, `Clipboard`, `Caffeine`, `SysMon`, `NightLight`, `Suits`.
+2. **Desktop Canvas Applets (20+):** `Clock`, `BatteryWidget`, `CalcWidget`, `CalendarWidget`, `ClipboardWidget`, `CryptoWidget`, `GitDashboardWidget`, `HabitsWidget`, `LiquidCard`, `MediaWidget`, `NetworkWidget`, `NotesWidget`, `PingWidget`, `PosterWidget`, `QuoteWidget`, `ResourceWheelWidget`, `StorageMapWidget`, `SystemInfo`, `ThermalWidget`, `TimerWidget`, `TodoWidget`, `VisualizerWidget` (Audio FFT), `VolumeBrightnessWidget`, `WeatherWidget`, `WorldClockWidget`.
+
+---
+
+## 6. Target Specifications & Performance KPIs
 
 | Metric | Legacy (Python + GTK3) | Next-Gen Target (Rust + QML) | Verification Method |
 | :--- | :--- | :--- | :--- |
@@ -74,18 +434,18 @@ The Rust daemon exposes high-speed, type-safe interfaces on the D-Bus session bu
 
 ---
 
-## 4. Master Step-by-Step Implementation Roadmap
+## 7. Master Step-by-Step Implementation Roadmap
 
 Use this checklist to track progress throughout the implementation. Mark items with `[X]` as each step is completed and verified.
 
 ---
 
 ### Step 1: Workspace Scaffolding & Build System Setup
-- [ ] 1.1 Create Cargo workspace configuration in `crates/` with initial package `agilityd`.
-- [ ] 1.2 Define dependency manifest in `crates/agilityd/Cargo.toml` (`tokio`, `zbus`, `serde`, `serde_json`, `sysinfo`, `nucleo`, `pam-sys`, `libpulse-binding`, `tracing`).
+- [ ] 1.1 Create Cargo workspace configuration at repository root with members `crates/agilityd` and `crates/agility-cli`.
+- [ ] 1.2 Define dependency manifests (`tokio`, `zbus`, `serde`, `serde_json`, `sysinfo`, `nucleo`, `pam-sys`, `libpulse-binding`, `tracing`, `tracing-subscriber`).
 - [ ] 1.3 Configure release build profile (`lto = "fat"`, `codegen-units = 1`, `panic = "abort"`, `strip = true`) for minimal binary size and maximum performance.
-- [ ] 1.4 Update root `Makefile` with targets for building and installing `agilityd` (`make build-rust`, `make install-rust`).
-- [ ] 1.5 Update `PKGBUILD` to compile the Rust daemon via `cargo build --release` and install to `/usr/bin/agilityd`.
+- [ ] 1.4 Update root `Makefile` with targets for building and installing `agilityd` and `agl` (`make build`, `make install`).
+- [ ] 1.5 Update `PKGBUILD` to compile the Rust daemon and CLI tool via `cargo build --release` and install to `/usr/bin/agilityd` and `/usr/bin/agl`.
 - [ ] 1.6 Verify clean compilation and zero-warning build on Arch Linux.
 
 ---
@@ -95,19 +455,17 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 2.2 Implement Unix signal handling (`SIGINT`, `SIGTERM`, `SIGHUP`) for graceful daemon shutdown and configuration reloading.
 - [ ] 2.3 Establish D-Bus connection on `org.agility.Daemon` using `zbus::connection::Builder::session()`.
 - [ ] 2.4 Implement singleton state manager holding in-memory state structs and atomic broadcast channels.
-- [ ] 2.5 Verify D-Bus service registration with `busctl --user list | grep org.agility.Daemon`.
+- [ ] 2.5 Seed and validate user configuration directories (`~/.config/agility-shell/`, `~/.cache/agility-shell/`).
+- [ ] 2.6 Verify D-Bus service registration with `busctl --user list | grep org.agility.Daemon`.
 
 ---
 
-### Step 3: Niri Compositor IPC Module
-- [ ] 3.1 Discover and connect to the active Niri socket via `NIRI_SOCKET` environment variable.
+### Step 3: Niri & Multi-Compositor IPC Module
+- [ ] 3.1 Discover and connect to active Niri socket via `NIRI_SOCKET` environment variable.
 - [ ] 3.2 Implement asynchronous JSON stream reader for Niri event stream (`WorkspacesChanged`, `WorkspaceActivated`, `WindowOpenedOrChanged`, `WindowClosed`, `WindowFocusChanged`).
-- [ ] 3.3 Create `NiriClient` trait abstraction allowing future extension to Hyprland and generic wlroots protocols.
-- [ ] 3.4 Implement D-Bus interface `org.agility.Daemon.Workspaces` exposing:
-  - Properties: `active_workspace` (u32), `workspaces` (JSON array), `focused_window_title` (string), `focused_app_id` (string).
-  - Methods: `ActivateWorkspace(u32)`, `CloseFocusedWindow()`.
-  - Signals: `WorkspaceChanged(u32)`, `WindowChanged(string)`.
-- [ ] 3.5 Test workspace switching latency and event reliability under rapid switching.
+- [ ] 3.3 Create `Compositor` trait abstraction allowing future extension to Hyprland and generic wlroots protocols.
+- [ ] 3.4 Implement D-Bus interface `org.agility.Daemon.Workspaces` exposing active workspace, window titles, and workspace switching methods.
+- [ ] 3.5 Test workspace switching latency and event reliability under rapid switching (< 4ms response).
 
 ---
 
@@ -121,14 +479,12 @@ Use this checklist to track progress throughout the implementation. Mark items w
 
 ---
 
-### Step 5: Audio & Media Service Integration
-- [ ] 5.1 Connect to PipeWire / WirePlumber audio daemon via PulseAudio emulation protocol or native PipeWire library.
+### Step 5: Audio Engine, PipeWire/Pulse Mixer, MPRIS2 & Visualizer Stream
+- [ ] 5.1 Connect to PipeWire / WirePlumber audio daemon via PulseAudio protocol (`libpulse-binding`).
 - [ ] 5.2 Implement reactive volume listener for default audio sink (speakers/headphones) and default source (microphone).
-- [ ] 5.3 Expose D-Bus interface `org.agility.Daemon.Audio`:
-  - Methods: `SetVolume(f64)`, `AdjustVolume(f64)`, `ToggleMute()`, `SetMicVolume(f64)`, `ToggleMicMute()`.
-  - Properties: `volume` (f64), `muted` (bool), `mic_volume` (f64), `mic_muted` (bool).
-  - Signals: `VolumeChanged(f64, bool)`.
-- [ ] 5.4 Implement MPRIS2 playerctl media controller listening for Spotify, Firefox, MPV metadata and playback controls.
+- [ ] 5.3 Expose D-Bus interface `org.agility.Daemon.Audio` with volume adjustment, mute toggles, and sink enumeration.
+- [ ] 5.4 Implement MPRIS2 player controller listening for Spotify, Firefox, MPV metadata and playback controls on `org.agility.Daemon.Media`.
+- [ ] 5.5 Implement lightweight PipeWire audio monitor / CAVA stream capturing audio amplitude bars for QML audio visualizers.
 
 ---
 
@@ -144,9 +500,8 @@ Use this checklist to track progress throughout the implementation. Mark items w
 - [ ] 7.1 Implement background scanner for standard XDG desktop entry directories (`/usr/share/applications`, `~/.local/share/applications`).
 - [ ] 7.2 Parse `.desktop` files (Name, Exec, Icon, Comment, Categories, Keywords, NoDisplay).
 - [ ] 7.3 Cache parsed applications in an in-memory index structure.
-- [ ] 7.4 Integrate `nucleo` / `fuzzy-matcher` for fuzzy matching with match scoring and character highlighting.
-- [ ] 7.5 Expose D-Bus interface `org.agility.Daemon.Launcher`:
-  - Methods: `Query(query_string: string) -> json_results`, `Launch(desktop_id: string)`, `ListAll() -> json_results`.
+- [ ] 7.4 Integrate `nucleo` for fuzzy matching with match scoring and character highlighting.
+- [ ] 7.5 Expose D-Bus interface `org.agility.Daemon.Launcher` with `Query()`, `Launch()`, and `ListAll()`.
 - [ ] 7.6 Benchmark search response: guarantee < 2ms latency for 500+ installed applications.
 
 ---
@@ -154,115 +509,140 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ### Step 8: Desktop Suites ("Suits") & Settings Engine
 - [ ] 8.1 Port `suits.json` schema to strongly typed Rust structs with Serde serialization.
 - [ ] 8.2 Load, validate, and save suites from `~/.config/agility-shell/config/suits.json`.
-- [ ] 8.3 Expose D-Bus interface `org.agility.Daemon.Suits`:
-  - Methods: `GetSuits()`, `GetActiveSuite()`, `SwitchSuite(id: string)`, `CycleNextSuite()`, `CyclePrevSuite()`, `ExportSuite(id, path)`, `ImportSuite(path)`.
-  - Signals: `SuiteChanged(id: string)`.
+- [ ] 8.3 Expose D-Bus interface `org.agility.Daemon.Suits` (`GetSuits()`, `SwitchSuite()`, `CycleNextSuite()`, `CyclePrevSuite()`).
 - [ ] 8.4 Load base user settings from `~/.config/agility-shell/config/config.json` with fallback defaults.
 
 ---
 
-### Step 9: Dynamic Theming Engine (Matugen + Material You)
+### Step 9: Dynamic Theming Engine (Matugen + Material You + Templates)
 - [ ] 9.1 Implement wallpaper path listener and setter (compatible with `awww`, `swww`, and static paths).
 - [ ] 9.2 Integrate `matugen` invocation or native material-color-utilities palette generator.
 - [ ] 9.3 Extract primary, secondary, surface, background, and accent color hex tokens.
 - [ ] 9.4 Expose D-Bus interface `org.agility.Daemon.Theme` streaming dynamic theme tokens directly to QML without file writes.
 - [ ] 9.5 Provide fallback static color presets (Dark, Light, TokyoNight, Catppuccin, Gruvbox) when wallpaper extraction is disabled.
+- [ ] 9.6 Implement template generator applying extracted tokens to terminal configurations (Kitty, Alacritty, Foot) and Niri borders.
 
 ---
 
-### Step 10: Secure PAM Lockscreen Authentication Worker
-- [ ] 10.1 Implement isolated worker thread in `agilityd` wrapping Linux PAM (`libpam`).
-- [ ] 10.2 Handle standard conversation functions (`PAM_PROMPT_ECHO_OFF`, `PAM_ERROR_MSG`).
-- [ ] 10.3 Expose private D-Bus/Unix socket endpoint for authentication requests:
-  - Method: `Authenticate(password: string) -> bool`.
-- [ ] 10.4 Implement rate limiting and exponential backoff to prevent brute-force unlock attempts.
-- [ ] 10.5 Zero-out password buffers in memory immediately after authentication verification.
+### Step 10: Freedesktop Notification Server & Persistent History Store
+- [ ] 10.1 Implement `org.freedesktop.Notifications` D-Bus service directly in `agilityd`.
+- [ ] 10.2 Parse incoming notification specifications (summary, body, app_icon, actions, urgency, hints).
+- [ ] 10.3 Persist notifications into SQLite/JSON database at `~/.cache/agility-shell/notifications.db`.
+- [ ] 10.4 Expose notification history querying and clearing methods for Quickshell Notification Drawer.
+- [ ] 10.5 Emit toast notification signals to Quickshell and dispatch audio trigger (`sounds/notification.wav`).
 
 ---
 
-### Step 11: Quickshell Frontend — Shell Entry & Theme Bridge
-- [ ] 11.1 Reorganize `quickshell/agility/` into clean component architecture (`shell.qml`, `Theme.qml`, `bar/`, `controlcenter/`, `launcher/`, `lockscreen/`).
-- [ ] 11.2 Implement `Theme.qml` singleton binding reactively to `org.agility.Daemon.Theme` D-Bus properties.
-- [ ] 11.3 Support custom font, border radius, and spacing variables inherited from `config.json`.
-- [ ] 11.4 Test hot-reloading with `quickshell -p quickshell/agility/shell.qml`.
+### Step 11: Clipboard Manager Engine
+- [ ] 11.1 Implement Wayland data-control / cliphist event listener detecting new text selections.
+- [ ] 11.2 Maintain an in-memory 50-item deduplicated ring buffer with preview strings and timestamps.
+- [ ] 11.3 Expose D-Bus interface `org.agility.Daemon.Clipboard` with `CopyText()`, `RemoveItem()`, and `Clear()`.
+- [ ] 11.4 Ensure zero CPU usage when clipboard remains idle.
 
 ---
 
-### Step 12: Quickshell Frontend — Modular Status Bar
-- [ ] 12.1 Refactor Top Bar in `shell.qml` with Wayland layer-shell anchors (Top, Left, Right) and exclusive zone matching user config height (26px–48px).
-- [ ] 12.2 Wire Workspaces widget to `org.agility.Daemon.Workspaces` with active indicator animations.
-- [ ] 12.3 Wire Clock widget with customizable format, world clock tooltips, and calendar popup toggle.
-- [ ] 12.4 Wire Volume and Brightness widgets with hover wheel adjustments and click-to-mute.
-- [ ] 12.5 Wire Battery widget with charging animations and dynamic color thresholds (<20% warning).
-- [ ] 12.6 Wire Network & Bluetooth island icons displaying live state indicators.
-- [ ] 12.7 Wire Suits switcher widget displaying active desktop mode.
+### Step 12: Power, Idle Inhibitor (Caffeine), Performance Profiles & Night Light
+- [ ] 12.1 Implement Wayland idle monitor / `ext-idle-notifier-v1` listener observing AC and Battery idle thresholds.
+- [ ] 12.2 Implement Caffeine mode acquiring Wayland idle inhibitor or systemd `Inhibit()` lock.
+- [ ] 12.3 Integrate Linux power profiles daemon (`power-profiles-daemon`) for `"power-saver"`, `"balanced"`, `"performance"`.
+- [ ] 12.4 Implement Night Light controller adjusting screen color temperature via `wlsunset` or compositor gamma protocol.
+- [ ] 12.5 Expose D-Bus interface `org.agility.Daemon.Power`.
 
 ---
 
-### Step 13: Quickshell Frontend — Control Center & Applet Popouts
-- [ ] 13.1 Build smooth slide-down Control Center overlay anchored to top-right island.
-- [ ] 13.2 Implement interactive sliders for Volume, Mic, and Screen Brightness.
-- [ ] 13.3 Implement quick toggle tiles for WiFi, Bluetooth, Do Not Disturb, Night Light, and Performance Profile.
-- [ ] 13.4 Integrate existing rich applet widgets (`MediaWidget.qml`, `WeatherWidget.qml`, `ResourceWheelWidget.qml`, `ThermalWidget.qml`).
-- [ ] 13.5 Implement outside-click and Escape key auto-dismiss behavior.
+### Step 13: Weather & Geolocation Background Fetcher
+- [ ] 13.1 Implement asynchronous IP geolocation query via `http://ip-api.com/json/`.
+- [ ] 13.2 Implement weather fetcher querying Open-Meteo API (`https://api.open-meteo.com/v1/forecast`).
+- [ ] 13.3 Map WMO weather condition codes to Agility duotone icon names.
+- [ ] 13.4 Cache weather forecast locally in `~/.cache/agility-shell/weather/` with 10-minute refresh interval.
+- [ ] 13.5 Expose D-Bus interface `org.agility.Daemon.Weather`.
 
 ---
 
-### Step 14: Quickshell Frontend — Fuzzy Application Launcher & Dash
-- [ ] 14.1 Implement centered modal Launcher overlay triggered by `Super` / `Mod` key or CLI.
-- [ ] 14.2 Bind search input text field to `org.agility.Daemon.Launcher.Query()`.
-- [ ] 14.3 Render list/grid of search results with icons, app titles, and descriptions.
-- [ ] 14.4 Implement keyboard navigation (Arrow Up/Down, Enter to launch, Escape to dismiss).
-- [ ] 14.5 Implement Quick Actions / Calc mode for arithmetic equations in search box.
+### Step 14: Screenshot & Screen Recording Service
+- [ ] 14.1 Implement screenshot trigger wrapping `grim` and `slurp` for fullscreen, active window, and custom selection region.
+- [ ] 14.2 Implement screen recording trigger wrapping `wl-screenrec` with PipeWire audio monitor recording.
+- [ ] 14.3 Save captures automatically to `~/Pictures/Screenshots` and `~/Videos/Recordings` with copy-to-clipboard option.
+- [ ] 14.4 Expose D-Bus interface `org.agility.Daemon.MediaCapture`.
 
 ---
 
-### Step 15: Quickshell Frontend — Ext-Session-Lock Lockscreen
-- [ ] 15.1 Implement Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
-- [ ] 15.2 Render blurred background surface, live clock, date, and user avatar.
-- [ ] 15.3 Render password input field with secure masked characters.
-- [ ] 15.4 Connect password submission to `org.agility.Daemon.Lock.Authenticate()`.
-- [ ] 15.5 Implement unlock animation on success and shake error animation on invalid password.
-- [ ] 15.6 Ensure screen remains fully locked across monitor connect/disconnect events.
+### Step 15: System Tray Host (`StatusNotifierWatcher`) & Sound Effects Player
+- [ ] 15.1 Implement `org.kde.StatusNotifierWatcher` registration and protocol handler in `agilityd`.
+- [ ] 15.2 Stream registered tray items, icons, and context menus to Quickshell status bars.
+- [ ] 15.3 Implement native sound effects dispatcher calling `pw-play` or PulseAudio stream for shell sound events (`session-start`, `session-quit`, `notification`, `battery-low`, `confirm`, `error`).
+- [ ] 15.4 Expose D-Bus interface `org.agility.Daemon.Sounds`.
 
 ---
 
-### Step 16: CLI Interface (`agl`) & Systemd User Integration
-- [ ] 16.1 Rewrite `bin/agl` CLI tool in Rust or streamline bash wrapper to dispatch calls directly to `agilityd` D-Bus interfaces.
-- [ ] 16.2 Implement subcommands:
+### Step 16: Secure Linux PAM Lockscreen Worker
+- [ ] 16.1 Implement isolated worker thread in `agilityd` wrapping Linux PAM (`libpam`).
+- [ ] 16.2 Handle standard PAM conversation functions (`PAM_PROMPT_ECHO_OFF`, `PAM_ERROR_MSG`).
+- [ ] 16.3 Expose D-Bus endpoint `org.agility.Daemon.Lock.Authenticate(password: string) -> bool`.
+- [ ] 16.4 Implement rate limiting and exponential backoff to prevent brute-force unlock attempts.
+- [ ] 16.5 Zero-out password buffers in memory immediately after authentication verification.
+
+---
+
+### Step 17: Quickshell Frontend — Shell Entry, Theme Singleton & Status Bars / Dock
+- [ ] 17.1 Reorganize `quickshell/agility/` into clean component architecture (`shell.qml`, `Theme.qml`, `bar/`, `dock/`, `popouts/`, `launcher/`, `lockscreen/`, `canvas/`).
+- [ ] 17.2 Implement `Theme.qml` singleton binding reactively to `org.agility.Daemon.Theme` D-Bus properties.
+- [ ] 17.3 Implement multi-monitor Status Bar(s) reading `config.json` layout (alignment, heights, floating options).
+- [ ] 17.4 Implement Bar Widgets: Workspaces, Window Title, Clock, Volume, Brightness, Battery, Wifi, Bluetooth, Suits switcher, Tray, Media.
+- [ ] 17.5 Implement standalone floating Application Dock with pinned apps and active running indicators.
+- [ ] 17.6 Test hot-reloading with `quickshell -p quickshell/agility/shell.qml`.
+
+---
+
+### Step 18: Quickshell Frontend — Control Center, Popouts, OSD & Launcher Dash
+- [ ] 18.1 Build smooth slide-down Control Center overlay anchored to top-right bar island.
+- [ ] 18.2 Implement interactive sliders for Volume, Mic, and Screen Brightness.
+- [ ] 18.3 Implement quick toggle tiles for WiFi, Bluetooth, Caffeine, Night Light, and Power Profile.
+- [ ] 18.4 Implement standalone popout menus for WiFi network selection, Bluetooth pairing, Audio device mixer, and Power/Session logout.
+- [ ] 18.5 Implement On-Screen Display (OSD) overlay for hardware volume/backlight adjustments.
+- [ ] 18.6 Implement centered modal Application Launcher / Dash with sub-2ms fuzzy search, categories, and calculator mode.
+
+---
+
+### Step 19: Quickshell Frontend — Desktop Applets Canvas, Edit Mode & Ext-Session-Lock Lockscreen
+- [ ] 19.1 Implement desktop canvas surface anchored to `Layer::Bottom` rendering freeform widgets from `widget_settings.json`.
+- [ ] 19.2 Integrate 20+ desktop widgets (`ResourceWheelWidget`, `ThermalWidget`, `StorageMapWidget`, `VisualizerWidget`, `WeatherWidget`, `CalendarWidget`, `NotesWidget`, `TodoWidget`, `HabitsWidget`, `CryptoWidget`, `GitDashboardWidget`).
+- [ ] 19.3 Implement interactive Desktop Edit Mode allowing users to drag, resize, and configure canvas widgets.
+- [ ] 19.4 Implement Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
+- [ ] 19.5 Render blurred wallpaper surface, clock, date, avatar, and secure password input connected to PAM worker.
+- [ ] 19.6 Ensure screen remains fully locked across monitor connect/disconnect events.
+
+---
+
+### Step 20: CLI Tool (`agl`), Systemd Integration, Backward Compatibility & Packaging
+- [ ] 20.1 Build `crates/agility-cli` (`agl`) binary in Rust dispatching high-speed D-Bus calls to `agilityd`:
   - `agl start`: Start daemon and Quickshell.
   - `agl stop`: Cleanly stop daemon and Quickshell.
-  - `agl restart`: Restart shell surfaces gracefully.
-  - `agl status`: Inspect daemon D-Bus health and PID.
+  - `agl restart`: Gracefully restart UI surfaces.
+  - `agl status`: Inspect daemon PID and D-Bus status.
   - `agl lock`: Trigger session lockscreen.
   - `agl suits <list|next|prev|switch <id>>`: Manage desktop suites.
   - `agl volume <up|down|mute>`: Audio control.
   - `agl brightness <up|down>`: Backlight control.
-- [ ] 16.3 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
-- [ ] 16.4 Verify automatic login launch under Niri compositor.
+  - `agl screenshot <full|window|region>`: Trigger screenshot.
+  - `agl record <start|stop>`: Trigger screen recording.
+  - `agl caffeine <toggle>`: Toggle idle inhibitor.
+- [ ] 20.2 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
+- [ ] 20.3 Implement fallback switch: allow users to launch legacy Python shell via `agl start --legacy`.
+- [ ] 20.4 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.
+- [ ] 20.5 Update installer scripts (`install.sh`, `scripts/install.sh`) to build and deploy the Rust daemon and Quickshell frontend.
+- [ ] 20.6 Update Arch `PKGBUILD` and verify `makepkg -si` produces a clean pacman package.
+- [ ] 20.7 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
+- [ ] 20.8 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
+- [ ] 20.9 Update `README.md` documentation, architecture diagrams, and quick-start guides.
 
 ---
 
-### Step 17: Dual-Stack Coexistence & Backward Compatibility
-- [ ] 17.1 Implement fallback switch: allow users to launch the legacy Python shell via `agl start --legacy`.
-- [ ] 17.2 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.
-- [ ] 17.3 Ensure custom stylesheets and wallpaper folders are preserved.
+## 8. Verification Sign-off Criteria
 
----
-
-### Step 18: Quality Assurance, Benchmarking & Packaging
-- [ ] 18.1 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
-- [ ] 18.2 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
-- [ ] 18.3 Test under stress: rapid audio adjustments, multi-monitor hotplugging, lock/unlock cycles.
-- [ ] 18.4 Update installer scripts (`install.sh`, `scripts/install.sh`) to build and deploy the Rust daemon and Quickshell frontend.
-- [ ] 18.5 Update Arch `PKGBUILD` and verify `makepkg -si` produces a clean, functional pacman package.
-- [ ] 18.6 Update `README.md` documentation, architecture diagrams, and quick-start guides.
-
----
-
-## 5. Verification Sign-off Criteria
 Before declaring the Next-Gen shell ready for production deployment:
-1. **Zero Python Dependencies:** The shell starts, runs, locks, and updates without any Python runtime installed.
+1. **Zero Python Dependencies:** The shell starts, runs, locks, and updates without any Python runtime or GTK3 libraries.
 2. **Memory Verification:** `ps -o rss,comm -p $(pgrep agilityd) -p $(pgrep quickshell)` reports combined RSS < 40,000 KB.
 3. **No Audio or Display Stutter:** Rapid slider manipulation produces zero frame drops on 60Hz and 144Hz monitors.
 4. **Security Audit:** Lockscreen cannot be bypassed via Alt+Tab, workspace cycling, or kill signals to child surfaces.
+5. **Vintage Hardware Compatibility:** Flawless operation on legacy Intel HD Graphics (i3/i5 2nd-4th Gen) using `QT_QUICK_BACKEND=software`.

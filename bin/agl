@@ -213,7 +213,7 @@ cmd_deps() {
     else
         local cache_repo="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell/repo"
         if [[ -d "$cache_repo/.git" ]]; then
-            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin)
+            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin && git checkout -f main 2>/dev/null && git reset --hard origin/main)
             exec "$cache_repo/scripts/install.sh" --deps "$@"
         else
             mkdir -p "$(dirname "$cache_repo")"
@@ -232,7 +232,7 @@ cmd_install() {
     else
         local cache_repo="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell/repo"
         if [[ -d "$cache_repo/.git" ]]; then
-            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin)
+            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin && git checkout -f main 2>/dev/null && git reset --hard origin/main)
             exec "$cache_repo/scripts/install.sh" "$@"
         else
             mkdir -p "$(dirname "$cache_repo")"
@@ -253,7 +253,7 @@ cmd_update() {
     else
         local cache_repo="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell/repo"
         if [[ -d "$cache_repo/.git" ]]; then
-            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin)
+            (cd "$cache_repo" && git remote set-url origin "https://github.com/TattvaOrg/agility-shell.git" 2>/dev/null || true && git fetch --prune --tags origin && git checkout -f main 2>/dev/null && git reset --hard origin/main)
             exec "$cache_repo/scripts/update.sh" "$@"
         else
             mkdir -p "$(dirname "$cache_repo")"

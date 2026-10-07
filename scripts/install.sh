@@ -95,12 +95,12 @@ prompt_user() {
     if [ -t 0 ]; then
         read -rp "$prompt_msg" input || true
     elif [ -r /dev/tty ]; then
-        read -rp "$prompt_msg" input < /dev/tty || true
+        read -rp "$prompt_msg" input < /dev/tty 2>/dev/tty || true
     else
         input="$default_val"
     fi
     input="${input:-$default_val}"
-    eval "$var_name=\"$input\""
+    printf -v "$var_name" '%s' "$input"
 }
 
 check_arch() {
@@ -145,6 +145,9 @@ PACMAN_DEPS=(
     python-loguru
     python-setproctitle
     python-rapidfuzz
+    python-pam
+    wayland
+    pkgconf
     awww
     base-devel
     git
@@ -159,6 +162,9 @@ AUR_DEPS=(
 
 is_pkg_installed() {
     local pkg="$1"
+    if pacman -Qq "$pkg" &>/dev/null; then
+        return 0
+    fi
     if pacman -T "$pkg" &>/dev/null; then
         return 0
     fi
@@ -166,6 +172,37 @@ is_pkg_installed() {
         return 0
     fi
     return 1
+}
+
+is_pkg_outdated() {
+    local pkg="$1"
+    if pacman -Qu "$pkg" 2>/dev/null | grep -q "^$pkg "; then
+        return 0
+    fi
+    if command -v yay &>/dev/null; then
+        if yay -Qu "$pkg" 2>/dev/null | grep -q "^$pkg "; then
+            return 0
+        fi
+    elif command -v paru &>/dev/null; then
+        if paru -Qu "$pkg" 2>/dev/null | grep -q "^$pkg "; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+get_pkg_update_info() {
+    local pkg="$1"
+    local info=""
+    info="$(pacman -Qu "$pkg" 2>/dev/null | grep "^$pkg " || true)"
+    if [[ -z "$info" ]]; then
+        if command -v yay &>/dev/null; then
+            info="$(yay -Qu "$pkg" 2>/dev/null | grep "^$pkg " || true)"
+        elif command -v paru &>/dev/null; then
+            info="$(paru -Qu "$pkg" 2>/dev/null | grep "^$pkg " || true)"
+        fi
+    fi
+    echo "$info"
 }
 
 ensure_yay() {
@@ -199,15 +236,16 @@ test_and_install_deps_step_by_step() {
 
     check_arch
 
+    info "Synchronizing Arch package databases..."
+    sudo pacman -Sy --noconfirm 2>/dev/null || sudo pacman -Sy || true
+
     local missing_count=0
+    local outdated_count=0
     local installed_count=0
 
     echo -e "${BOLD}--- [1/2] Official Arch Pacman Packages ---${RESET}"
     for pkg in "${PACMAN_DEPS[@]}"; do
-        if is_pkg_installed "$pkg"; then
-            echo -e "  ${GREEN}[  ok  ]${RESET} ${pkg}"
-            installed_count=$(( installed_count + 1 ))
-        else
+        if ! is_pkg_installed "$pkg"; then
             missing_count=$(( missing_count + 1 ))
             echo -e "  ${YELLOW}[ miss ]${RESET} ${BOLD}${pkg}${RESET} (not installed)"
             prompt_user "         -> Install '${pkg}' via pacman now? [Y/n]: " inst_choice "y"
@@ -226,6 +264,30 @@ test_and_install_deps_step_by_step() {
                     fi
                     ;;
             esac
+        elif is_pkg_outdated "$pkg"; then
+            outdated_count=$(( outdated_count + 1 ))
+            local up_info
+            up_info="$(get_pkg_update_info "$pkg")"
+            echo -e "  ${YELLOW}[ update ]${RESET} ${BOLD}${pkg}${RESET} (outdated: ${up_info})"
+            prompt_user "         -> Update '${pkg}' via pacman now? [Y/n]: " upd_choice "y"
+            case "$upd_choice" in
+                [nN]|[nN][oO])
+                    echo -e "         ${DIM}Skipped update for ${pkg}.${RESET}"
+                    ;;
+                *)
+                    info "Updating ${pkg}..."
+                    if sudo pacman -S --noconfirm "$pkg"; then
+                        success "Updated ${pkg}"
+                        installed_count=$(( installed_count + 1 ))
+                        outdated_count=$(( outdated_count - 1 ))
+                    else
+                        error "Failed to update ${pkg}"
+                    fi
+                    ;;
+            esac
+        else
+            echo -e "  ${GREEN}[  ok  ]${RESET} ${pkg} (up to date)"
+            installed_count=$(( installed_count + 1 ))
         fi
     done
 
@@ -239,10 +301,7 @@ test_and_install_deps_step_by_step() {
     fi
 
     for pkg in "${AUR_DEPS[@]}"; do
-        if is_pkg_installed "$pkg"; then
-            echo -e "  ${GREEN}[  ok  ]${RESET} ${pkg}"
-            installed_count=$(( installed_count + 1 ))
-        else
+        if ! is_pkg_installed "$pkg"; then
             missing_count=$(( missing_count + 1 ))
             echo -e "  ${YELLOW}[ miss ]${RESET} ${BOLD}${pkg}${RESET} (AUR package - not installed)"
             if [[ -z "$aur_helper" ]]; then
@@ -276,21 +335,45 @@ test_and_install_deps_step_by_step() {
                     fi
                     ;;
             esac
+        elif is_pkg_outdated "$pkg"; then
+            outdated_count=$(( outdated_count + 1 ))
+            local up_info
+            up_info="$(get_pkg_update_info "$pkg")"
+            echo -e "  ${YELLOW}[ update ]${RESET} ${BOLD}${pkg}${RESET} (AUR package outdated: ${up_info})"
+            prompt_user "         -> Update '${pkg}' using ${aur_helper}? [Y/n]: " aur_upd_choice "y"
+            case "$aur_upd_choice" in
+                [nN]|[nN][oO])
+                    echo -e "         ${DIM}Skipped update for ${pkg}.${RESET}"
+                    ;;
+                *)
+                    info "Updating ${pkg} via ${aur_helper}..."
+                    if "$aur_helper" -S --noconfirm "$pkg"; then
+                        success "Updated ${pkg}"
+                        installed_count=$(( installed_count + 1 ))
+                        outdated_count=$(( outdated_count - 1 ))
+                    else
+                        error "Failed to update ${pkg}"
+                    fi
+                    ;;
+            esac
+        else
+            echo -e "  ${GREEN}[  ok  ]${RESET} ${pkg} (up to date)"
+            installed_count=$(( installed_count + 1 ))
         fi
     done
 
     echo
     echo -e "${BOLD}--------------------------------------------------${RESET}"
-    if [[ "$missing_count" -eq 0 ]]; then
-        success "All dependencies are satisfied!"
+    if [[ "$missing_count" -eq 0 && "$outdated_count" -eq 0 ]]; then
+        success "All dependencies are satisfied and up to date!"
     else
-        warn "$missing_count dependency/dependencies are still missing."
+        warn "$missing_count missing and $outdated_count outdated dependency/dependencies remain."
     fi
     echo
 
     if [[ "$standalone" == "true" ]]; then
         if [[ "$missing_count" -eq 0 ]]; then
-            prompt_user "  All dependencies are satisfied! Would you like to install Agility Shell now? [Y/n]: " install_now "y"
+            prompt_user "  All required dependencies are satisfied! Would you like to install Agility Shell now? [Y/n]: " install_now "y"
             case "$install_now" in
                 [yY]|[yY][eE][sS]|"")
                     echo
@@ -315,71 +398,96 @@ test_and_install_deps_step_by_step() {
 }
 
 check_and_install_deps() {
-    info "Checking system dependencies..."
+    info "Synchronizing Arch package databases to inspect updates..."
+    sudo pacman -Sy --noconfirm 2>/dev/null || sudo pacman -Sy || true
+
+    info "Auditing system dependencies (checking missing or outdated packages)..."
     local missing_pacman=()
+    local outdated_pacman=()
     local missing_aur=()
+    local outdated_aur=()
 
     for pkg in "${PACMAN_DEPS[@]}"; do
         if ! is_pkg_installed "$pkg"; then
             missing_pacman+=("$pkg")
+        elif is_pkg_outdated "$pkg"; then
+            outdated_pacman+=("$pkg")
         fi
     done
 
     for pkg in "${AUR_DEPS[@]}"; do
         if ! is_pkg_installed "$pkg"; then
             missing_aur+=("$pkg")
+        elif is_pkg_outdated "$pkg"; then
+            outdated_aur+=("$pkg")
         fi
     done
 
     local need_yay=false
-    if [[ ${#missing_aur[@]} -gt 0 ]] && ! command -v yay &>/dev/null && ! command -v paru &>/dev/null; then
+    if [[ (${#missing_aur[@]} -gt 0 || ${#outdated_aur[@]} -gt 0) ]] && ! command -v yay &>/dev/null && ! command -v paru &>/dev/null; then
         need_yay=true
     fi
 
-    if [[ ${#missing_pacman[@]} -eq 0 && ${#missing_aur[@]} -eq 0 && "$need_yay" == "false" ]]; then
-        success "All required dependencies are already installed."
+    if [[ ${#missing_pacman[@]} -eq 0 && ${#outdated_pacman[@]} -eq 0 && ${#missing_aur[@]} -eq 0 && ${#outdated_aur[@]} -eq 0 && "$need_yay" == "false" ]]; then
+        success "All required dependencies are already installed and up to date."
         return 0
     fi
 
     echo
-    warn "The following dependencies are missing and required:"
-    if [[ ${#missing_pacman[@]} -gt 0 ]]; then
-        echo -e "  ${BOLD}Pacman packages:${RESET} ${CYAN}${missing_pacman[*]}${RESET}"
+    if [[ ${#missing_pacman[@]} -gt 0 || ${#missing_aur[@]} -gt 0 ]]; then
+        warn "Missing dependencies detected:"
+        [[ ${#missing_pacman[@]} -gt 0 ]] && echo -e "  ${BOLD}Missing Pacman:${RESET}   ${CYAN}${missing_pacman[*]}${RESET}"
+        [[ ${#missing_aur[@]} -gt 0 ]] && echo -e "  ${BOLD}Missing AUR:${RESET}      ${CYAN}${missing_aur[*]}${RESET}"
     fi
-    if [[ ${#missing_aur[@]} -gt 0 ]]; then
-        echo -e "  ${BOLD}AUR packages:${RESET}    ${CYAN}${missing_aur[*]}${RESET}"
+
+    if [[ ${#outdated_pacman[@]} -gt 0 || ${#outdated_aur[@]} -gt 0 ]]; then
+        warn "Outdated dependencies detected (updates available in repositories):"
+        [[ ${#outdated_pacman[@]} -gt 0 ]] && echo -e "  ${BOLD}Outdated Pacman:${RESET}  ${YELLOW}${outdated_pacman[*]}${RESET}"
+        [[ ${#outdated_aur[@]} -gt 0 ]] && echo -e "  ${BOLD}Outdated AUR:${RESET}     ${YELLOW}${outdated_aur[*]}${RESET}"
     fi
+
     if [[ "$need_yay" == "true" ]]; then
-        echo -e "  ${BOLD}AUR Helper:${RESET}      ${CYAN}yay (will be bootstrapped)${RESET}"
+        echo -e "  ${BOLD}AUR Helper:${RESET}       ${CYAN}yay (will be bootstrapped)${RESET}"
     fi
     echo
 
-    echo -e "  Installation options for missing dependencies:"
-    echo -e "  ${BOLD}1)${RESET} Install all missing dependencies automatically"
-    echo -e "  ${BOLD}2)${RESET} Test and install dependencies step-by-step"
-    echo -e "  ${BOLD}3)${RESET} Skip (proceed without installing dependencies)"
+    echo -e "  Installation options for dependencies:"
+    echo -e "  ${BOLD}1)${RESET} Install missing and update outdated dependencies automatically ${GREEN}(Recommended)${RESET}"
+    echo -e "  ${BOLD}2)${RESET} Audit and install/update dependencies step-by-step"
+    echo -e "  ${BOLD}3)${RESET} Skip (proceed with existing dependencies as-is)"
     echo
     prompt_user "  Choice [1/2/3]: " dep_mode "1"
     case "$dep_mode" in
         1)
-            if [[ ${#missing_pacman[@]} -gt 0 ]]; then
-                info "Installing missing pacman packages..."
-                sudo pacman -S --needed --noconfirm "${missing_pacman[@]}"
-                success "Pacman dependencies installed."
+            local pacman_targets=("${missing_pacman[@]}" "${outdated_pacman[@]}")
+            if [[ ${#pacman_targets[@]} -gt 0 ]]; then
+                info "Installing and updating pacman packages (${pacman_targets[*]})..."
+                sudo pacman -S --needed --noconfirm "${pacman_targets[@]}"
+                if [[ ${#outdated_pacman[@]} -gt 0 ]]; then
+                    sudo pacman -S --noconfirm "${outdated_pacman[@]}" || true
+                fi
+                success "Pacman dependencies installed and updated."
             fi
 
             if [[ "$need_yay" == "true" ]]; then
                 ensure_yay
             fi
 
-            if [[ ${#missing_aur[@]} -gt 0 ]]; then
-                local aur_helper="yay"
-                if command -v paru &>/dev/null; then
-                    aur_helper="paru"
+            local aur_helper=""
+            if command -v yay &>/dev/null; then
+                aur_helper="yay"
+            elif command -v paru &>/dev/null; then
+                aur_helper="paru"
+            fi
+
+            local aur_targets=("${missing_aur[@]}" "${outdated_aur[@]}")
+            if [[ ${#aur_targets[@]} -gt 0 && -n "$aur_helper" ]]; then
+                info "Installing and updating AUR packages via $aur_helper (${aur_targets[*]})..."
+                "$aur_helper" -S --needed --noconfirm "${aur_targets[@]}"
+                if [[ ${#outdated_aur[@]} -gt 0 ]]; then
+                    "$aur_helper" -S --noconfirm "${outdated_aur[@]}" || true
                 fi
-                info "Installing missing AUR packages using $aur_helper..."
-                "$aur_helper" -S --needed --noconfirm "${missing_aur[@]}"
-                success "AUR dependencies installed."
+                success "AUR dependencies installed and updated."
             fi
             ;;
         2)
@@ -434,9 +542,21 @@ install_system_files() {
     cd "$src_dir"
 
     if [[ "$method" == "pacman" ]]; then
-        info "Building and installing native Arch pacman package (makepkg)..."
-        makepkg -sif --noconfirm
-        success "Pacman package installed successfully."
+        info "Building native Arch pacman package (makepkg)..."
+        makepkg -sf --noconfirm
+        local pkg_file
+        pkg_file="$(ls -t agility-shell-git-*.pkg.tar.* 2>/dev/null | head -n 1 || true)"
+        if [[ -n "$pkg_file" && -f "$pkg_file" ]]; then
+            info "Installing native Arch pacman package with overwrite protection ($pkg_file)..."
+            sudo pacman -U --needed --noconfirm --overwrite "*" "$pkg_file"
+            success "Pacman package installed successfully."
+        else
+            warn "Built package file not found; falling back to direct system installation..."
+            make
+            sudo make PREFIX="/usr" install
+        fi
+        sudo make PREFIX="/usr" install-venv
+        success "Dedicated virtualenv verified at /usr/lib/agility-shell/venv."
     else
         info "Building native snippets and installing via root Makefile..."
         make
@@ -656,6 +776,31 @@ do_install() {
         info "Cloning Agility Shell from $REPO_URL..."
         git clone "$REPO_URL" "$work_dir/repo"
         work_dir="$work_dir/repo"
+
+        cd "$work_dir"
+        git fetch --prune --tags origin
+
+        local latest_tag
+        latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+        latest_tag="${latest_tag:-1.0.2}"
+
+        echo ""
+        echo -e "${BOLD}Select installation version / channel:${RESET}"
+        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM}Tested, stable version${RESET}"
+        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM}Newest features & bug fixes (Recommended)${RESET}"
+        echo ""
+        prompt_user "  Enter choice [1/2] (default: 2): " inst_channel "2"
+        case "$inst_channel" in
+            1|[rR]|[rR][eE][lL]*)
+                info "Checking out release v$latest_tag..."
+                git checkout -f "$latest_tag" 2>/dev/null || git checkout -f "tags/$latest_tag"
+                ;;
+            *)
+                info "Checking out latest main branch..."
+                git checkout -f main 2>/dev/null || git checkout -b main origin/main
+                git reset --hard origin/main
+                ;;
+        esac
     fi
 
     # Scan and delete old shell from ~/.config/agility-shell

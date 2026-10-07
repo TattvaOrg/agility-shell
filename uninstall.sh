@@ -10,6 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")
 
 if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/scripts/uninstall.sh" ]]; then
     exec "$SCRIPT_DIR/scripts/uninstall.sh" "$@"
+elif [[ -f "/usr/share/agility-shell/scripts/uninstall.sh" ]]; then
+    exec "/usr/share/agility-shell/scripts/uninstall.sh" "$@"
 elif [[ -f "$HOME/.config/agility-shell/scripts/uninstall.sh" ]]; then
     exec "$HOME/.config/agility-shell/scripts/uninstall.sh" "$@"
 fi

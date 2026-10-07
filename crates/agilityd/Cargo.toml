@@ -1,0 +1,28 @@
+[package]
+name = "agilityd"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+agility-common = { path = "../agility-common" }
+tokio.workspace = true
+zbus.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+sysinfo.workspace = true
+nucleo.workspace = true
+pam-sys = { workspace = true, optional = true }
+libpulse-binding = { workspace = true, optional = true }
+image = { workspace = true, optional = true }
+
+[features]
+default = ["audio", "pam", "image-proc"]
+audio = ["dep:libpulse-binding"]
+pam = ["dep:pam-sys"]
+image-proc = ["dep:image"]

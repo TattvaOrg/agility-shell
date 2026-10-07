@@ -15,3 +15,6 @@ templates/*
 *.log
 *.so
 config/*.json
+
+# Rust build artifacts
+target/

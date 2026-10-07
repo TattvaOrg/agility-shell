@@ -1,0 +1,19 @@
+[package]
+name = "agility-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "agl"
+path = "src/main.rs"
+
+[dependencies]
+agility-common = { path = "../agility-common" }
+clap.workspace = true
+tokio.workspace = true
+zbus.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true

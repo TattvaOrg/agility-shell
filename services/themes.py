@@ -11,7 +11,7 @@ from user_options import user_options
 from .wallpaper import WallpaperService
 from .templates import template_service, MATUGEN_CONFIG_CACHE
 
-from services.paths import get_cache_path, get_theme_dirs, get_user_config_dir
+from services.paths import get_cache_path, get_theme_dirs, get_user_config_dir, resolve_style_file, get_user_style_dir
 
 CACHE_THEME_PATH = get_cache_path("theme.json")
 
@@ -105,7 +105,7 @@ class ThemeService(Service):
         self._connect_wallpaper_service()
 
         self._load_current_theme()
-        user_colors = os.path.join(get_user_config_dir(), "style", "colors.css")
+        user_colors = resolve_style_file("colors.css")
         if not os.path.isfile(user_colors) or os.path.getsize(user_colors) == 0:
             self.apply()
         logger.info("[ThemeService] initialised")

@@ -16,12 +16,13 @@ from fabric.widgets.centerbox import CenterBox
 from gi.repository import GdkPixbuf, GLib, Gio, Gtk, Gdk
 from snippets import Icon, ClippingScrolledWindow, ClippingBox, SmoothSwitch
 from services.themes import wallpaper
+from services.paths import get_user_config_dir, get_wallpaper_dirs
 from user_options import user_options
 from PIL import Image as PilImage
 
 THUMBNAIL_WIDTH  = 205
 THUMBNAIL_HEIGHT = 115
-SUPPORTED_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
+SUPPORTED_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif")
 
 PREVIEW_WIDTH  = 540
 PREVIEW_HEIGHT = 304
@@ -980,7 +981,14 @@ class DashWallpaperPage(DashSelectorPage):
         self._unload_all_thumbs()
         self._preview_image.set_from_pixbuf(None)
         self._executor.shutdown(wait=False)
-        if hasattr(self, "_walls_monitor"):
+        if hasattr(self, "_walls_monitors"):
+            for m in self._walls_monitors:
+                try:
+                    m.cancel()
+                except Exception:
+                    pass
+            self._walls_monitors.clear()
+        elif hasattr(self, "_walls_monitor"):
             self._walls_monitor.cancel()
 
     def _cancel_preview(self) -> None:
@@ -1006,37 +1014,81 @@ class DashWallpaperPage(DashSelectorPage):
             self._count_badge.set_label(f"{len(self._all_thumbs)} Wallpapers")
 
     def _load_wallpapers(self) -> None:
-        walls_dir = os.path.expanduser("~/.config/agility-shell/wallpapers")
-        if not os.path.isdir(walls_dir):
-            return
+        user_walls_dir = os.path.join(get_user_config_dir(), "wallpapers")
+        try:
+            os.makedirs(user_walls_dir, exist_ok=True)
+        except Exception:
+            pass
 
         def load():
-            paths = sorted(
-                os.path.join(walls_dir, f)
-                for f in os.listdir(walls_dir)
-                if f.lower().endswith(SUPPORTED_EXTS)
-            )
+            candidates = get_wallpaper_dirs()
+            paths = []
+            seen_names = set()
+            for wdir in candidates:
+                if not os.path.isdir(wdir):
+                    continue
+                try:
+                    for f in sorted(os.listdir(wdir)):
+                        if f.lower().endswith(SUPPORTED_EXTS) and f not in seen_names:
+                            seen_names.add(f)
+                            paths.append(os.path.join(wdir, f))
+                except Exception:
+                    pass
+
             def apply():
                 self._all_thumbs = [WallpaperThumb(path, self._on_thumb_clicked) for path in paths]
                 self._rebuild_grid()
                 adj = self._scroll.get_vadjustment()
                 adj.connect("value-changed", self._on_scroll_changed)
                 GLib.idle_add(self._on_scroll_changed, adj)
-                if not hasattr(self, "_walls_monitor"):
-                    self._walls_monitor = monitor_file(walls_dir)
-                    self._walls_monitor.connect("changed", self._on_dir_changed)
+                if not hasattr(self, "_walls_monitors"):
+                    self._walls_monitors = []
+                    for wdir in candidates:
+                        if os.path.isdir(wdir):
+                            try:
+                                m = monitor_file(wdir)
+                                m.connect("changed", self._on_dir_changed)
+                                self._walls_monitors.append(m)
+                            except Exception:
+                                pass
             GLib.idle_add(apply)
 
         threading.Thread(target=load, daemon=True).start()
 
     def _on_dir_changed(self, monitor, file, other_file, event_type) -> None:
-        path = file.get_path()
-        if not path.lower().endswith(SUPPORTED_EXTS):
-            return
-        if event_type == Gio.FileMonitorEvent.CREATED:
-            GLib.idle_add(self._add_thumb, path)
-        elif event_type == Gio.FileMonitorEvent.DELETED:
-            GLib.idle_add(self._remove_thumb, path)
+        path = file.get_path() if file else None
+        other_path = other_file.get_path() if other_file else None
+
+        if hasattr(wallpaper, "_cached_wallpapers"):
+            wallpaper._cached_wallpapers = None
+
+        if event_type in (
+            Gio.FileMonitorEvent.CREATED,
+            Gio.FileMonitorEvent.CHANGES_DONE_HINT,
+            Gio.FileMonitorEvent.MOVED_IN,
+        ):
+            if path and path.lower().endswith(SUPPORTED_EXTS):
+                GLib.idle_add(self._add_thumb, path)
+        elif event_type in (
+            Gio.FileMonitorEvent.DELETED,
+            Gio.FileMonitorEvent.MOVED_OUT,
+        ):
+            if path:
+                GLib.idle_add(self._remove_thumb, path)
+        elif event_type in (
+            Gio.FileMonitorEvent.RENAMED,
+            Gio.FileMonitorEvent.MOVED,
+        ):
+            if path:
+                if os.path.exists(path) and path.lower().endswith(SUPPORTED_EXTS):
+                    GLib.idle_add(self._add_thumb, path)
+                else:
+                    GLib.idle_add(self._remove_thumb, path)
+            if other_path:
+                if os.path.exists(other_path) and other_path.lower().endswith(SUPPORTED_EXTS):
+                    GLib.idle_add(self._add_thumb, other_path)
+                else:
+                    GLib.idle_add(self._remove_thumb, other_path)
 
     def _on_scroll_changed(self, adj) -> None:
         visible_start = adj.get_value()
@@ -1119,9 +1171,22 @@ class DashWallpaperPage(DashSelectorPage):
         self._preview_future = self._executor.submit(load)
 
     def _add_thumb(self, path: str) -> None:
-        existing = [t.path for t in self._all_thumbs]
-        if path in existing:
+        if not os.path.isfile(path) or os.path.getsize(path) == 0:
             return
+        base_name = os.path.basename(path)
+        matching_thumb = None
+        for t in self._all_thumbs:
+            if t.path == path or os.path.basename(t.path) == base_name:
+                matching_thumb = t
+                break
+        if matching_thumb is not None:
+            matching_thumb._path = path
+            matching_thumb.unload()
+            matching_thumb.load(self._executor)
+            if self._active_thumb == matching_thumb:
+                self._update_preview(path)
+            return
+
         thumb = WallpaperThumb(path, self._on_thumb_clicked)
         self._all_thumbs.append(thumb)
         self._all_thumbs.sort(key=lambda t: t.path)
@@ -1144,6 +1209,16 @@ class DashWallpaperPage(DashSelectorPage):
             self._rebuild_grid()
             self._on_scroll_changed(self._scroll.get_vadjustment())
 
+            base_name = os.path.basename(path)
+            fallback = None
+            for wdir in get_wallpaper_dirs():
+                cand = os.path.join(wdir, base_name)
+                if cand != path and os.path.isfile(cand):
+                    fallback = cand
+                    break
+            if fallback:
+                self._add_thumb(fallback)
+
     def _on_random_clicked(self, *_):
         chosen = wallpaper.random_wallpaper(is_hotkey=False)
         if chosen:
@@ -1158,6 +1233,6 @@ class DashWallpaperPage(DashSelectorPage):
             pass
 
     def _on_open_folder_clicked(self, *_):
-        walls_dir = os.path.expanduser("~/.config/agility-shell/wallpapers")
+        walls_dir = os.path.join(get_user_config_dir(), "wallpapers")
         os.makedirs(walls_dir, exist_ok=True)
         Gio.AppInfo.launch_default_for_uri(f"file://{walls_dir}", None)

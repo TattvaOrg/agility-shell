@@ -35,7 +35,7 @@ class AppletPage(Box):
 
 
 class Applet(Box):
-    def __init__(self, main_menu: AppletPage, **kwargs):
+    def __init__(self, main_menu: AppletPage, homogeneous: bool = True, **kwargs):
         self.main_menu = main_menu
 
         self._back_button = Button(
@@ -43,6 +43,7 @@ class Applet(Box):
             child=Icon(icon_name="chevron-left"),
             on_clicked=lambda *_: self._stack.set_visible_child_name("main"),
         )
+        self._back_button.set_no_show_all(True)
         self._back_button.set_visible(False)
 
         self._title_slot = Box()
@@ -64,6 +65,9 @@ class Applet(Box):
             bezier_curve=(0.34, 1.3, 0.64, 1.0),
             duration=0.45,
         )
+        self._stack.set_homogeneous(homogeneous)
+        self._stack.set_vhomogeneous(homogeneous)
+        self._stack.set_hhomogeneous(homogeneous)
         self._stack.add_named(main_menu, "main")
         self._stack.connect("notify::visible-child", self._on_page_changed)
 
@@ -82,6 +86,7 @@ class Applet(Box):
 
     def _on_visibility_changed(self, *_):
         self._stack.set_visible_child(self.main_menu)
+        self._update_header(self.main_menu)
 
     def _update_header(self, page: AppletPage):
         self._back_button.set_visible(not page.is_first)
@@ -110,6 +115,10 @@ class Applet(Box):
         page = self._stack.get_visible_child()
         if isinstance(page, AppletPage):
             self._update_header(page)
+        if not self._stack.get_homogeneous():
+            toplevel = self.get_toplevel()
+            if toplevel and hasattr(toplevel, "queue_resize"):
+                toplevel.queue_resize()
 
     def add_menu(self, name: str, menu) -> None:
         self._stack.add_named(menu(stack=self._stack), name)

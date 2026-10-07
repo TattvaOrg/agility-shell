@@ -12,6 +12,7 @@ from services.singletons import theme_service
 from services.templates import template_service, TEMPLATES_DIR
 from services.themes import WALLPAPER_THEME
 from user_options import user_options
+from services.paths import get_user_style_dir
 
 THUMB_BG_W   = 154
 THUMB_BG_H   = 110
@@ -33,7 +34,7 @@ FONT_MAP = {
 def write_border_css(key: str) -> None:
     values = RADIUS_MAP.get(key, RADIUS_MAP["round"])
     css = "\n".join(f"@define {k} {v};" for k, v in values.items())
-    path = os.path.expanduser("~/.config/agility-shell/style/borders.css")
+    path = os.path.join(get_user_style_dir(), "borders.css")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(css + "\n")
@@ -41,7 +42,7 @@ def write_border_css(key: str) -> None:
 def write_font_css(key: str) -> None:
     values = FONT_MAP.get(key, FONT_MAP["none"])
     css = "\n".join(f"@define {k} {v};" for k, v in values.items())
-    path = os.path.expanduser("~/.config/agility-shell/style/fonts.css")
+    path = os.path.join(get_user_style_dir(), "fonts.css")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(css + "\n")
@@ -615,20 +616,10 @@ class ThemePreview(Box):
             self._dark_btn.remove_style_class("active")
 
     def _write_border_css(self, key: str) -> None:
-        values = RADIUS_MAP[key]
-        css = "\n".join(f"@define {k} {v};" for k, v in values.items())
-        path = os.path.expanduser("~/.config/agility-shell/style/borders.css")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            f.write(css + "\n")
+        write_border_css(key)
 
     def _write_font_css(self, key: str) -> None:
-        values = FONT_MAP[key]
-        css = "\n".join(f"@define {k} {v};" for k, v in values.items())
-        path = os.path.expanduser("~/.config/agility-shell/style/fonts.css")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            f.write(css + "\n")
+        write_font_css(key)
 
     def _build_templates_section(self) -> Section:
         templates = template_service.list_templates()

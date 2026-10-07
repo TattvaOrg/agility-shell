@@ -170,10 +170,20 @@ class LauncherGridItem(Button):
             self._launcher.toggle()
 
 
+def _get_filtered_desktop_applications() -> list[DesktopApp]:
+    return [
+        app for app in get_desktop_applications()
+        if not getattr(app, "hidden", False)
+        and "agility-shell" not in (getattr(app, "executable", "") or "")
+        and (getattr(app, "name", "") != "Agility Shell")
+        and (getattr(app, "display_name", "") != "Agility Shell")
+    ]
+
+
 class LauncherApplet(Applet):
     def __init__(self, parent):
         self.window = parent
-        self._all_apps = get_desktop_applications()
+        self._all_apps = _get_filtered_desktop_applications()
         self._grid_mode = user_options.launcher.grid
         self._load_generation = 0
         self._list_box = Box(orientation="v", spacing=6)
@@ -347,7 +357,7 @@ class LauncherApplet(Applet):
         GLib.idle_add(self.reload_apps)
 
     def reload_apps(self):
-        self._all_apps = get_desktop_applications()
+        self._all_apps = _get_filtered_desktop_applications()
         self._app_count.set_text(f"Apps · {len(self._all_apps)}")
         current_text = self._entry.get_text()
         if current_text:
@@ -368,10 +378,10 @@ class LauncherApplet(Applet):
                 child.destroy()
             for child in self._grid_box.get_children():
                 child.destroy()
-            self._all_apps = get_desktop_applications()
+            self._all_apps = _get_filtered_desktop_applications()
             self._load_async(self._sorted_by_usage(self._all_apps), self._grid_mode)
         else:
-            self._all_apps = get_desktop_applications()
+            self._all_apps = _get_filtered_desktop_applications()
             self._app_count.set_text(f"Apps · {len(self._all_apps)}")
             current_text = self._entry.get_text()
             if current_text:

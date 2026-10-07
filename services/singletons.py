@@ -54,4 +54,3 @@ wallpaper_service = WallpaperService.get_instance()
 from .suits_service import SuitsService, suits_service
 from .agility_profile import AgilityProfileService
 profile_service = AgilityProfileService.get_instance()
-idle.start()

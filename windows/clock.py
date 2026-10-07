@@ -500,6 +500,7 @@ class ClockApplet(Applet):
                 child=self.main_box,
                 first=True,
             ),
+            homogeneous=True,
             **kwargs,
         )
         self.add_menu("tz-search", lambda stack: TimezoneSearchPage(

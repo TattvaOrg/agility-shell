@@ -10,9 +10,6 @@ plugins/*
 wallpapers/*
 templates/*
 
-styles/colors.css
-styles/borders.css
-styles/fonts.css
 
 # Logs / misc
 *.log

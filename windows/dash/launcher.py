@@ -443,10 +443,20 @@ class HybridGrid(Gtk.Grid):
         return row * COLUMNS + col
 
 
+def _get_filtered_desktop_applications() -> list[DesktopApp]:
+    return [
+        app for app in get_desktop_applications()
+        if not getattr(app, "hidden", False)
+        and "agility-shell" not in (getattr(app, "executable", "") or "")
+        and (getattr(app, "name", "") != "Agility Shell")
+        and (getattr(app, "display_name", "") != "Agility Shell")
+    ]
+
+
 class DashLauncherPage(DashPage):
     def __init__(self, window):
         self.window = window
-        self._all_apps = get_desktop_applications()
+        self._all_apps = _get_filtered_desktop_applications()
         self._search_entry: Entry | None = None
         self._applet_page_ref = None
 
@@ -484,7 +494,7 @@ class DashLauncherPage(DashPage):
         GLib.idle_add(self.reload_apps)
 
     def reload_apps(self):
-        self._all_apps = get_desktop_applications()
+        self._all_apps = _get_filtered_desktop_applications()
         if self._search_entry and self._search_entry.get_text():
             self._search(self._search_entry)
         else:
@@ -767,7 +777,7 @@ class DashLauncherPage(DashPage):
         self.window.connect("notify::visible", self._on_visibility_changed)
 
     def _on_visibility_changed(self, *_):
-        self._all_apps = get_desktop_applications()
+        self._all_apps = _get_filtered_desktop_applications()
         if not self.window.get_visible():
             if self._search_entry:
                 self._search_entry.set_text("")

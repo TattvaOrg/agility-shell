@@ -1,0 +1,49 @@
+/* =============================================================================
+ * Agility Shell - Custom Border & Radius Configuration
+ * =============================================================================
+ *
+ * This file allows you to customize the corner roundness and borders of widgets,
+ * applets, menus, and bars.
+ *
+ * HOW TO USE:
+ * You can customize the 4 standard corner radius steps used throughout the UI:
+ *   --radius-s   Small buttons, badges, status chips
+ *   --radius-m   Sliders, input entries, action buttons
+ *   --radius-l   Popout cards, dialog containers
+ *   --radius-xl  Outer window borders, launcher, dashboard panels
+ *
+ * Presets (Uncomment one to activate):
+ * ============================================================================= */
+
+/* --- Preset 1: Sharp / Square Style (Uncomment to activate) ---
+:root {
+    --radius-s: 0px;
+    --radius-m: 0px;
+    --radius-l: 0px;
+    --radius-xl: 0px;
+}
+*/
+
+/* --- Preset 2: Compact / Modern Rounded (Uncomment to activate) ---
+:root {
+    --radius-s: 4px;
+    --radius-m: 8px;
+    --radius-l: 12px;
+    --radius-xl: 18px;
+}
+*/
+
+/* --- Preset 3: Ultra Rounded Style (Uncomment to activate) ---
+:root {
+    --radius-s: 12px;
+    --radius-m: 18px;
+    --radius-l: 24px;
+    --radius-xl: 36px;
+}
+*/
+
+/* --- Optional: Global border-radius override ---
+* {
+    border-radius: 8px;
+}
+*/

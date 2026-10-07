@@ -6,7 +6,7 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
-from snippets import HackedRevealer, enable_blur, set_blur_regions_from_widget, disable_blur, free_blur, AppletReveal, UnifiedPopoutManager
+from snippets import HackedRevealer, enable_blur, set_blur_region, set_blur_regions_from_widget, disable_blur, free_blur, AppletReveal, UnifiedPopoutManager
 from gi.repository import Gdk, Gtk, GLib, GtkLayerShell
 from bar_widgets import (
     LauncherButton, BluetoothButton, BatteryButton, CalendarButton, ClockButton,
@@ -238,6 +238,16 @@ def set_open_applet(applet: AppletWindow | None):
     open_applet = applet
 
 def is_applet_open(*keys: str) -> bool:
+    from services.singletons import bar_manager
+    if bar_manager and hasattr(bar_manager, "_bars"):
+        for b in bar_manager._bars.values():
+            pm = getattr(b, "popout_manager", None)
+            if pm and (pm.is_open or (pm.window and pm.window.get_visible()) or pm.is_pointer_inside()):
+                if not keys:
+                    return True
+                if pm._current_key in keys:
+                    return True
+
     if open_applet is None or not open_applet.is_visible():
         return False
     if not keys:
@@ -570,28 +580,10 @@ class WidgetWrapper(Box):
     def _is_pointer_actually_inside(self) -> bool:
         if self._pointer_in_widget or self._pointer_in_popup:
             return True
-        try:
-            if self.event_box and self.event_box.get_realized():
-                x, y = self.event_box.get_pointer()
-                alloc = self.event_box.get_allocation()
-                if 0 <= x < alloc.width and 0 <= y < alloc.height:
-                    self._pointer_in_widget = True
-                    return True
-        except Exception:
-            pass
         bar = self._get_bar()
         if bar and hasattr(bar, "popout_manager") and bar.popout_manager.is_open:
             if bar.popout_manager.is_pointer_inside():
                 return True
-        try:
-            if self._popup and self._popup.get_realized() and self._popup.is_visible():
-                x, y = self._popup.get_pointer()
-                alloc = self._popup.get_allocation()
-                if 0 <= x < alloc.width and 0 <= y < alloc.height:
-                    self._pointer_in_popup = True
-                    return True
-        except Exception:
-            pass
         return False
 
     def _on_popup_interaction(self):
@@ -608,12 +600,13 @@ class WidgetWrapper(Box):
             return False
         if self.widget_key == "Dash":
             import services.singletons as singletons
-            if singletons.bar_manager and singletons.bar_manager._dash:
-                if not singletons.bar_manager._dash.is_visible():
+            if singletons.bar_manager:
+                dash = singletons.bar_manager.get_dash()
+                if not dash.is_visible():
                     self._opened_by_hover = True
                     bar = self._get_bar()
                     active_monitor = bar.gdk_monitor if bar and hasattr(bar, "gdk_monitor") else None
-                    singletons.bar_manager._dash.toggle(active_monitor)
+                    dash.toggle(active_monitor)
                     self._hook_dash_hover_leave()
         elif self.widget_key in APPLET_WIDGETS:
             bar = self._get_bar()
@@ -1125,28 +1118,10 @@ class GroupWrapper(Box):
     def _is_pointer_actually_inside(self) -> bool:
         if self._pointer_in_widget or self._pointer_in_popup:
             return True
-        try:
-            if self._outer_eb and self._outer_eb.get_realized():
-                x, y = self._outer_eb.get_pointer()
-                alloc = self._outer_eb.get_allocation()
-                if 0 <= x < alloc.width and 0 <= y < alloc.height:
-                    self._pointer_in_widget = True
-                    return True
-        except Exception:
-            pass
         bar = self._get_bar()
         if bar and hasattr(bar, "popout_manager") and bar.popout_manager.is_open:
             if bar.popout_manager.is_pointer_inside():
                 return True
-        try:
-            if self._popup and self._popup.get_realized() and self._popup.is_visible():
-                x, y = self._popup.get_pointer()
-                alloc = self._popup.get_allocation()
-                if 0 <= x < alloc.width and 0 <= y < alloc.height:
-                    self._pointer_in_popup = True
-                    return True
-        except Exception:
-            pass
         return False
 
     def _on_popup_interaction(self):
@@ -1836,6 +1811,8 @@ class Bar(Window):
         self.connect("enter-notify-event", self._on_bar_enter)
         self.connect("leave-notify-event", self._on_bar_leave)
         self.connect("realize", self._on_realize)
+        self._centerbox.connect("size-allocate", lambda *_: self._update_blur_region())
+        self._revealer.connect("notify::child-revealed", lambda *_: self._update_blur_region())
         edit_mode.connect("notify::edit-mode", self._on_edit_mode_changed)
         self.gdk_monitor = monitor
         self.set_opacity(getattr(user_options.settings, "bar_opacity", 1.0))
@@ -1875,7 +1852,18 @@ class Bar(Window):
         self.queue_resize()
         self.resize(1, 1)
         if hasattr(self, "_blur_ctx") and self._blur_ctx:
-            GLib.timeout_add(250, self._update_blur_region)
+            if getattr(self, "_blur_timeout", None) is not None:
+                try:
+                    GLib.source_remove(self._blur_timeout)
+                except Exception:
+                    pass
+                self._blur_timeout = None
+
+            def _do_blur():
+                self._blur_timeout = None
+                return self._update_blur_region()
+
+            self._blur_timeout = GLib.timeout_add(250, _do_blur)
 
     def _update_child_bar_height(self, wrapper, height: int, widget_h: int, scale_sz: int):
         def _apply_to_widget(w):
@@ -1910,10 +1898,11 @@ class Bar(Window):
                 _apply_to_widget(c)
 
     def _on_realize(self, *_):
-        should_blur = getattr(user_options.settings, "bar_blur", True)
+        current_theme = getattr(user_options.settings, "bar_theme", "default")
+        should_blur = getattr(user_options.settings, "bar_blur", True) if current_theme in ("liquid-glass", "blurred", "tinted-glass") else getattr(user_options.settings, "bar_blur", False)
         if should_blur:
             self._blur_ctx = enable_blur(self)
-            GLib.timeout_add(1500, self._update_blur_region)
+            GLib.timeout_add(100, self._update_blur_region)
 
     def set_opacity(self, opacity: float):
         opacity = max(0.0, min(1.0, float(opacity)))
@@ -1962,8 +1951,21 @@ class Bar(Window):
         return section
 
     def _update_blur_region(self) -> bool:
-        if self._blur_ctx and self.get_realized():
-            set_blur_regions_from_widget(self._blur_ctx, self, accuracy=1, erode=0)
+        if not (self._blur_ctx and self.get_realized()):
+            return False
+        if hasattr(self, "_revealer") and not self._revealer.get_child_revealed():
+            set_blur_region(self._blur_ctx, 0, 0, 0, 0)
+            return False
+        if hasattr(self, "_centerbox") and self._centerbox.get_realized():
+            alloc = self._centerbox.get_allocation()
+            coords = self._centerbox.translate_coordinates(self, 0, 0)
+            if coords:
+                bx, by = coords
+                bw, bh = alloc.width, alloc.height
+                if bw > 0 and bh > 0:
+                    set_blur_region(self._blur_ctx, bx, by, bw, bh)
+                    return False
+        set_blur_regions_from_widget(self._blur_ctx, self, accuracy=1, erode=0)
         return False
 
     def apply_blur(self, enabled: bool) -> None:
@@ -2203,6 +2205,12 @@ class Bar(Window):
     def _update_smart_autohide(self):
         if not self.auto_hide or edit_mode.edit_mode:
             return
+        if hasattr(self, "popout_manager") and self.popout_manager and (
+            self.popout_manager.is_open
+            or (self.popout_manager.window and self.popout_manager.window.get_visible())
+            or self.popout_manager.is_pointer_inside()
+        ):
+            return
         if is_applet_open():
             return
         if self._is_hovered:
@@ -2254,6 +2262,12 @@ class Bar(Window):
         self._hide_timeout = None
         if self._is_hovered:
             return False
+        if hasattr(self, "popout_manager") and self.popout_manager and (
+            self.popout_manager.is_open
+            or (self.popout_manager.window and self.popout_manager.window.get_visible())
+            or self.popout_manager.is_pointer_inside()
+        ):
+            return False
         if open_applet is not None and open_applet.is_visible():
             return False
         if edit_mode.edit_mode:
@@ -2293,10 +2307,10 @@ class Bar(Window):
                 self._hide_timeout = GLib.timeout_add(350, self._try_hide)
 
     def _open_edit_applets(self):
-        if self._bar_manager is None or self._bar_manager._dash is None:
+        if self._bar_manager is None:
             return
         active_monitor = self.gdk_monitor
-        self._bar_manager._dash.toggle_applets(active_monitor)
+        self._bar_manager.get_dash().toggle_applets(active_monitor)
 
     def _on_menu_deactivate(self, _):
         if not self.auto_hide:
@@ -2398,6 +2412,8 @@ class BarManager:
         self._standalone_windows: dict[str, object] = {}
         current_bar_height = getattr(user_options.settings, "bar_height", 36)
         update_bar_height_css(current_bar_height)
+
+        # Critical path: construct and display all bars first (~70ms)
         for i in range(self._display.get_n_monitors()):
             monitor = self._display.get_monitor(i)
             self._add_bar(monitor, i)
@@ -2408,23 +2424,43 @@ class BarManager:
         )
         self._display.connect("monitor-removed", self._on_monitor_removed)
 
-    def _add_bar(self, monitor: Gdk.Monitor, monitor_id: int) -> None:
-        if monitor not in self._notifications:
-            self._notifications[monitor] = NotificationWindow(monitor_id)
+        # Defer heavy secondary windows (Dash, OSD, Notifications) to idle preload
+        GLib.idle_add(self._deferred_init)
 
+    def _deferred_init(self) -> bool:
+        # Preload OSDs and notifications
+        for i in range(self._display.get_n_monitors()):
+            monitor = self._display.get_monitor(i)
+            if monitor not in self._notifications:
+                try:
+                    self._notifications[monitor] = NotificationWindow(i)
+                except Exception as e:
+                    logger.debug(f"[BarManager] NotificationWindow init error: {e}")
+            if monitor not in self._osds:
+                try:
+                    self._osds[monitor] = OSD(i)
+                except Exception as e:
+                    logger.debug(f"[BarManager] OSD init error: {e}")
+
+        # Preload Dash in background so it's ready when user opens it
+        if self._dash is None:
+            try:
+                self.get_dash()
+            except Exception as e:
+                logger.error(f"[BarManager] Dash preload error: {e}")
+
+        return GLib.SOURCE_REMOVE
+
+    def get_dash(self):
         if self._dash is None:
             from windows.dash.dash import Dash
             self._dash = Dash(self)
+            for bar in self._bars.values():
+                bar.register_dash_callback(self._dash.applets.refresh_bar_state)
+            self._dash.applets.refresh_bar_state()
+        return self._dash
 
-        if self._wallpaper_picker is None:
-            self._wallpaper_picker = WallpaperPicker()
-
-        if self._wallpaper_drawer is None:
-            self._wallpaper_drawer = WallpaperDrawer()
-
-        if monitor not in self._osds:
-            self._osds[monitor] = OSD(monitor_id)
-
+    def _add_bar(self, monitor: Gdk.Monitor, monitor_id: int) -> None:
         monitor_cfg = next(
             (c for c in user_options.bars.configs if c.get("monitor") == monitor_id),
             None,
@@ -2446,9 +2482,11 @@ class BarManager:
                 on_remove=lambda m=monitor, bi=bar_index: self._remove_bar(m, bi),
             )
             self._bars[key] = new_bar
-            new_bar.register_dash_callback(self._dash.applets.refresh_bar_state)
+            if self._dash:
+                new_bar.register_dash_callback(self._dash.applets.refresh_bar_state)
 
-        self._dash.applets.refresh_bar_state()
+        if self._dash:
+            self._dash.applets.refresh_bar_state()
 
     def _remove_bar(self, monitor: Gdk.Monitor, bar_index: int = None) -> None:
         self.reload_bars()
@@ -2490,13 +2528,11 @@ class BarManager:
             toggleable_windows[key].toggle(active_monitor)
             return
         if key == "Dash":
-            if self._dash:
-                self._dash.toggle(active_monitor)
+            self.get_dash().toggle(active_monitor)
             return
 
         if key in ("Settings", "DashSettings"):
-            if self._dash:
-                self._dash.open_settings(None, active_monitor)
+            self.get_dash().open_settings(None, active_monitor)
             return
 
         if key == "WallpaperPicker":
@@ -2512,24 +2548,32 @@ class BarManager:
             return
 
         if key == "Wallpapers":
-            if self._dash:
-                self._dash.toggle_wallpapers(active_monitor)
+            self.get_dash().toggle_wallpapers(active_monitor)
             return
 
         if key == "Themes":
-            if self._dash:
-                self._dash.toggle_themes(active_monitor)
+            self.get_dash().toggle_themes(active_monitor)
             return
 
         if key == "Settings":
-            if self._dash:
-                self._dash.toggle_settings(active_monitor)
+            self.get_dash().toggle_settings(active_monitor)
             return
 
         if key == "EditApplets":
-            if self._dash:
-                self._dash.toggle_applets(active_monitor)
+            self.get_dash().toggle_applets(active_monitor)
             return
+
+        if key == "Launcher":
+            keybind_pos = getattr(user_options.launcher, "keybind_position", "center")
+            for (monitor, _), bar in self._bars.items():
+                if get_connector_from_monitor_id(bar.monitor_id) == active_output:
+                    if hasattr(bar, "popout_manager") and bar.popout_manager:
+                        bar.popout_manager.toggle(key, anchor_widget=None, show_scrim=True, position=keybind_pos)
+                        return
+            for bar in self._bars.values():
+                if hasattr(bar, "popout_manager") and bar.popout_manager:
+                    bar.popout_manager.toggle(key, anchor_widget=None, show_scrim=True, position=keybind_pos)
+                    return
 
         # Search bars on active monitor for the widget
         for (monitor, _), bar in self._bars.items():
@@ -2616,8 +2660,7 @@ class BarManager:
             if get_connector_from_monitor_id(i) == active_output:
                 active_monitor = monitor
                 break
-        if self._dash:
-            self._dash.open_settings(section, active_monitor)
+        self.get_dash().open_settings(section, active_monitor)
 
     def apply_bar_height(self, height: int) -> None:
         update_bar_height_css(height)

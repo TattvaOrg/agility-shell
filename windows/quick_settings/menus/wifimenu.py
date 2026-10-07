@@ -83,7 +83,9 @@ class AccessPointItem(Box):
         )
 
         self._status_badge = Label(label="", style="font-size: 11px; font-weight: 500;", visible=False)
+        self._status_badge.set_no_show_all(True)
         self._status_icon = Icon(icon_name="check-circle-duotone", icon_size=14, visible=False)
+        self._status_icon.set_no_show_all(True)
 
         self._status_box = Box(
             orientation="h",
@@ -150,6 +152,7 @@ class AccessPointItem(Box):
                 self._disconnect_btn,
             ],
         )
+        self.confirm_box.set_no_show_all(True)
 
         super().__init__(
             orientation="v",
@@ -166,12 +169,33 @@ class AccessPointItem(Box):
         )
         self._refresh_state()
 
+    def update_ui(self):
+        self._icon.set_property("icon-name", self._icon._get_icon(self.ap.strength))
+        if self.ap.ssid and self.ap.ssid != "Unknown":
+            self._ssid_label.set_label(self.ap.ssid)
+        self._refresh_state()
+
     def _refresh_state(self):
         if self.get_parent() is None:
             return
         active_ap = self._wifi._device.get_active_access_point()
         bssid = self.ap._dict.get("bssid")
+        is_conn = False
         if active_ap and active_ap.get_bssid() == bssid:
+            is_conn = True
+        elif bssid == "connected-active-connection":
+            is_conn = True
+        else:
+            try:
+                active_conn = self._wifi._device.get_active_connection()
+                if active_conn:
+                    conn_id = active_conn.get_id()
+                    if conn_id and (conn_id == self.ap.ssid or conn_id == self.ap._dict.get("ssid")):
+                        is_conn = True
+            except Exception:
+                pass
+
+        if is_conn:
             self._set_state(APState.CONNECTED)
         elif self._state != APState.CONNECTING:
             self._set_state(APState.IDLE)
@@ -298,11 +322,7 @@ class _WifiTab:
             ],
         )
 
-        for nm_ap in nm_device.get_access_points():
-            self._add_ap_from_nm(nm_ap)
-
-        self._update_placeholder()
-        self.sort_items()
+        self.refresh_access_points()
 
         self._device_signals.append(
             nm_device.connect(
@@ -316,6 +336,22 @@ class _WifiTab:
                 lambda _, nm_ap: self._on_ap_removed(nm_ap),
             )
         )
+        self._device_signals.append(
+            nm_device.connect(
+                "notify::active-access-point",
+                lambda *_: self.refresh_access_points(),
+            )
+        )
+        self._device_signals.append(
+            nm_device.connect(
+                "state-changed",
+                lambda *_: self.refresh_access_points(),
+            )
+        )
+        self._wifi_signal = self._wifi.connect(
+            "changed",
+            lambda *_: self.refresh_access_points(),
+        )
 
         tab_stack.add_tab(
             name=self._tab_name,
@@ -328,11 +364,12 @@ class _WifiTab:
     def _make_ap_dict(self, nm_ap) -> dict:
         from gi.repository import NM
         ssid_data = nm_ap.get_ssid()
+        active_ap = self._wifi._device.get_active_access_point()
         return {
             "bssid": nm_ap.get_bssid(),
             "last_seen": nm_ap.get_last_seen(),
             "ssid": NM.utils_ssid_to_utf8(ssid_data.get_data()) if ssid_data else "Unknown",
-            "active-ap": self._wifi._ap,
+            "active-ap": active_ap,
             "strength": nm_ap.get_strength(),
             "frequency": nm_ap.get_frequency(),
             "security": nm_ap.get_rsn_flags() or nm_ap.get_wpa_flags(),
@@ -342,12 +379,92 @@ class _WifiTab:
     def _add_ap_from_nm(self, nm_ap):
         ap_dict = self._make_ap_dict(nm_ap)
         bssid = ap_dict.get("bssid")
-        if not bssid or bssid in self._ap_items:
+        if not bssid:
+            return
+        if bssid in self._ap_items:
+            self._update_ap_item(self._ap_items[bssid], nm_ap)
             return
         ap = AccessPoint(ap_dict, self._wifi)
         item = AccessPointItem(ap, on_connect=self._on_connect, wifi=self._wifi, tab=self)
         self._ap_items[bssid] = item
         self._ap_box.add(item)
+
+    def _update_ap_item(self, item: AccessPointItem, nm_ap):
+        ap_dict = self._make_ap_dict(nm_ap)
+        item.ap._dict.update(ap_dict)
+        item.update_ui()
+
+    def refresh_access_points(self):
+        nm_device = self._wifi._device
+        if not nm_device:
+            return
+
+        current_aps = {}
+        for nm_ap in nm_device.get_access_points():
+            bssid = nm_ap.get_bssid()
+            if bssid:
+                current_aps[bssid] = nm_ap
+
+        active_ap = nm_device.get_active_access_point()
+        if not active_ap:
+            try:
+                ac = nm_device.get_active_connection()
+                if ac and ac.get_specific_object_path():
+                    active_ap = nm_device.get_access_point_by_path(ac.get_specific_object_path())
+            except Exception:
+                pass
+
+        if active_ap:
+            active_bssid = active_ap.get_bssid()
+            if active_bssid:
+                current_aps[active_bssid] = active_ap
+
+        # Remove APs no longer present (unless currently active or synthesized active)
+        active_bssid = active_ap.get_bssid() if active_ap else None
+        for bssid in list(self._ap_items.keys()):
+            if bssid not in current_aps and bssid != active_bssid and bssid != "connected-active-connection":
+                item = self._ap_items.pop(bssid, None)
+                if item:
+                    self._ap_box.remove(item)
+                    item.destroy()
+
+        # Add or update
+        for bssid, nm_ap in current_aps.items():
+            if bssid in self._ap_items:
+                self._update_ap_item(self._ap_items[bssid], nm_ap)
+            else:
+                self._add_ap_from_nm(nm_ap)
+
+        # Fallback: if no APs found at all, but we have an active connection, synthesize one
+        if not self._ap_items:
+            try:
+                ac = nm_device.get_active_connection()
+                if ac and ac.get_id():
+                    synth_ssid = ac.get_id()
+                    synth_bssid = "connected-active-connection"
+                    synth_dict = {
+                        "bssid": synth_bssid,
+                        "last_seen": 0,
+                        "ssid": synth_ssid,
+                        "active-ap": None,
+                        "strength": 80,
+                        "frequency": 5000,
+                        "security": 1,
+                        "psk": True,
+                    }
+                    ap = AccessPoint(synth_dict, self._wifi)
+                    item = AccessPointItem(ap, on_connect=self._on_connect, wifi=self._wifi, tab=self)
+                    item._set_state(APState.CONNECTED)
+                    self._ap_items[synth_bssid] = item
+                    self._ap_box.add(item)
+            except Exception:
+                pass
+
+        for item in self._ap_items.values():
+            item._refresh_state()
+
+        self.sort_items()
+        self._update_placeholder()
 
     def sort_items(self):
         active_ap = self._wifi._device.get_active_access_point()
@@ -370,6 +487,9 @@ class _WifiTab:
 
     def _on_ap_removed(self, nm_ap):
         bssid = nm_ap.get_bssid()
+        active_ap = self._wifi._device.get_active_access_point()
+        if active_ap and active_ap.get_bssid() == bssid:
+            return
         item = self._ap_items.pop(bssid, None)
         if item:
             self._ap_box.remove(item)
@@ -397,6 +517,13 @@ class _WifiTab:
             except Exception:
                 pass
         self._device_signals.clear()
+
+        if hasattr(self, "_wifi_signal") and self._wifi_signal is not None:
+            try:
+                self._wifi.disconnect(self._wifi_signal)
+            except Exception:
+                pass
+            self._wifi_signal = None
 
         for item in list(self._ap_items.values()):
             item.destroy()
@@ -440,6 +567,16 @@ class WifiMenu(QSAppletPage):
 
         self._password_menu = WifiPasswordMenu(stack=stack)
         self.connect("realize", self._add_password_menu)
+        self.connect("map", self._on_mapped)
+
+    def _on_mapped(self, *_):
+        for tab in self._wifi_tabs.values():
+            tab.refresh_access_points()
+        for wifi in network.wifi_devices.values():
+            try:
+                wifi.scan()
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------ #
     # Switch

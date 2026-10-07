@@ -173,12 +173,59 @@ def resolve_theme_file(theme_filename: str) -> Optional[str]:
             return p
     return None
 
+def get_user_style_dir() -> str:
+    """Returns ~/.config/agility-shell/custom_style (user customization directory for stylesheets)."""
+    return os.path.join(get_user_config_dir(), "custom_style")
+
+def get_user_style_dirs() -> List[str]:
+    """Returns candidate user style directories in priority order."""
+    user_config = get_user_config_dir()
+    return [
+        os.path.join(user_config, "custom_style"),
+        os.path.join(user_config, "custom_styles"),
+        os.path.join(user_config, "style"),
+        os.path.join(user_config, "styles"),
+    ]
+
+def get_system_style_file(filename: str) -> str | None:
+    """Returns the path to a stock system stylesheet, bypassing user overrides."""
+    repo_file = os.path.join(get_repo_dir(), "style", filename)
+    if os.path.isfile(repo_file):
+        return repo_file
+    for base in get_system_data_dirs():
+        for folder in ["style", "styles"]:
+            p = os.path.join(base, folder, filename)
+            if os.path.isfile(p):
+                return p
+    return None
+
 def resolve_style_file(filename: str) -> str:
-    """Resolves a stylesheet file checking user override first, then system defaults."""
+    """Resolves a stylesheet file checking user custom_style overrides first, then system defaults."""
+    alias_map = {
+        "border.css": ["border.css", "borders.css"],
+        "borders.css": ["borders.css", "border.css"],
+        "color.css": ["color.css", "colors.css"],
+        "colors.css": ["colors.css", "color.css"],
+        "font.css": ["font.css", "fonts.css"],
+        "fonts.css": ["fonts.css", "font.css"],
+    }
+    candidate_names = alias_map.get(filename, [filename])
+
+    # 1. Search user custom style directories (custom_style, custom_styles, style, styles)
+    for style_dir in get_user_style_dirs():
+        for name in candidate_names:
+            p = os.path.join(style_dir, name)
+            if os.path.isfile(p):
+                return p
+
+    # 2. Search data dirs (e.g. repo dir, /usr/share/agility-shell)
     for base in get_search_data_dirs():
-        p = os.path.join(base, "style", filename)
-        if os.path.exists(p):
-            return p
+        for folder in ["style", "styles", "custom_style"]:
+            for name in candidate_names:
+                p = os.path.join(base, folder, name)
+                if os.path.isfile(p):
+                    return p
+
     return os.path.join(get_repo_dir(), "style", filename)
 
 def get_native_lib_path(lib_name: str, snippet_name: str) -> str:

@@ -1,0 +1,53 @@
+/* =============================================================================
+ * Agility Shell - Custom Color Scheme Configuration
+ * =============================================================================
+ *
+ * This file allows you to override the color palette used by Agility Shell.
+ * By default, Agility Shell dynamically generates colors using Matugen based
+ * on your active wallpaper. Any colors defined here will override the defaults.
+ *
+ * HOW TO USE:
+ * You can define colors using standard CSS variable syntax (:root { --token: #hex; })
+ * or GTK format (@define-color token #hex;).
+ *
+ * Common palette tokens:
+ *   --primary                Accent / highlight color (active buttons, sliders)
+ *   --on_primary             Text/icon color displayed on top of primary
+ *   --secondary              Secondary accent color
+ *   --background             Window & popout background color
+ *   --surface                Card and panel background color
+ *   --surface_container      Widget container and slider track background
+ *   --on_surface             Main text and icon color
+ *   --on_surface_variant     Secondary / muted text color
+ *   --error                  Warning / error indicator color
+ *
+ * Example 1: Tokyo Night Dark (Uncomment to activate)
+ * ============================================================================= */
+
+/*
+:root {
+    --primary: #bb9af7;
+    --on_primary: #15161e;
+    --secondary: #7aa2f7;
+    --background: #1a1b26;
+    --surface: #1f2335;
+    --surface_container: #292e42;
+    --on_surface: #c0caf5;
+    --on_surface_variant: #787c99;
+    --error: #f7768e;
+}
+*/
+
+/* Example 2: Catppuccin Mocha (Uncomment to activate)
+:root {
+    --primary: #cba6f7;
+    --on_primary: #11111b;
+    --secondary: #89b4fa;
+    --background: #1e1e2e;
+    --surface: #181825;
+    --surface_container: #313244;
+    --on_surface: #cdd6f4;
+    --on_surface_variant: #a6adc8;
+    --error: #f38ba8;
+}
+*/

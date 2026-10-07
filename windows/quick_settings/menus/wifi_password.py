@@ -69,6 +69,7 @@ class WifiPasswordMenu(QSAppletPage):
             style_classes=["wifi-password-error"],
             visible=False,
         )
+        self._error_label.set_no_show_all(True)
         self._connect_button = Button(
             label="Connect",
             style_classes=["suggested-action"],

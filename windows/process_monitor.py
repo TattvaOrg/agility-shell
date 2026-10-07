@@ -357,7 +357,7 @@ class ProcessMonitorApplet(Applet):
         self.parent = parent
         self._monitor_page = ProcessMonitorPage(self)
 
-        super().__init__(main_menu=self._monitor_page)
+        super().__init__(main_menu=self._monitor_page, homogeneous=True, **kwargs)
         self.add_menu("processes", lambda stack: ProcessesMenu(parent, stack))
 
         self.connect("realize", self._on_realize)

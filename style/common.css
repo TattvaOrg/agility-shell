@@ -17,7 +17,6 @@
 
 .scrollable {
     border-radius: apply(radius-m);
-    min-height: 316px;
 }
 
 .smooth-switch {

@@ -13,16 +13,19 @@ class TabMenu(AnimatedScroll):
         self._width = width
         super().__init__(
             style_classes=["scrollable"],
-            style=f"min-width: {width}px; min-height: {height}px;",
+            style=f"min-width: {width}px;",
             child=child,
             max_content_size=(width, height),
+            propagate_natural_height=True,
             overlay_scroll=True,
             kinetic_scroll=True,
+            v_expand=True,
+            h_expand=True,
             **kwargs,
         )
 
     def set_height(self, height: int):
-        self.set_style(f"min-width: {self._width}px; min-height: {height}px;")
+        self.set_style(f"min-width: {self._width}px;")
         self.set_max_content_size((self._width, height))
 
 
@@ -39,17 +42,25 @@ class TabStack(Box):
             h_align="center",
             style_classes=["qs-device-switcher"],
         )
+        self.tab_switcher.set_no_show_all(True)
         self.tab_stack = HackedStack(
             style_classes=["applet-stack"],
             transition_type=transition_type,
             bezier_curve=(0.34, 1.3, 0.64, 1.0),
             duration=0.45,
+            v_expand=True,
+            h_expand=True,
         )
+        self.tab_stack.set_homogeneous(False)
+        self.tab_stack.set_vhomogeneous(False)
+        self.tab_stack.set_hhomogeneous(False)
         self._tab_buttons: list[tuple[str, Button, Callable | None]] = []
 
         super().__init__(
             orientation="v",
             spacing=12,
+            v_expand=True,
+            h_expand=True,
             children=[self.tab_switcher, self.tab_stack],
             **kwargs,
         )
@@ -60,12 +71,14 @@ class TabStack(Box):
             child = self.tab_stack.get_child_by_name(name)
             if isinstance(child, TabMenu):
                 menus.append(child)
+            elif isinstance(child, AnimatedScroll):
+                menus.append(child)
         return menus
 
     def _sync_switcher_visibility(self):
-        single = len(self._tab_buttons) == 1
-        self.tab_switcher.set_visible(not single)
-        height = SINGLE_TAB_HEIGHT if single else MULTI_TAB_HEIGHT
+        show_switcher = len(self._tab_buttons) > 1
+        self.tab_switcher.set_visible(show_switcher)
+        height = SINGLE_TAB_HEIGHT if len(self._tab_buttons) <= 1 else MULTI_TAB_HEIGHT
         for menu in self._tab_menus():
             menu.set_height(height)
 

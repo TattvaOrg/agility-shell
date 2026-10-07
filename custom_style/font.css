@@ -1,0 +1,35 @@
+/* =============================================================================
+ * Agility Shell - Custom Font Configuration
+ * =============================================================================
+ *
+ * This file allows you to customize the typography used across Agility Shell.
+ *
+ * HOW TO USE:
+ * 1. GOOGLE FONTS (Recommended):
+ *    Paste a Google Fonts @import url(...) below. Agility Shell will automatically:
+ *    - Download the TrueType font binaries in the background.
+ *    - Cache them locally in ~/.local/share/fonts/agility-shell/.
+ *    - Register them dynamically with Pango and Fontconfig (no system restart required).
+ *    - Apply the font globally to all bars, widgets, applets, and menus.
+ *
+ *    Example 1: Sans-Serif (Modern & Clean)
+ *    @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap");
+ *
+ *    Example 2: Sans-Serif (Minimal & Geometric)
+ *    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+ *
+ *    Example 3: Monospace / Coding Font
+ *    @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
+ *
+ * 2. SYSTEM OR LOCAL FONTS:
+ *    If you have a local font already installed (e.g. Nerd Fonts), specify:
+ *    @define mixed-mono "FiraCode Nerd Font";
+ *    @define always-mono "FiraCode Nerd Font";
+ *    * {
+ *        font-family: "FiraCode Nerd Font", monospace;
+ *    }
+ *
+ * To use a font, simply uncomment one of the examples below or paste your own.
+ * ============================================================================= */
+
+/* @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); */

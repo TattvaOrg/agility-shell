@@ -271,8 +271,7 @@ class Brightness(Service):
         """Setter accepts brightness value in RAW (0 to max_screen)."""
         self._lock.lock()
         try:
-
-            value = max(0, min(value, self.max_screen))
+            value = max(0, min(int(round(value)), self.max_screen))
 
             current_percent = (
                 int((self._last_raw / self.max_screen) * 100)
@@ -296,6 +295,25 @@ class Brightness(Service):
             self._timer_id = GLib.timeout_add(50, self._apply_brightness)
         finally:
             self._lock.unlock()
+
+    @Property(int, "read-write")
+    def screen_percent(self) -> int:
+        """Getter returns current brightness in percentage (0 to 100)."""
+        if self.max_screen <= 0:
+            return 0
+        raw = self.screen_brightness
+        return int(round((raw / self.max_screen) * 100))
+
+    @screen_percent.setter
+    def screen_percent(self, percent: int):
+        """Setter accepts brightness in percentage (0 to 100)."""
+        percent = max(0, min(100, int(round(percent))))
+        self.screen_brightness = int(round((percent / 100.0) * self.max_screen))
+
+    def step_percent(self, delta: int):
+        """Adjust brightness by a relative percentage (e.g. +10 or -10)."""
+        cur = self.screen_percent
+        self.screen_percent = max(0, min(100, cur + delta))
 
     def _apply_brightness(self):
         """Apply pending brightness change with optimized debouncing."""

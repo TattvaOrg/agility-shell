@@ -274,24 +274,33 @@ class PlayerStackSwitcher(CenterBox):
             max_chars_width=20,
         )
 
+        self._prev_player_btn = Button(
+            style_classes=["applet-misc-button"],
+            child=Icon(icon_name="arrow-left-duotone"),
+            tooltip_text="Previous Player",
+            on_clicked=lambda *_: self._navigate(-1),
+        )
+        self._next_player_btn = Button(
+            style_classes=["applet-misc-button"],
+            child=Icon(icon_name="arrow-right-duotone"),
+            tooltip_text="Next Player",
+            on_clicked=lambda *_: self._navigate(1),
+        )
+
+        self._nav_box = Box(
+            spacing=12,
+            children=[
+                self._prev_player_btn,
+                self._next_player_btn,
+            ],
+        )
+        self._nav_box.set_no_show_all(True)
+        self._nav_box.set_visible(False)
+
         super().__init__(
             style_classes=["applet-header"],
             start_children=self.title,
-            end_children=Box(
-                spacing=12,
-                children=[
-                    Button(
-                        style_classes=["applet-misc-button"],
-                        child=Icon(icon_name="arrow-left-duotone"),
-                        on_clicked=lambda *_: self._navigate(-1),
-                    ),
-                    Button(
-                        style_classes=["applet-misc-button"],
-                        child=Icon(icon_name="arrow-right-duotone"),
-                        on_clicked=lambda *_: self._navigate(1),
-                    ),
-                ],
-            ),
+            end_children=self._nav_box,
             **kwargs,
         )
 
@@ -304,9 +313,11 @@ class PlayerStackSwitcher(CenterBox):
         current = self._applet.get_current_name()
         if current:
             self.title.set_label(current.capitalize())
+        else:
+            self.title.set_label("Media")
 
         player_count = len(self._applet.get_player_names())
-        self.end_children[0].set_visible(player_count > 1)
+        self._nav_box.set_visible(player_count > 1)
 
     def _navigate(self, direction: int):
         if not self._applet:
@@ -348,6 +359,14 @@ class MediaApplet(Box):
         for name, service in player_manager.get_all_services().items():
             self._add_player(name, service)
 
+        self.sync()
+        self.connect("realize", self._on_realize)
+
+    def _on_realize(self, *_):
+        toplevel = self.get_toplevel()
+        if toplevel:
+            toplevel.connect("notify::visible", lambda *_: self.sync())
+
     def _add_player(self, name: str, service: PlayerService):
         if name in self._players:
             return
@@ -384,3 +403,4 @@ class MediaApplet(Box):
         else:
             self.player_stack.set_visible_child_name("__placeholder__")
         self.set_visible(True)
+        self.switcher.sync()

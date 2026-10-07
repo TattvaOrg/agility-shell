@@ -49,7 +49,7 @@ install: all
 
 	# Install application files and assets
 	cp -r main.py bar.py lockscreen.py plugin_loader.py user_options.py requirements.txt $(DESTDIR)$(DATADIR)/
-	cp -r bar_widgets desktop_applets windows services utils style themes config wallpapers icons svgs sounds snippets quickshell scripts $(DESTDIR)$(DATADIR)/
+	cp -r bar_widgets desktop_applets windows services utils style custom_style themes config wallpapers icons svgs sounds snippets quickshell scripts $(DESTDIR)$(DATADIR)/
 
 	# Clean potential build leftovers in target directory
 	find $(DESTDIR)$(DATADIR) -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true

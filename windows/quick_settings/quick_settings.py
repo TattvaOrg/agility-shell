@@ -75,6 +75,7 @@ class QuickSettings(Applet):
     def __init__(self, parent, **kwargs):
         super().__init__(
             main_menu=QuickSettingsMenu(self),
+            homogeneous=True,
             **kwargs,
         )
         self.add_menu("wifi", WifiMenu)

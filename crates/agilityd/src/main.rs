@@ -65,6 +65,9 @@ async fn main() -> Result<()> {
     // Initialize Connectivity service (Network & Bluetooth)
     let connectivity_service = modules::connectivity::ConnectivityService::new();
 
+    // Initialize Launcher service (Application Indexer & Fuzzy Search)
+    let launcher_service = modules::launcher::LauncherService::new();
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -76,6 +79,7 @@ async fn main() -> Result<()> {
             Arc::clone(&audio_service),
             Arc::clone(&media_service),
             Arc::clone(&connectivity_service),
+            Arc::clone(&launcher_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -133,6 +137,7 @@ async fn main() -> Result<()> {
         Arc::clone(&audio_service),
         Arc::clone(&media_service),
         Arc::clone(&connectivity_service),
+        Arc::clone(&launcher_service),
     )
     .await?;
 

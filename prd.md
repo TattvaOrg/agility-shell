@@ -626,13 +626,13 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 7: Application Indexer & Sub-Millisecond Fuzzy Launcher Engine
-- [ ] 7.1 Implement background scanner for standard XDG desktop entry directories (`/usr/share/applications`, `~/.local/share/applications`).
-- [ ] 7.2 Parse `.desktop` files (Name, Exec, Icon, Comment, Categories, Keywords, NoDisplay).
-- [ ] 7.3 Cache parsed applications in an in-memory index structure.
-- [ ] 7.4 Integrate `nucleo` for fuzzy matching with match scoring and character highlighting.
-- [ ] 7.5 Expose D-Bus interface `org.agility.Daemon.Launcher` with `Query()`, `Launch()`, and `ListAll()`.
-- [ ] 7.6 Benchmark search response: guarantee < 2ms latency for 500+ installed applications.
-- [ ] 7.7 Implement high-speed Icon Resolver engine matching reverse-DNS app IDs to Freedesktop icons and local `svgs/` duotones, backed by in-memory and disk cache (`~/.cache/agility-shell/icons.json`).
+- [X] 7.1 Implement background scanner for standard XDG desktop entry directories (`/usr/share/applications`, `~/.local/share/applications`).
+- [X] 7.2 Parse `.desktop` files (Name, Exec, Icon, Comment, Categories, Keywords, NoDisplay).
+- [X] 7.3 Cache parsed applications in an in-memory index structure.
+- [X] 7.4 Integrate `nucleo` for fuzzy matching with match scoring and character highlighting.
+- [X] 7.5 Expose D-Bus interface `org.agility.Daemon.Launcher` with `Query()`, `Launch()`, and `ListAll()`.
+- [X] 7.6 Benchmark search response: guarantee < 2ms latency for 500+ installed applications.
+- [X] 7.7 Implement high-speed Icon Resolver engine matching reverse-DNS app IDs to Freedesktop icons and local `svgs/` duotones, backed by in-memory and disk cache (`~/.cache/agility-shell/icons.json`).
 
 ---
 

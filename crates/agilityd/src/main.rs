@@ -41,10 +41,23 @@ async fn main() -> Result<()> {
     // Seed and validate configuration / cache directories
     state.seed_and_validate_directories()?;
 
+    // Discover compositor (Niri or Mock fallback)
+    let niri_sock = modules::compositor::find_niri_socket();
+    let compositor: Arc<dyn modules::compositor::Compositor> = if let Some(ref sock) = niri_sock {
+        info!("Discovered active Niri socket: {:?}", sock);
+        Arc::new(modules::compositor::NiriCompositor::new(sock.clone()))
+    } else {
+        warn!("No active Niri socket discovered; initializing mock compositor backend");
+        Arc::new(modules::compositor::MockCompositor::new())
+    };
+
+    // Initialize Workspaces D-Bus service
+    let workspaces_service = modules::compositor::WorkspacesService::new(Arc::clone(&compositor)).await?;
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
-        let dbus_conn = dbus::establish_dbus_connection(Arc::clone(&state)).await?;
+        let dbus_conn = dbus::establish_dbus_connection(Arc::clone(&state), Arc::clone(&workspaces_service)).await?;
         if dbus_conn.is_some() {
             info!("D-Bus session service registration: OK");
         } else {
@@ -52,15 +65,20 @@ async fn main() -> Result<()> {
         }
 
         let status = state.status();
-        info!("State validation: OK [uptime: {}s, compositor: {}]", status.uptime_secs, status.compositor);
+        info!("State validation: OK [uptime: {}s, compositor: {}]", status.uptime_secs, compositor.name());
         println!("Agility Shell Daemon self-test PASSED.");
         return Ok(());
     }
 
-    info!("Target compositor: Niri (Wayland)");
+    info!("Target compositor: {} (Wayland)", compositor.name());
 
-    // Establish D-Bus connection and register org.agility.Daemon
-    let _conn = dbus::establish_dbus_connection(Arc::clone(&state)).await?;
+    // Start asynchronous event stream if Niri is active
+    if niri_sock.is_some() {
+        workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
+    }
+
+    // Establish D-Bus connection and register org.agility.Daemon and org.agility.Daemon.Workspaces
+    let _conn = dbus::establish_dbus_connection(Arc::clone(&state), Arc::clone(&workspaces_service)).await?;
 
     // Subscribe to daemon shutdown broadcast
     let mut shutdown_rx = state.subscribe_shutdown();

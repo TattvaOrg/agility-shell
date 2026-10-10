@@ -637,11 +637,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 8: Desktop Suites ("Suits") & Settings Engine
-- [ ] 8.1 Port `suits.json` schema to strongly typed Rust structs with Serde serialization.
-- [ ] 8.2 Load, validate, and save suites from `~/.config/agility-shell/config/suits.json`.
-- [ ] 8.3 Expose D-Bus interface `org.agility.Daemon.Suits` (`GetSuits()`, `SwitchSuite()`, `CycleNextSuite()`, `CyclePrevSuite()`).
-- [ ] 8.4 Load base user settings from `~/.config/agility-shell/config/config.json` with fallback defaults.
-- [ ] 8.5 Implement Doom Vertical Melt screen transition overlay (`DoomMeltOverlay`) playing staggered column melt animation across monitors when switching suites.
+- [X] 8.1 Port `suits.json` schema to strongly typed Rust structs with Serde serialization.
+- [X] 8.2 Load, validate, and save suites from `~/.config/agility-shell/config/suits.json`.
+- [X] 8.3 Expose D-Bus interface `org.agility.Daemon.Suits` (`GetSuits()`, `SwitchSuite()`, `CycleNextSuite()`, `CyclePrevSuite()`).
+- [X] 8.4 Load base user settings from `~/.config/agility-shell/config/config.json` with fallback defaults.
+- [X] 8.5 Implement Doom Vertical Melt screen transition overlay (`DoomMeltOverlay`) playing staggered column melt animation across monitors when switching suites.
 
 ---
 

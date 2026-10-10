@@ -72,6 +72,7 @@ pub async fn establish_dbus_connection(
     clipboard_service: Arc<crate::modules::clipboard::ClipboardService>,
     power_service: Arc<crate::modules::power::PowerService>,
     weather_service: Arc<crate::modules::weather::WeatherService>,
+    media_capture_service: Arc<crate::modules::media_capture::MediaCaptureService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -96,6 +97,9 @@ pub async fn establish_dbus_connection(
     let power_iface = crate::modules::power::PowerInterface::new(Arc::clone(&power_service));
     let weather_iface =
         crate::modules::weather::WeatherInterface::new(Arc::clone(&weather_service));
+    let media_capture_iface = crate::modules::media_capture::MediaCaptureInterface::new(
+        Arc::clone(&media_capture_service),
+    );
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -124,6 +128,7 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::CLIPBOARD, clipboard_iface)?
         .serve_at(paths::POWER, power_iface)?
         .serve_at(paths::WEATHER, weather_iface)?
+        .serve_at(paths::MEDIA_CAPTURE, media_capture_iface)?
         .build()
         .await
     {
@@ -144,7 +149,7 @@ pub async fn establish_dbus_connection(
             }
 
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -159,7 +164,8 @@ pub async fn establish_dbus_connection(
                 paths::NOTIFICATIONS,
                 paths::CLIPBOARD,
                 paths::POWER,
-                paths::WEATHER
+                paths::WEATHER,
+                paths::MEDIA_CAPTURE
             );
             Ok(Some(conn))
         }

@@ -693,10 +693,10 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 14: Screenshot & Screen Recording Service
-- [ ] 14.1 Implement screenshot trigger wrapping `grim` and `slurp` for fullscreen, active window, and custom selection region.
-- [ ] 14.2 Implement screen recording trigger wrapping `wl-screenrec` with PipeWire audio monitor recording.
-- [ ] 14.3 Save captures automatically to `~/Pictures/Screenshots` and `~/Videos/Recordings` with copy-to-clipboard option.
-- [ ] 14.4 Expose D-Bus interface `org.agility.Daemon.MediaCapture`.
+- [X] 14.1 Implement screenshot trigger wrapping `grim` and `slurp` for fullscreen, active window, and custom selection region.
+- [X] 14.2 Implement screen recording trigger wrapping `wl-screenrec` with PipeWire audio monitor recording.
+- [X] 14.3 Save captures automatically to `~/Pictures/Screenshots` and `~/Videos/Recordings` with copy-to-clipboard option.
+- [X] 14.4 Expose D-Bus interface `org.agility.Daemon.MediaCapture`.
 
 ---
 

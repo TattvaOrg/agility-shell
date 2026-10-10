@@ -438,6 +438,15 @@ impl Default for GeolocationData {
     }
 }
 
+/// Media capture snapshot state.
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MediaCaptureStatus {
+    pub is_recording: bool,
+    pub recording_duration_secs: u32,
+    pub last_screenshot_path: String,
+    pub last_recording_path: String,
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

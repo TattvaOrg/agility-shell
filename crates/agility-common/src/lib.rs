@@ -372,6 +372,72 @@ impl Default for IdleRule {
     }
 }
 
+/// Weather snapshot including current conditions, location, and metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WeatherData {
+    pub temperature: f64,
+    pub feels_like: f64,
+    pub humidity: u32,
+    pub pressure: u32,
+    pub wind_speed: f64,
+    pub wind_direction: String,
+    pub precipitation: f64,
+    pub weather_code: u32,
+    pub condition_text: String,
+    pub condition_icon: String,
+    pub condition_emoji: String,
+    pub city: String,
+    pub country: String,
+    pub is_loading: bool,
+    pub has_error: bool,
+    pub error_message: String,
+    pub last_updated_epoch: u64,
+}
+
+impl Default for WeatherData {
+    fn default() -> Self {
+        Self {
+            temperature: 0.0,
+            feels_like: 0.0,
+            humidity: 0,
+            pressure: 1013,
+            wind_speed: 0.0,
+            wind_direction: "N".to_string(),
+            precipitation: 0.0,
+            weather_code: 0,
+            condition_text: "Clear sky".to_string(),
+            condition_icon: "sun-duotone".to_string(),
+            condition_emoji: "☀️".to_string(),
+            city: "Unknown".to_string(),
+            country: String::new(),
+            is_loading: false,
+            has_error: false,
+            error_message: String::new(),
+            last_updated_epoch: 0,
+        }
+    }
+}
+
+/// Geolocation data resolved from IP or manual override.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GeolocationData {
+    pub lat: f64,
+    pub lon: f64,
+    pub city: String,
+    pub country: String,
+}
+
+impl Default for GeolocationData {
+    fn default() -> Self {
+        Self {
+            lat: 0.0,
+            lon: 0.0,
+            city: "Unknown".to_string(),
+            country: String::new(),
+        }
+    }
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

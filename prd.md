@@ -684,11 +684,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 13: Weather & Geolocation Background Fetcher
-- [ ] 13.1 Implement asynchronous IP geolocation query via `http://ip-api.com/json/`.
-- [ ] 13.2 Implement weather fetcher querying Open-Meteo API (`https://api.open-meteo.com/v1/forecast`).
-- [ ] 13.3 Map WMO weather condition codes to Agility duotone icon names.
-- [ ] 13.4 Cache weather forecast locally in `~/.cache/agility-shell/weather/` with 10-minute refresh interval.
-- [ ] 13.5 Expose D-Bus interface `org.agility.Daemon.Weather`.
+- [X] 13.1 Implement asynchronous IP geolocation query via `http://ip-api.com/json/`.
+- [X] 13.2 Implement weather fetcher querying Open-Meteo API (`https://api.open-meteo.com/v1/forecast`).
+- [X] 13.3 Map WMO weather condition codes to Agility duotone icon names.
+- [X] 13.4 Cache weather forecast locally in `~/.cache/agility-shell/weather/` with 10-minute refresh interval.
+- [X] 13.5 Expose D-Bus interface `org.agility.Daemon.Weather`.
 
 ---
 

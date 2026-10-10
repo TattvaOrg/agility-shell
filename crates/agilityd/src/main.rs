@@ -93,6 +93,9 @@ async fn main() -> Result<()> {
     let power_service =
         modules::power::PowerService::new(state.config_dir.clone(), state.cache_dir.clone());
 
+    // Initialize Weather service (Open-Meteo & IP Geolocation background fetcher)
+    let weather_service = modules::weather::WeatherService::new(state.cache_dir.clone());
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -110,6 +113,7 @@ async fn main() -> Result<()> {
             Arc::clone(&notifications_service),
             Arc::clone(&clipboard_service),
             Arc::clone(&power_service),
+            Arc::clone(&weather_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -163,6 +167,12 @@ async fn main() -> Result<()> {
     // Start power & idle watcher (swayidle and battery monitoring)
     power_service.start_watcher(state.subscribe_shutdown());
 
+    // Start weather poller (10-minute refresh interval)
+    weather_service.start_poller(
+        std::time::Duration::from_secs(600),
+        state.subscribe_shutdown(),
+    );
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
@@ -183,6 +193,7 @@ async fn main() -> Result<()> {
         Arc::clone(&notifications_service),
         Arc::clone(&clipboard_service),
         Arc::clone(&power_service),
+        Arc::clone(&weather_service),
     )
     .await?;
 

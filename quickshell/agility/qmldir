@@ -1,4 +1,12 @@
 singleton Theme 1.0 Theme.qml
+singleton IconResolver 1.0 components/IconResolver.qml
+GlassCard 1.0 components/GlassCard.qml
+GlassPill 1.0 components/GlassPill.qml
+GlassButton 1.0 components/GlassButton.qml
+GlassSlider 1.0 components/GlassSlider.qml
+GlassMenu 1.0 components/GlassMenu.qml
+GlassIcon 1.0 components/GlassIcon.qml
+GlassMarquee 1.0 components/GlassMarquee.qml
 LiquidCard 1.0 LiquidCard.qml
 BatteryWidget 1.0 BatteryWidget.qml
 CalcWidget 1.0 CalcWidget.qml

@@ -56,6 +56,7 @@ impl DaemonInterface {
 
 /// Establish D-Bus connection on session bus, request `org.agility.Daemon` name,
 /// and register root interface and subsystem interfaces.
+#[allow(clippy::too_many_arguments)]
 pub async fn establish_dbus_connection(
     state: Arc<DaemonState>,
     workspaces_service: Arc<crate::modules::compositor::WorkspacesService>,
@@ -64,6 +65,7 @@ pub async fn establish_dbus_connection(
     audio_service: Arc<crate::modules::audio::AudioService>,
     media_service: Arc<crate::modules::audio::MediaService>,
     connectivity_service: Arc<crate::modules::connectivity::ConnectivityService>,
+    launcher_service: Arc<crate::modules::launcher::LauncherService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -72,6 +74,7 @@ pub async fn establish_dbus_connection(
     let audio_iface = (*audio_service).clone();
     let media_iface = (*media_service).clone();
     let connectivity_iface = (*connectivity_service).clone();
+    let launcher_iface = (*launcher_service).clone();
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -91,12 +94,13 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::AUDIO, audio_iface)?
         .serve_at(paths::MEDIA, media_iface)?
         .serve_at(paths::CONNECTIVITY, connectivity_iface)?
+        .serve_at(paths::LAUNCHER, launcher_iface)?
         .build()
         .await
     {
         Ok(conn) => {
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', and '{}'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '{}'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -104,7 +108,8 @@ pub async fn establish_dbus_connection(
                 paths::SYSTEM,
                 paths::AUDIO,
                 paths::MEDIA,
-                paths::CONNECTIVITY
+                paths::CONNECTIVITY,
+                paths::LAUNCHER
             );
             Ok(Some(conn))
         }

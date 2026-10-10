@@ -522,13 +522,13 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 4: Hardware & System Telemetry Engine
-- [ ] 4.1 Implement asynchronous CPU utilization poller using non-blocking `/proc/stat` delta calculations.
-- [ ] 4.2 Implement RAM and swap usage reader from `/proc/meminfo`.
-- [ ] 4.3 Implement UPower and `/sys/class/power_supply` battery monitor (percentage, charging state, time to empty/full, health).
-- [ ] 4.4 Implement thermal temperature monitor inspecting `/sys/class/thermal/` and `/sys/class/hwmon/`.
-- [ ] 4.5 Implement filesystem storage monitor calculating mounted root and home directory usage.
-- [ ] 4.6 Expose telemetry via `org.agility.Daemon.Hardware` with configurable polling frequencies (fast: 1s for CPU/RAM, slow: 10s for battery/storage).
-- [ ] 4.7 Implement top process scanner sorted by CPU/memory and `KillProcess(pid)` method on `org.agility.Daemon.System`.
+- [X] 4.1 Implement asynchronous CPU utilization poller using non-blocking `/proc/stat` delta calculations.
+- [X] 4.2 Implement RAM and swap usage reader from `/proc/meminfo`.
+- [X] 4.3 Implement UPower and `/sys/class/power_supply` battery monitor (percentage, charging state, time to empty/full, health).
+- [X] 4.4 Implement thermal temperature monitor inspecting `/sys/class/thermal/` and `/sys/class/hwmon/`.
+- [X] 4.5 Implement filesystem storage monitor calculating mounted root and home directory usage.
+- [X] 4.6 Expose telemetry via `org.agility.Daemon.Hardware` with configurable polling frequencies (fast: 1s for CPU/RAM, slow: 10s for battery/storage).
+- [X] 4.7 Implement top process scanner sorted by CPU/memory and `KillProcess(pid)` method on `org.agility.Daemon.System`.
 
 
 ---

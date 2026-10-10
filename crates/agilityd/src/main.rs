@@ -54,10 +54,20 @@ async fn main() -> Result<()> {
     // Initialize Workspaces D-Bus service
     let workspaces_service = modules::compositor::WorkspacesService::new(Arc::clone(&compositor)).await?;
 
+    // Initialize Hardware & System Telemetry services
+    let hardware_service = modules::telemetry::HardwareService::new();
+    let system_service = modules::system::SystemService::new();
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
-        let dbus_conn = dbus::establish_dbus_connection(Arc::clone(&state), Arc::clone(&workspaces_service)).await?;
+        let dbus_conn = dbus::establish_dbus_connection(
+            Arc::clone(&state),
+            Arc::clone(&workspaces_service),
+            Arc::clone(&hardware_service),
+            Arc::clone(&system_service),
+        )
+        .await?;
         if dbus_conn.is_some() {
             info!("D-Bus session service registration: OK");
         } else {
@@ -72,13 +82,30 @@ async fn main() -> Result<()> {
 
     info!("Target compositor: {} (Wayland)", compositor.name());
 
+    // Start background telemetry pollers
+    hardware_service.start_polling(
+        std::time::Duration::from_secs(1),
+        std::time::Duration::from_secs(10),
+        state.subscribe_shutdown(),
+    );
+    system_service.start_polling(
+        std::time::Duration::from_secs(3),
+        state.subscribe_shutdown(),
+    );
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
     }
 
-    // Establish D-Bus connection and register org.agility.Daemon and org.agility.Daemon.Workspaces
-    let _conn = dbus::establish_dbus_connection(Arc::clone(&state), Arc::clone(&workspaces_service)).await?;
+    // Establish D-Bus connection and register interfaces
+    let _conn = dbus::establish_dbus_connection(
+        Arc::clone(&state),
+        Arc::clone(&workspaces_service),
+        Arc::clone(&hardware_service),
+        Arc::clone(&system_service),
+    )
+    .await?;
 
     // Subscribe to daemon shutdown broadcast
     let mut shutdown_rx = state.subscribe_shutdown();

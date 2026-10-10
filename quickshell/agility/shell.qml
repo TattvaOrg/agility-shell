@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import Quickshell.Io
 import "bar" as Bar
 import "dock" as Dock
+import "popouts" as Popouts
 
 ShellRoot {
     IpcHandler {
@@ -17,6 +18,15 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         Bar.BarWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Island Popout Applets & Control Center
+    Variants {
+        model: Quickshell.screens
+        Popouts.PopoutWindow {
             property var modelData
             screenModel: modelData
         }

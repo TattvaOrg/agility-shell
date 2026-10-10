@@ -1,0 +1,7 @@
+singleton PopoutService 1.0 PopoutService.qml
+PopoutWindow 1.0 PopoutWindow.qml
+ControlCenter 1.0 ControlCenter.qml
+WifiPopout 1.0 WifiPopout.qml
+BluetoothPopout 1.0 BluetoothPopout.qml
+AudioMixerPopout 1.0 AudioMixerPopout.qml
+SessionMenu 1.0 SessionMenu.qml

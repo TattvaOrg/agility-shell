@@ -1,6 +1,7 @@
 import QtQuick
 import ".."
 import "../components"
+import "../popouts" as Popouts
 
 Item {
     id: root
@@ -11,6 +12,7 @@ Item {
     GlassPill {
         anchors.fill: parent
         interactive: true
+        onClicked: Popouts.PopoutService.toggle("wifi")
 
         Row {
             id: rowContent

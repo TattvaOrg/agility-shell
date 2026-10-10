@@ -1,6 +1,7 @@
 import QtQuick
 import ".."
 import "../components"
+import "../popouts" as Popouts
 
 Item {
     id: root
@@ -12,6 +13,7 @@ Item {
         anchors.fill: parent
         interactive: true
         active: BarDataService.bluetoothConnected
+        onClicked: Popouts.PopoutService.toggle("bluetooth")
 
         Row {
             id: rowContent

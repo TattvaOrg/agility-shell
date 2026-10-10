@@ -1,6 +1,7 @@
 import QtQuick
 import ".."
 import "../components"
+import "../popouts" as Popouts
 
 Item {
     id: root
@@ -13,7 +14,10 @@ Item {
     GlassPill {
         anchors.fill: parent
         interactive: true
-        onClicked: root.clicked()
+        onClicked: {
+            root.clicked()
+            Popouts.PopoutService.toggle("control_center")
+        }
 
         Row {
             id: rowContent

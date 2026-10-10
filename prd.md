@@ -512,12 +512,12 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 3: Niri & Multi-Compositor IPC Module
-- [ ] 3.1 Discover and connect to active Niri socket via `NIRI_SOCKET` environment variable.
-- [ ] 3.2 Implement asynchronous JSON stream reader for Niri event stream (`WorkspacesChanged`, `WorkspaceActivated`, `WindowOpenedOrChanged`, `WindowClosed`, `WindowFocusChanged`).
-- [ ] 3.3 Create `Compositor` trait abstraction allowing future extension to Hyprland and generic wlroots protocols.
-- [ ] 3.4 Implement D-Bus interface `org.agility.Daemon.Workspaces` exposing active workspace, window titles, and workspace switching methods.
-- [ ] 3.5 Implement keyboard layout synchronization observing compositor IPC events and expose `SwitchKeyboardLayout(idx)` on `org.agility.Daemon.Workspaces`.
-- [ ] 3.6 Test workspace switching latency and event reliability under rapid switching (< 4ms response).
+- [X] 3.1 Discover and connect to active Niri socket via `NIRI_SOCKET` environment variable.
+- [X] 3.2 Implement asynchronous JSON stream reader for Niri event stream (`WorkspacesChanged`, `WorkspaceActivated`, `WindowOpenedOrChanged`, `WindowClosed`, `WindowFocusChanged`).
+- [X] 3.3 Create `Compositor` trait abstraction allowing future extension to Hyprland and generic wlroots protocols.
+- [X] 3.4 Implement D-Bus interface `org.agility.Daemon.Workspaces` exposing active workspace, window titles, and workspace switching methods.
+- [X] 3.5 Implement keyboard layout synchronization observing compositor IPC events and expose `SwitchKeyboardLayout(idx)` on `org.agility.Daemon.Workspaces`.
+- [X] 3.6 Test workspace switching latency and event reliability under rapid switching (< 4ms response).
 
 ---
 

@@ -55,11 +55,13 @@ impl DaemonInterface {
 }
 
 /// Establish D-Bus connection on session bus, request `org.agility.Daemon` name,
-/// and register the root interface.
+/// and register root interface and subsystem interfaces.
 pub async fn establish_dbus_connection(
     state: Arc<DaemonState>,
+    workspaces_service: Arc<crate::modules::compositor::WorkspacesService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
+    let workspaces_iface = (*workspaces_service).clone();
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -73,14 +75,16 @@ pub async fn establish_dbus_connection(
     match builder
         .name(DBUS_NAME)?
         .serve_at(paths::DAEMON, daemon_iface)?
+        .serve_at(paths::WORKSPACES, workspaces_iface)?
         .build()
         .await
     {
         Ok(conn) => {
             info!(
-                "Successfully registered D-Bus service '{}' at '{}'",
+                "Successfully registered D-Bus service '{}' at '{}' and '{}'",
                 DBUS_NAME,
-                paths::DAEMON
+                paths::DAEMON,
+                paths::WORKSPACES
             );
             Ok(Some(conn))
         }

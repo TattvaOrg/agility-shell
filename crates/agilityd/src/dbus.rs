@@ -59,9 +59,13 @@ impl DaemonInterface {
 pub async fn establish_dbus_connection(
     state: Arc<DaemonState>,
     workspaces_service: Arc<crate::modules::compositor::WorkspacesService>,
+    hardware_service: Arc<crate::modules::telemetry::HardwareService>,
+    system_service: Arc<crate::modules::system::SystemService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
+    let hardware_iface = (*hardware_service).clone();
+    let system_iface = (*system_service).clone();
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -76,15 +80,19 @@ pub async fn establish_dbus_connection(
         .name(DBUS_NAME)?
         .serve_at(paths::DAEMON, daemon_iface)?
         .serve_at(paths::WORKSPACES, workspaces_iface)?
+        .serve_at(paths::HARDWARE, hardware_iface)?
+        .serve_at(paths::SYSTEM, system_iface)?
         .build()
         .await
     {
         Ok(conn) => {
             info!(
-                "Successfully registered D-Bus service '{}' at '{}' and '{}'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', and '{}'",
                 DBUS_NAME,
                 paths::DAEMON,
-                paths::WORKSPACES
+                paths::WORKSPACES,
+                paths::HARDWARE,
+                paths::SYSTEM
             );
             Ok(Some(conn))
         }

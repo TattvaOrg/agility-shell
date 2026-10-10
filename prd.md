@@ -745,11 +745,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 19: Quickshell Frontend — Floating Application Dock
-- [ ] 19.1 Implement standalone floating dock surface anchored to screen edge (`WlrLayer.Top`) with configurable autohide and exclusive zone.
-- [ ] 19.2 Read pinned applications from `dock.entries` in `config.json` with dynamic add/remove support.
-- [ ] 19.3 Track running applications via Niri IPC and display active running dots / focus indicators.
-- [ ] 19.4 Implement macOS-style hover scale / parabolic zoom magnification and app launch bounce physics.
-- [ ] 19.5 Implement right-click glass context menu for dock items (Pin, Unpin, New Window, Close).
+- [X] 19.1 Implement standalone floating dock surface anchored to screen edge (`WlrLayer.Top`) with configurable autohide and exclusive zone.
+- [X] 19.2 Read pinned applications from `dock.entries` in `config.json` with dynamic add/remove support.
+- [X] 19.3 Track running applications via Niri IPC and display active running dots / focus indicators.
+- [X] 19.4 Implement macOS-style hover scale / parabolic zoom magnification and app launch bounce physics.
+- [X] 19.5 Implement right-click glass context menu for dock items (Pin, Unpin, New Window, Close).
 
 ---
 

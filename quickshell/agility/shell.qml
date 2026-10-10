@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import "bar" as Bar
+import "dock" as Dock
 
 ShellRoot {
     IpcHandler {
@@ -16,6 +17,15 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         Bar.BarWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Bottom Floating Application Dock
+    Variants {
+        model: Quickshell.screens
+        Dock.DockWindow {
             property var modelData
             screenModel: modelData
         }

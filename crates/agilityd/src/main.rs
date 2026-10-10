@@ -52,7 +52,8 @@ async fn main() -> Result<()> {
     };
 
     // Initialize Workspaces D-Bus service
-    let workspaces_service = modules::compositor::WorkspacesService::new(Arc::clone(&compositor)).await?;
+    let workspaces_service =
+        modules::compositor::WorkspacesService::new(Arc::clone(&compositor)).await?;
 
     // Initialize Hardware & System Telemetry services
     let hardware_service = modules::telemetry::HardwareService::new();
@@ -69,10 +70,12 @@ async fn main() -> Result<()> {
     let launcher_service = modules::launcher::LauncherService::new();
 
     // Initialize Suits service (Desktop Suites & Settings Engine)
-    let suits_service = modules::suits::SuitsService::new(
-        state.config_dir.clone(),
-        state.cache_dir.clone(),
-    );
+    let suits_service =
+        modules::suits::SuitsService::new(state.config_dir.clone(), state.cache_dir.clone());
+
+    // Initialize Theme service (Dynamic Theming & XDG Portal Backend)
+    let theme_service =
+        modules::theme::ThemeService::new(state.config_dir.clone(), state.cache_dir.clone());
 
     // Self-test execution mode (--test)
     if args.test {
@@ -87,6 +90,7 @@ async fn main() -> Result<()> {
             Arc::clone(&connectivity_service),
             Arc::clone(&launcher_service),
             Arc::clone(&suits_service),
+            Arc::clone(&theme_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -96,7 +100,11 @@ async fn main() -> Result<()> {
         }
 
         let status = state.status();
-        info!("State validation: OK [uptime: {}s, compositor: {}]", status.uptime_secs, compositor.name());
+        info!(
+            "State validation: OK [uptime: {}s, compositor: {}]",
+            status.uptime_secs,
+            compositor.name()
+        );
         println!("Agility Shell Daemon self-test PASSED.");
         return Ok(());
     }
@@ -146,6 +154,7 @@ async fn main() -> Result<()> {
         Arc::clone(&connectivity_service),
         Arc::clone(&launcher_service),
         Arc::clone(&suits_service),
+        Arc::clone(&theme_service),
     )
     .await?;
 

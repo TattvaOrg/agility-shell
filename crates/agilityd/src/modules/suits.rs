@@ -73,10 +73,7 @@ pub fn generate_doom_melt_delays(num_cols: u32) -> Vec<f64> {
 pub fn capture_desktop_snapshot(cache_dir: &Path, wallpaper_path: &str) -> Option<String> {
     let snap_dir = cache_dir.join("snapshots");
     let _ = fs::create_dir_all(&snap_dir);
-    let tmp_path = snap_dir.join(format!(
-        "melt_snapshot_{}.ppm",
-        std::process::id()
-    ));
+    let tmp_path = snap_dir.join(format!("melt_snapshot_{}.ppm", std::process::id()));
 
     // Try grim screenshot utility
     let grim_res = Command::new("grim")
@@ -179,7 +176,11 @@ impl SuitsService {
     /// Retrieve currently active suite preset.
     pub fn get_active_suite(&self) -> Option<SuitePreset> {
         let catalog = self.catalog.read().unwrap();
-        catalog.suites.iter().find(|s| s.id == catalog.active_id).cloned()
+        catalog
+            .suites
+            .iter()
+            .find(|s| s.id == catalog.active_id)
+            .cloned()
     }
 
     /// Retrieve all configured suites.
@@ -220,7 +221,23 @@ impl SuitsService {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
-        let new_id = format!("desktop-{now_millis}");
+        let base_id = format!("desktop-{now_millis}");
+        let new_id = {
+            let catalog = self.catalog.read().unwrap();
+            if catalog.suites.iter().any(|s| s.id == base_id) {
+                let mut c = 1;
+                while catalog
+                    .suites
+                    .iter()
+                    .any(|s| s.id == format!("{base_id}-{c}"))
+                {
+                    c += 1;
+                }
+                format!("{base_id}-{c}")
+            } else {
+                base_id
+            }
+        };
 
         let suite_name = match name {
             Some(n) if !n.trim().is_empty() => n.trim().to_string(),
@@ -251,7 +268,10 @@ impl SuitsService {
         }
 
         let _ = self.save_suits();
-        info!("Created desktop suite '{}' ({})", new_suite.name, new_suite.id);
+        info!(
+            "Created desktop suite '{}' ({})",
+            new_suite.name, new_suite.id
+        );
         new_suite
     }
 
@@ -266,7 +286,23 @@ impl SuitsService {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
-        let new_id = format!("desktop-{now_millis}");
+        let base_id = format!("desktop-{now_millis}");
+        let new_id = {
+            let catalog = self.catalog.read().unwrap();
+            if catalog.suites.iter().any(|s| s.id == base_id) {
+                let mut c = 1;
+                while catalog
+                    .suites
+                    .iter()
+                    .any(|s| s.id == format!("{base_id}-{c}"))
+                {
+                    c += 1;
+                }
+                format!("{base_id}-{c}")
+            } else {
+                base_id
+            }
+        };
         let new_name = format!("{} (Copy)", source.name);
 
         let cloned_suite = SuitePreset {
@@ -285,7 +321,10 @@ impl SuitsService {
         }
 
         let _ = self.save_suits();
-        info!("Duplicated suite '{}' to '{}'", source.name, cloned_suite.name);
+        info!(
+            "Duplicated suite '{}' to '{}'",
+            source.name, cloned_suite.name
+        );
         Some(cloned_suite)
     }
 
@@ -339,7 +378,10 @@ impl SuitsService {
     pub fn cycle_next_suite(&self) -> Option<String> {
         let (current_idx, len) = {
             let catalog = self.catalog.read().unwrap();
-            let idx = catalog.suites.iter().position(|s| s.id == catalog.active_id)?;
+            let idx = catalog
+                .suites
+                .iter()
+                .position(|s| s.id == catalog.active_id)?;
             (idx, catalog.suites.len())
         };
 
@@ -360,7 +402,10 @@ impl SuitsService {
     pub fn cycle_prev_suite(&self) -> Option<String> {
         let (current_idx, len) = {
             let catalog = self.catalog.read().unwrap();
-            let idx = catalog.suites.iter().position(|s| s.id == catalog.active_id)?;
+            let idx = catalog
+                .suites
+                .iter()
+                .position(|s| s.id == catalog.active_id)?;
             (idx, catalog.suites.len())
         };
 
@@ -455,7 +500,10 @@ impl SuitsService {
             let _ = self.save_suits();
             let _ = self.save_config();
 
-            info!("Switched active suite to '{target_id}' ({})", target_suite.name);
+            info!(
+                "Switched active suite to '{target_id}' ({})",
+                target_suite.name
+            );
             Ok(true)
         })();
 
@@ -500,8 +548,7 @@ impl SuitsService {
         let tmp = path.with_extension("tmp");
         fs::write(&tmp, json)
             .with_context(|| format!("Failed to write temporary file: {tmp:?}"))?;
-        fs::rename(&tmp, path)
-            .with_context(|| format!("Failed to commit file to: {path:?}"))?;
+        fs::rename(&tmp, path).with_context(|| format!("Failed to commit file to: {path:?}"))?;
         Ok(())
     }
 }
@@ -605,13 +652,13 @@ impl SuitsInterface {
     }
 
     /// Cycle to the next desktop suite in catalog list.
-    async fn cycle_next_suite(
-        &self,
-        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
-    ) -> String {
+    async fn cycle_next_suite(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) -> String {
         let (current_idx, len) = {
             let catalog = self.service.catalog.read().unwrap();
-            let idx = catalog.suites.iter().position(|s| s.id == catalog.active_id);
+            let idx = catalog
+                .suites
+                .iter()
+                .position(|s| s.id == catalog.active_id);
             match idx {
                 Some(i) => (i, catalog.suites.len()),
                 None => return String::new(),
@@ -623,7 +670,9 @@ impl SuitsInterface {
         }
 
         let next_idx = (current_idx + 1) % len;
-        let next_id = self.service.catalog.read().unwrap().suites[next_idx].id.clone();
+        let next_id = self.service.catalog.read().unwrap().suites[next_idx]
+            .id
+            .clone();
 
         if self.switch_suite(emitter, next_id.clone()).await {
             next_id
@@ -633,13 +682,13 @@ impl SuitsInterface {
     }
 
     /// Cycle to the previous desktop suite in catalog list.
-    async fn cycle_prev_suite(
-        &self,
-        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
-    ) -> String {
+    async fn cycle_prev_suite(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) -> String {
         let (current_idx, len) = {
             let catalog = self.service.catalog.read().unwrap();
-            let idx = catalog.suites.iter().position(|s| s.id == catalog.active_id);
+            let idx = catalog
+                .suites
+                .iter()
+                .position(|s| s.id == catalog.active_id);
             match idx {
                 Some(i) => (i, catalog.suites.len()),
                 None => return String::new(),
@@ -651,7 +700,9 @@ impl SuitsInterface {
         }
 
         let prev_idx = (current_idx + len - 1) % len;
-        let prev_id = self.service.catalog.read().unwrap().suites[prev_idx].id.clone();
+        let prev_id = self.service.catalog.read().unwrap().suites[prev_idx]
+            .id
+            .clone();
 
         if self.switch_suite(emitter, prev_id.clone()).await {
             prev_id
@@ -719,10 +770,7 @@ impl SuitsInterface {
     }
 
     /// Synchronize runtime UI modifications into active suite preset.
-    async fn sync_from_current(
-        &self,
-        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
-    ) -> bool {
+    async fn sync_from_current(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) -> bool {
         let ok = self.service.sync_from_current().is_ok();
         if ok {
             let _ = Self::suites_changed(&emitter).await;
@@ -985,6 +1033,9 @@ mod tests {
         // Verify that delays are not all identical (proper random walk)
         let min = delays.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = delays.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        assert!(max > min, "Delays should have variance: min={min}, max={max}");
+        assert!(
+            max > min,
+            "Delays should have variance: min={min}, max={max}"
+        );
     }
 }

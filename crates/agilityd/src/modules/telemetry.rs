@@ -27,7 +27,14 @@ struct CpuTick {
 
 impl CpuTick {
     fn total(&self) -> u64 {
-        self.user + self.nice + self.system + self.idle + self.iowait + self.irq + self.softirq + self.steal
+        self.user
+            + self.nice
+            + self.system
+            + self.idle
+            + self.iowait
+            + self.irq
+            + self.softirq
+            + self.steal
     }
 
     fn idle_all(&self) -> u64 {
@@ -144,7 +151,13 @@ impl TelemetryEngine {
                         steal: parts[7],
                     };
                 }
-            } else if line.starts_with("cpu") && line.chars().nth(3).map(|c| c.is_ascii_digit()).unwrap_or(false) {
+            } else if line.starts_with("cpu")
+                && line
+                    .chars()
+                    .nth(3)
+                    .map(|c| c.is_ascii_digit())
+                    .unwrap_or(false)
+            {
                 let parts: Vec<u64> = line
                     .split_whitespace()
                     .skip(1)
@@ -222,7 +235,12 @@ impl TelemetryEngine {
         let swap_total_bytes = swap_total_kb * 1024;
         let swap_used_bytes = swap_total_bytes.saturating_sub(swap_free_kb * 1024);
 
-        (ram_used_bytes, ram_total_bytes, swap_used_bytes, swap_total_bytes)
+        (
+            ram_used_bytes,
+            ram_total_bytes,
+            swap_used_bytes,
+            swap_total_bytes,
+        )
     }
 
     /// Sample battery status, percentage, and time remaining from sysfs.
@@ -501,7 +519,8 @@ impl HardwareService {
     /// Filesystem storage devices serialized as JSON array.
     #[zbus(property)]
     async fn storage_devices(&self) -> String {
-        serde_json::to_string(&self.snapshot.read().unwrap().storage_devices).unwrap_or_else(|_| "[]".to_string())
+        serde_json::to_string(&self.snapshot.read().unwrap().storage_devices)
+            .unwrap_or_else(|_| "[]".to_string())
     }
 
     /// Signal emitted when telemetry is updated.
@@ -527,7 +546,10 @@ mod tests {
     fn test_memory_reading() {
         let (r_used, r_total, _s_used, _s_total) = TelemetryEngine::sample_memory();
         assert!(r_total > 0, "ram_total_bytes must be greater than 0");
-        assert!(r_used <= r_total, "ram_used_bytes must not exceed ram_total_bytes");
+        assert!(
+            r_used <= r_total,
+            "ram_used_bytes must not exceed ram_total_bytes"
+        );
     }
 
     #[test]

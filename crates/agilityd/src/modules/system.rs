@@ -100,12 +100,16 @@ impl SystemService {
         let status = std::process::Command::new("systemctl")
             .arg(action)
             .status()
-            .map_err(|e| zbus::fdo::Error::Failed(format!("Failed to execute systemctl {action}: {e}")))?;
+            .map_err(|e| {
+                zbus::fdo::Error::Failed(format!("Failed to execute systemctl {action}: {e}"))
+            })?;
 
         if status.success() {
             Ok(())
         } else {
-            Err(zbus::fdo::Error::Failed(format!("systemctl {action} exited with non-zero status")))
+            Err(zbus::fdo::Error::Failed(format!(
+                "systemctl {action} exited with non-zero status"
+            )))
         }
     }
 }

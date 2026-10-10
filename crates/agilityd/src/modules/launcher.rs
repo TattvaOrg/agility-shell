@@ -132,7 +132,13 @@ impl IconResolver {
         resolved
     }
 
-    fn candidate_keys(&self, app_id: &str, raw_icon: &str, app_name: &str, exec: &str) -> Vec<String> {
+    fn candidate_keys(
+        &self,
+        app_id: &str,
+        raw_icon: &str,
+        app_name: &str,
+        exec: &str,
+    ) -> Vec<String> {
         let mut keys = Vec::new();
         let add = |list: &mut Vec<String>, k: &str| {
             let s = k.trim().to_lowercase();
@@ -193,7 +199,8 @@ pub struct LauncherService {
 impl LauncherService {
     pub fn new() -> Arc<Self> {
         let resolver = Arc::new(IconResolver::new());
-        let (apps, utf32_names, utf32_search_texts, categories) = scan_desktop_applications(&resolver);
+        let (apps, utf32_names, utf32_search_texts, categories) =
+            scan_desktop_applications(&resolver);
 
         Arc::new(Self {
             apps: Arc::new(RwLock::new(apps)),
@@ -276,7 +283,12 @@ impl LauncherService {
     }
 
     /// Query indexed applications filtered by category.
-    pub fn query_category_apps(&self, pattern_str: &str, category: &str, limit: usize) -> Vec<SearchResult> {
+    pub fn query_category_apps(
+        &self,
+        pattern_str: &str,
+        category: &str,
+        limit: usize,
+    ) -> Vec<SearchResult> {
         let all_matches = self.query_apps(pattern_str, 200);
         let cat_lower = category.trim().to_lowercase();
 
@@ -304,7 +316,11 @@ impl LauncherService {
         let app = apps.iter().find(|a| {
             a.id.to_lowercase() == target_lower
                 || a.name.to_lowercase() == target_lower
-                || a.id.strip_suffix(".desktop").map(|s| s.to_lowercase()).as_deref() == Some(target_lower.as_str())
+                || a.id
+                    .strip_suffix(".desktop")
+                    .map(|s| s.to_lowercase())
+                    .as_deref()
+                    == Some(target_lower.as_str())
         });
 
         if let Some(app) = app {
@@ -353,7 +369,8 @@ impl LauncherService {
 
     /// Rescan desktop directories and update application index.
     pub fn rescan_index(&self) {
-        let (apps, utf32_names, utf32_search_texts, categories) = scan_desktop_applications(&self.icon_resolver);
+        let (apps, utf32_names, utf32_search_texts, categories) =
+            scan_desktop_applications(&self.icon_resolver);
         let count = apps.len() as u32;
 
         *self.apps.write().unwrap() = apps;
@@ -434,7 +451,12 @@ impl LauncherService {
 /// Scan standard XDG applications directories and parse `.desktop` entries.
 pub fn scan_desktop_applications(
     resolver: &IconResolver,
-) -> (Vec<AppEntry>, Vec<Utf32String>, Vec<Utf32String>, Vec<CategoryInfo>) {
+) -> (
+    Vec<AppEntry>,
+    Vec<Utf32String>,
+    Vec<Utf32String>,
+    Vec<CategoryInfo>,
+) {
     let mut search_dirs = Vec::new();
 
     // 1. User local applications
@@ -508,7 +530,11 @@ pub fn scan_desktop_applications(
 }
 
 /// Parse a single `.desktop` file into an `AppEntry`. Returns `None` if hidden, not an application, or invalid.
-pub fn parse_desktop_file(path: &Path, desktop_id: &str, resolver: &IconResolver) -> Option<AppEntry> {
+pub fn parse_desktop_file(
+    path: &Path,
+    desktop_id: &str,
+    resolver: &IconResolver,
+) -> Option<AppEntry> {
     let content = fs::read_to_string(path).ok()?;
     parse_desktop_entry_str(&content, desktop_id, resolver)
 }
@@ -582,7 +608,12 @@ pub fn parse_desktop_entry_str(
         }
     }
 
-    if (entry_type != "Application" && !entry_type.is_empty()) || no_display || hidden || name.is_empty() || exec.is_empty() {
+    if (entry_type != "Application" && !entry_type.is_empty())
+        || no_display
+        || hidden
+        || name.is_empty()
+        || exec.is_empty()
+    {
         return None;
     }
 
@@ -658,8 +689,14 @@ Keywords=internet;web;browser;
 
     #[test]
     fn test_clean_exec_line() {
-        assert_eq!(clean_exec_line("/usr/bin/code --unity-launch %F"), "/usr/bin/code --unity-launch");
-        assert_eq!(clean_exec_line("vlc --started-from-file %U"), "vlc --started-from-file");
+        assert_eq!(
+            clean_exec_line("/usr/bin/code --unity-launch %F"),
+            "/usr/bin/code --unity-launch"
+        );
+        assert_eq!(
+            clean_exec_line("vlc --started-from-file %U"),
+            "vlc --started-from-file"
+        );
         assert_eq!(clean_exec_line("htop"), "htop");
     }
 
@@ -708,10 +745,17 @@ Keywords=internet;web;browser;
             },
         ];
 
-        let utf32_names: Vec<Utf32String> = apps.iter().map(|a| Utf32String::from(a.name.as_str())).collect();
+        let utf32_names: Vec<Utf32String> = apps
+            .iter()
+            .map(|a| Utf32String::from(a.name.as_str()))
+            .collect();
         let utf32_search_texts: Vec<Utf32String> = apps
             .iter()
-            .map(|a| Utf32String::from(format!("{} {} {}", a.generic_name, a.keywords.join(" "), a.exec).as_str()))
+            .map(|a| {
+                Utf32String::from(
+                    format!("{} {} {}", a.generic_name, a.keywords.join(" "), a.exec).as_str(),
+                )
+            })
             .collect();
         let service = LauncherService {
             apps: Arc::new(RwLock::new(apps)),
@@ -752,10 +796,17 @@ Keywords=internet;web;browser;
             });
         }
 
-        let utf32_names: Vec<Utf32String> = apps.iter().map(|a| Utf32String::from(a.name.as_str())).collect();
+        let utf32_names: Vec<Utf32String> = apps
+            .iter()
+            .map(|a| Utf32String::from(a.name.as_str()))
+            .collect();
         let utf32_search_texts: Vec<Utf32String> = apps
             .iter()
-            .map(|a| Utf32String::from(format!("{} {} {}", a.generic_name, a.keywords.join(" "), a.exec).as_str()))
+            .map(|a| {
+                Utf32String::from(
+                    format!("{} {} {}", a.generic_name, a.keywords.join(" "), a.exec).as_str(),
+                )
+            })
             .collect();
         let service = LauncherService {
             apps: Arc::new(RwLock::new(apps)),

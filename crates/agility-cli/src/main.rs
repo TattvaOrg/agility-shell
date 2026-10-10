@@ -53,15 +53,9 @@ enum Commands {
         args: Vec<String>,
     },
     /// Control audio sink volume ('up', 'down', 'mute')
-    Volume {
-        action: String,
-        step: Option<f64>,
-    },
+    Volume { action: String, step: Option<f64> },
     /// Control display brightness ('up', 'down')
-    Brightness {
-        action: String,
-        step: Option<u32>,
-    },
+    Brightness { action: String, step: Option<u32> },
     /// Trigger screenshot capture ('full', 'window', 'region')
     Screenshot {
         #[arg(default_value = "region")]

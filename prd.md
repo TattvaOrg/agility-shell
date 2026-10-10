@@ -646,14 +646,14 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 9: Dynamic Theming Engine (Matugen + Material You + Templates)
-- [ ] 9.1 Implement wallpaper path listener and setter (compatible with `awww`, `swww`, and static paths).
-- [ ] 9.2 Integrate `matugen` invocation or native material-color-utilities palette generator.
-- [ ] 9.3 Extract primary, secondary, surface, background, and accent color hex tokens.
-- [ ] 9.4 Expose D-Bus interface `org.agility.Daemon.Theme` streaming dynamic theme tokens directly to QML without file writes.
-- [ ] 9.5 Provide fallback static color presets (Dark, Light, TokyoNight, Catppuccin, Gruvbox) when wallpaper extraction is disabled.
-- [ ] 9.6 Implement template generator applying extracted tokens to terminal configurations (Kitty, Alacritty, Foot) and Niri borders.
-- [ ] 9.7 Implement fast Rust-native blurred wallpaper generator using `image` crate, producing `~/.cache/agility-shell/wallpaper_blurred` in < 15ms for lockscreen and UI glass backgrounds.
-- [ ] 9.8 Implement XDG Desktop Portal Settings backend (`org.freedesktop.impl.portal.Settings`) synchronizing `color-scheme` (0: default, 1: dark, 2: light) across Flatpaks and native GTK/Qt applications.
+- [X] 9.1 Implement wallpaper path listener and setter (compatible with `awww`, `swww`, and static paths).
+- [X] 9.2 Integrate `matugen` invocation or native material-color-utilities palette generator.
+- [X] 9.3 Extract primary, secondary, surface, background, and accent color hex tokens.
+- [X] 9.4 Expose D-Bus interface `org.agility.Daemon.Theme` streaming dynamic theme tokens directly to QML without file writes.
+- [X] 9.5 Provide fallback static color presets (Dark, Light, TokyoNight, Catppuccin, Gruvbox) when wallpaper extraction is disabled.
+- [X] 9.6 Implement template generator applying extracted tokens to terminal configurations (Kitty, Alacritty, Foot) and Niri borders.
+- [X] 9.7 Implement fast Rust-native blurred wallpaper generator using `image` crate, producing `~/.cache/agility-shell/wallpaper_blurred` in < 15ms for lockscreen and UI glass backgrounds.
+- [X] 9.8 Implement XDG Desktop Portal Settings backend (`org.freedesktop.impl.portal.Settings`) synchronizing `color-scheme` (0: default, 1: dark, 2: light) across Flatpaks and native GTK/Qt applications.
 
 ---
 

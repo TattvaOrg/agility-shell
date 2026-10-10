@@ -1,8 +1,8 @@
 //! Singleton state manager and configuration persistence for `agilityd`.
 
 use agility_common::{
-    default_cache_dir, default_config_dir, DaemonStatus, DEFAULT_CONFIG_JSON,
-    DEFAULT_SUITS_JSON, DEFAULT_WIDGET_SETTINGS_JSON,
+    default_cache_dir, default_config_dir, DaemonStatus, DEFAULT_CONFIG_JSON, DEFAULT_SUITS_JSON,
+    DEFAULT_WIDGET_SETTINGS_JSON,
 };
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -59,8 +59,14 @@ impl DaemonState {
 
     /// Seed and validate configuration and cache directories on disk.
     pub fn seed_and_validate_directories(&self) -> Result<()> {
-        info!("Seeding and validating config directory: {:?}", self.config_dir);
-        info!("Seeding and validating cache directory: {:?}", self.cache_dir);
+        info!(
+            "Seeding and validating config directory: {:?}",
+            self.config_dir
+        );
+        info!(
+            "Seeding and validating cache directory: {:?}",
+            self.cache_dir
+        );
 
         // Ensure primary directories exist
         let config_subdirs = [
@@ -105,9 +111,13 @@ impl DaemonState {
         // Seed widget_settings.json
         let widget_settings_file = self.config_dir.join("widget_settings.json");
         if !widget_settings_file.exists() {
-            info!("Writing default widget settings to {:?}", widget_settings_file);
-            fs::write(&widget_settings_file, DEFAULT_WIDGET_SETTINGS_JSON)
-                .with_context(|| format!("Failed to write widget settings to {widget_settings_file:?}"))?;
+            info!(
+                "Writing default widget settings to {:?}",
+                widget_settings_file
+            );
+            fs::write(&widget_settings_file, DEFAULT_WIDGET_SETTINGS_JSON).with_context(|| {
+                format!("Failed to write widget settings to {widget_settings_file:?}")
+            })?;
         }
 
         // Load and validate from disk into memory
@@ -214,7 +224,9 @@ impl DaemonState {
     pub fn status(&self) -> DaemonStatus {
         let compositor = std::env::var("NIRI_SOCKET")
             .map(|_| "Niri".to_string())
-            .or_else(|_| std::env::var("HYPRLAND_INSTANCE_SIGNATURE").map(|_| "Hyprland".to_string()))
+            .or_else(|_| {
+                std::env::var("HYPRLAND_INSTANCE_SIGNATURE").map(|_| "Hyprland".to_string())
+            })
             .unwrap_or_else(|_| "Wayland (Generic)".to_string());
 
         DaemonStatus {
@@ -263,4 +275,3 @@ mod tests {
         let _ = fs::remove_dir_all(&temp_dir);
     }
 }
-

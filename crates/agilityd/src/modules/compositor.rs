@@ -83,7 +83,9 @@ impl NiriCompositor {
     async fn send_request(&self, request: Value) -> Result<Value> {
         let mut stream = UnixStream::connect(&self.socket_path)
             .await
-            .with_context(|| format!("Failed to connect to Niri socket at {:?}", self.socket_path))?;
+            .with_context(|| {
+                format!("Failed to connect to Niri socket at {:?}", self.socket_path)
+            })?;
 
         let mut payload = serde_json::to_vec(&request)?;
         payload.push(b'\n');
@@ -160,9 +162,16 @@ impl Compositor for NiriCompositor {
 
     async fn query_workspaces(&self) -> Result<Vec<WorkspaceInfo>> {
         // Query windows to get window_count per workspace
-        let windows_resp = self.send_request(json!("Windows")).await.unwrap_or(Value::Null);
+        let windows_resp = self
+            .send_request(json!("Windows"))
+            .await
+            .unwrap_or(Value::Null);
         let mut window_counts: HashMap<u32, u32> = HashMap::new();
-        if let Some(windows) = windows_resp.get("Ok").and_then(|o| o.get("Windows")).and_then(|w| w.as_array()) {
+        if let Some(windows) = windows_resp
+            .get("Ok")
+            .and_then(|o| o.get("Windows"))
+            .and_then(|w| w.as_array())
+        {
             for win in windows {
                 if let Some(ws_id) = win.get("workspace_id").and_then(|v| v.as_u64()) {
                     *window_counts.entry(ws_id as u32).or_insert(0) += 1;
@@ -181,9 +190,20 @@ impl Compositor for NiriCompositor {
         for item in ws_array {
             let id = item.get("id").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
             let idx = item.get("idx").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-            let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let output = item.get("output").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let is_active = item.get("is_active").and_then(|v| v.as_bool()).unwrap_or(false);
+            let name = item
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let output = item
+                .get("output")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let is_active = item
+                .get("is_active")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let window_count = *window_counts.get(&id).unwrap_or(&0);
 
             results.push(WorkspaceInfo {
@@ -203,8 +223,16 @@ impl Compositor for NiriCompositor {
         let resp = self.send_request(json!("FocusedWindow")).await?;
         if let Some(win) = resp.get("Ok").and_then(|o| o.get("FocusedWindow")) {
             if win.is_object() {
-                let title = win.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let app_id = win.get("app_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let title = win
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let app_id = win
+                    .get("app_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 return Ok((title, app_id));
             }
         }
@@ -428,9 +456,20 @@ impl WorkspacesService {
                     for item in arr {
                         let id = item.get("id").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                         let idx = item.get("idx").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-                        let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                        let output = item.get("output").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                        let is_active = item.get("is_active").and_then(|v| v.as_bool()).unwrap_or(false);
+                        let name = item
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let output = item
+                            .get("output")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        let is_active = item
+                            .get("is_active")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
 
                         if is_active {
                             if let Ok(mut lock) = self.active_workspace.write() {
@@ -464,7 +503,10 @@ impl WorkspacesService {
                         }
                     }
                 }
-            } else if let Some(win) = obj.get("WindowOpenedOrChanged").or_else(|| obj.get("WindowFocusChanged")) {
+            } else if let Some(win) = obj
+                .get("WindowOpenedOrChanged")
+                .or_else(|| obj.get("WindowFocusChanged"))
+            {
                 let (title, app_id) = if let Some(w) = win.get("window") {
                     let t = w.get("title").and_then(|v| v.as_str()).unwrap_or("");
                     let a = w.get("app_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -482,8 +524,15 @@ impl WorkspacesService {
                     *a_lock = app_id;
                 }
             } else if let Some(kl) = obj.get("KeyboardLayoutsChanged") {
-                if let Some(names) = kl.get("keyboard_layouts").and_then(|k| k.get("names")).and_then(|n| n.as_array()) {
-                    let parsed: Vec<String> = names.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+                if let Some(names) = kl
+                    .get("keyboard_layouts")
+                    .and_then(|k| k.get("names"))
+                    .and_then(|n| n.as_array())
+                {
+                    let parsed: Vec<String> = names
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
                     if let Ok(mut lock) = self.keyboard_layouts.write() {
                         *lock = parsed;
                     }
@@ -572,16 +621,20 @@ impl WorkspacesService {
 
     /// Close currently focused window.
     async fn close_focused_window(&self) -> zbus::fdo::Result<()> {
-        self.compositor.close_focused_window().await.map_err(|e| {
-            zbus::fdo::Error::Failed(format!("Failed to close focused window: {e}"))
-        })
+        self.compositor
+            .close_focused_window()
+            .await
+            .map_err(|e| zbus::fdo::Error::Failed(format!("Failed to close focused window: {e}")))
     }
 
     /// Switch active keyboard layout by index.
     async fn switch_keyboard_layout(&self, idx: u32) -> zbus::fdo::Result<()> {
-        self.compositor.switch_keyboard_layout(idx).await.map_err(|e| {
-            zbus::fdo::Error::Failed(format!("Failed to switch keyboard layout {idx}: {e}"))
-        })?;
+        self.compositor
+            .switch_keyboard_layout(idx)
+            .await
+            .map_err(|e| {
+                zbus::fdo::Error::Failed(format!("Failed to switch keyboard layout {idx}: {e}"))
+            })?;
 
         if let Ok(mut lock) = self.current_keyboard_layout_idx.write() {
             *lock = idx;
@@ -603,11 +656,19 @@ impl WorkspacesService {
 
     /// Signal emitted when focused window title or app_id changes.
     #[zbus(signal)]
-    pub async fn window_changed(emitter: &SignalEmitter<'_>, title: &str, app_id: &str) -> zbus::Result<()>;
+    pub async fn window_changed(
+        emitter: &SignalEmitter<'_>,
+        title: &str,
+        app_id: &str,
+    ) -> zbus::Result<()>;
 
     /// Signal emitted when keyboard layout changes.
     #[zbus(signal)]
-    pub async fn keyboard_layout_changed(emitter: &SignalEmitter<'_>, name: &str, idx: u32) -> zbus::Result<()>;
+    pub async fn keyboard_layout_changed(
+        emitter: &SignalEmitter<'_>,
+        name: &str,
+        idx: u32,
+    ) -> zbus::Result<()>;
 }
 
 #[cfg(test)]
@@ -626,15 +687,24 @@ mod tests {
         assert_eq!(service.current_keyboard_layout_idx().await, 0);
 
         // Switch workspace
-        service.activate_workspace(2).await.expect("Failed to activate ws 2");
+        service
+            .activate_workspace(2)
+            .await
+            .expect("Failed to activate ws 2");
         assert_eq!(service.active_workspace().await, 2);
 
         // Switch keyboard layout
-        service.switch_keyboard_layout(1).await.expect("Failed to switch layout");
+        service
+            .switch_keyboard_layout(1)
+            .await
+            .expect("Failed to switch layout");
         assert_eq!(service.current_keyboard_layout_idx().await, 1);
 
         // Close window
-        service.close_focused_window().await.expect("Failed to close window");
+        service
+            .close_focused_window()
+            .await
+            .expect("Failed to close window");
     }
 
     #[tokio::test]
@@ -665,4 +735,3 @@ mod tests {
         );
     }
 }
-

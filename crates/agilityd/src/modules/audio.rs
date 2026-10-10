@@ -141,7 +141,8 @@ impl AudioService {
             / 300.0;
 
         for i in 0..16 {
-            let val = ((time_factor + (i as f64 * 0.4)).sin().abs() * 0.8 + 0.1) * active_multiplier;
+            let val =
+                ((time_factor + (i as f64 * 0.4)).sin().abs() * 0.8 + 0.1) * active_multiplier;
             bars.push((val.clamp(0.0, 1.0) * 100.0).round() / 100.0);
         }
         snapshot.visualizer_bars = bars;
@@ -216,13 +217,15 @@ impl AudioService {
     /// Available output audio devices serialized as JSON array.
     #[zbus(property)]
     async fn sinks(&self) -> String {
-        serde_json::to_string(&self.snapshot.read().unwrap().sinks).unwrap_or_else(|_| "[]".to_string())
+        serde_json::to_string(&self.snapshot.read().unwrap().sinks)
+            .unwrap_or_else(|_| "[]".to_string())
     }
 
     /// Available input audio devices serialized as JSON array.
     #[zbus(property)]
     async fn sources(&self) -> String {
-        serde_json::to_string(&self.snapshot.read().unwrap().sources).unwrap_or_else(|_| "[]".to_string())
+        serde_json::to_string(&self.snapshot.read().unwrap().sources)
+            .unwrap_or_else(|_| "[]".to_string())
     }
 
     /// Real-time audio visualizer amplitude bars.
@@ -236,7 +239,11 @@ impl AudioService {
         let clamped = vol.clamp(0.0, 1.5);
         info!("Setting audio sink volume to {clamped:.2}");
         let _ = Command::new("wpctl")
-            .args(["set-volume", "@DEFAULT_AUDIO_SINK@", &format!("{clamped:.2}")])
+            .args([
+                "set-volume",
+                "@DEFAULT_AUDIO_SINK@",
+                &format!("{clamped:.2}"),
+            ])
             .status();
 
         if let Ok(mut lock) = self.snapshot.write() {
@@ -270,7 +277,11 @@ impl AudioService {
         let clamped = vol.clamp(0.0, 1.0);
         info!("Setting microphone volume to {clamped:.2}");
         let _ = Command::new("wpctl")
-            .args(["set-volume", "@DEFAULT_AUDIO_SOURCE@", &format!("{clamped:.2}")])
+            .args([
+                "set-volume",
+                "@DEFAULT_AUDIO_SOURCE@",
+                &format!("{clamped:.2}"),
+            ])
             .status();
 
         if let Ok(mut lock) = self.snapshot.write() {
@@ -312,11 +323,19 @@ impl AudioService {
 
     /// Signal emitted when default sink volume or mute state changes.
     #[zbus(signal)]
-    pub async fn volume_changed(emitter: &SignalEmitter<'_>, vol: f64, muted: bool) -> zbus::Result<()>;
+    pub async fn volume_changed(
+        emitter: &SignalEmitter<'_>,
+        vol: f64,
+        muted: bool,
+    ) -> zbus::Result<()>;
 
     /// Signal emitted when microphone volume or mute state changes.
     #[zbus(signal)]
-    pub async fn mic_changed(emitter: &SignalEmitter<'_>, vol: f64, muted: bool) -> zbus::Result<()>;
+    pub async fn mic_changed(
+        emitter: &SignalEmitter<'_>,
+        vol: f64,
+        muted: bool,
+    ) -> zbus::Result<()>;
 }
 
 /// MPRIS2 media player metadata snapshot.
@@ -363,11 +382,13 @@ impl MediaService {
         // Query session bus for active org.mpris.MediaPlayer2.* services
         let dbus_proxy = zbus::fdo::DBusProxy::new(&conn).await;
         let Ok(proxy) = dbus_proxy else { return };
-        let Ok(names) = proxy.list_names().await else { return };
+        let Ok(names) = proxy.list_names().await else {
+            return;
+        };
 
-        let mpris_name = names
-            .into_iter()
-            .find(|n| n.as_str().starts_with("org.mpris.MediaPlayer2.") && !n.as_str().contains("playerctld"));
+        let mpris_name = names.into_iter().find(|n| {
+            n.as_str().starts_with("org.mpris.MediaPlayer2.") && !n.as_str().contains("playerctld")
+        });
 
         if let Some(player_name) = mpris_name {
             let short_name = player_name

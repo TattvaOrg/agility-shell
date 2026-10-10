@@ -124,11 +124,7 @@ impl ConnectivityService {
     }
 
     /// Spawn background poller tasks for NetworkManager and BlueZ.
-    pub fn start_polling(
-        &self,
-        interval: Duration,
-        mut shutdown_rx: broadcast::Receiver<()>,
-    ) {
+    pub fn start_polling(&self, interval: Duration, mut shutdown_rx: broadcast::Receiver<()>) {
         let snapshot_arc = Arc::clone(&self.snapshot);
 
         tokio::spawn(async move {
@@ -308,9 +304,7 @@ impl ConnectivityService {
     /// Set WiFi radio state (on/off).
     async fn set_wifi_enabled(&self, enabled: bool) -> zbus::fdo::Result<()> {
         let flag = if enabled { "on" } else { "off" };
-        let _ = Command::new("nmcli")
-            .args(["radio", "wifi", flag])
-            .output();
+        let _ = Command::new("nmcli").args(["radio", "wifi", flag]).output();
 
         let mut snap = self.snapshot.write().unwrap();
         snap.wifi_enabled = enabled;
@@ -319,7 +313,11 @@ impl ConnectivityService {
             snap.ssid.clear();
             snap.signal_strength = 0;
             if snap.primary_connection == "wifi" {
-                snap.primary_connection = if snap.ethernet_connected { "ethernet".into() } else { "none".into() };
+                snap.primary_connection = if snap.ethernet_connected {
+                    "ethernet".into()
+                } else {
+                    "none".into()
+                };
             }
         }
         info!("Set WiFi enabled: {enabled}");
@@ -386,9 +384,7 @@ impl ConnectivityService {
     /// Set Bluetooth adapter power state.
     async fn set_bluetooth_powered(&self, powered: bool) -> zbus::fdo::Result<()> {
         let flag = if powered { "on" } else { "off" };
-        let _ = Command::new("bluetoothctl")
-            .args(["power", flag])
-            .output();
+        let _ = Command::new("bluetoothctl").args(["power", flag]).output();
 
         let mut snap = self.snapshot.write().unwrap();
         snap.bluetooth_powered = powered;
@@ -466,9 +462,7 @@ impl ConnectivityService {
 // ─── Low-level Poller Helpers ───
 
 /// Query NetworkManager via D-Bus system bus.
-async fn poll_network_dbus(
-    conn: &Connection,
-) -> anyhow::Result<NetworkPollResult> {
+async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResult> {
     // 1. Check WirelessEnabled
     let wifi_enabled_msg = conn
         .call_method(
@@ -566,12 +560,16 @@ async fn poll_network_dbus(
                                 path_str,
                                 Some("org.freedesktop.DBus.Properties"),
                                 "Get",
-                                &("org.freedesktop.NetworkManager.Connection.Active", "SpecificObject"),
+                                &(
+                                    "org.freedesktop.NetworkManager.Connection.Active",
+                                    "SpecificObject",
+                                ),
                             )
                             .await;
 
                         if let Ok(ap_msg) = ap_obj_msg {
-                            if let Ok(v) = ap_msg.body().deserialize::<zbus::zvariant::OwnedValue>() {
+                            if let Ok(v) = ap_msg.body().deserialize::<zbus::zvariant::OwnedValue>()
+                            {
                                 if let Ok(ap_path) = zbus::zvariant::OwnedObjectPath::try_from(v) {
                                     let ap_str = ap_path.as_str();
                                     if ap_str != "/" {
@@ -581,12 +579,18 @@ async fn poll_network_dbus(
                                                 ap_str,
                                                 Some("org.freedesktop.DBus.Properties"),
                                                 "Get",
-                                                &("org.freedesktop.NetworkManager.AccessPoint", "Strength"),
+                                                &(
+                                                    "org.freedesktop.NetworkManager.AccessPoint",
+                                                    "Strength",
+                                                ),
                                             )
                                             .await;
 
                                         if let Ok(sm) = str_msg {
-                                            if let Ok(sv) = sm.body().deserialize::<zbus::zvariant::OwnedValue>() {
+                                            if let Ok(sv) = sm
+                                                .body()
+                                                .deserialize::<zbus::zvariant::OwnedValue>()
+                                            {
                                                 if let Ok(st) = u8::try_from(sv) {
                                                     strength = st as u32;
                                                 }
@@ -671,7 +675,14 @@ fn poll_network_cli() -> anyhow::Result<NetworkPollResult> {
 /// Scans access points via `nmcli`.
 fn poll_wifi_access_points_cli() -> anyhow::Result<Vec<AccessPointInfo>> {
     let output = Command::new("nmcli")
-        .args(["-t", "-f", "active,ssid,signal,security,bssid", "dev", "wifi", "list"])
+        .args([
+            "-t",
+            "-f",
+            "active,ssid,signal,security,bssid",
+            "dev",
+            "wifi",
+            "list",
+        ])
         .output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -719,14 +730,16 @@ pub fn parse_nmcli_wifi_output(output: &str) -> Vec<AccessPointInfo> {
     }
 
     let mut result: Vec<AccessPointInfo> = dedup.into_values().collect();
-    result.sort_by(|a, b| b.active.cmp(&a.active).then_with(|| b.strength.cmp(&a.strength)));
+    result.sort_by(|a, b| {
+        b.active
+            .cmp(&a.active)
+            .then_with(|| b.strength.cmp(&a.strength))
+    });
     result
 }
 
 /// Query BlueZ via D-Bus system bus.
-async fn poll_bluetooth_dbus(
-    conn: &Connection,
-) -> anyhow::Result<BluetoothPollResult> {
+async fn poll_bluetooth_dbus(conn: &Connection) -> anyhow::Result<BluetoothPollResult> {
     let objects_msg = conn
         .call_method(
             Some("org.bluez"),
@@ -739,8 +752,10 @@ async fn poll_bluetooth_dbus(
 
     // ManagedObjects returns a{oa{sa{sv}}}
     let body = objects_msg.body();
-    let objects: HashMap<zbus::zvariant::OwnedObjectPath, HashMap<String, HashMap<String, zbus::zvariant::OwnedValue>>> =
-        body.deserialize()?;
+    let objects: HashMap<
+        zbus::zvariant::OwnedObjectPath,
+        HashMap<String, HashMap<String, zbus::zvariant::OwnedValue>>,
+    > = body.deserialize()?;
 
     let mut powered = false;
     let mut connected_devices = Vec::new();
@@ -825,9 +840,7 @@ async fn poll_bluetooth_dbus(
 
 /// Fallback bluetooth poller via `bluetoothctl`.
 fn poll_bluetooth_cli() -> anyhow::Result<BluetoothPollResult> {
-    let output = Command::new("bluetoothctl")
-        .arg("show")
-        .output()?;
+    let output = Command::new("bluetoothctl").arg("show").output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut powered = false;
@@ -864,7 +877,10 @@ fn poll_bluetooth_cli() -> anyhow::Result<BluetoothPollResult> {
         }
     }
 
-    if let Ok(conn_out) = Command::new("bluetoothctl").args(["devices", "Connected"]).output() {
+    if let Ok(conn_out) = Command::new("bluetoothctl")
+        .args(["devices", "Connected"])
+        .output()
+    {
         let conn_str = String::from_utf8_lossy(&conn_out.stdout);
         for line in conn_str.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();

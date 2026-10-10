@@ -113,6 +113,160 @@ pub struct ThemeTokens {
     pub border_radius: u32,
     pub font_family: String,
     pub font_mono: String,
+    #[serde(default)]
+    pub active_preset: String,
+    #[serde(default)]
+    pub on_primary: String,
+    #[serde(default)]
+    pub on_surface: String,
+    #[serde(default)]
+    pub surface_container: String,
+    #[serde(default)]
+    pub outline: String,
+}
+
+impl Default for ThemeTokens {
+    fn default() -> Self {
+        Self::dark()
+    }
+}
+
+impl ThemeTokens {
+    pub fn dark() -> Self {
+        Self {
+            is_dark: true,
+            primary_color: "#2a98df".to_string(),
+            secondary_color: "#8392a3".to_string(),
+            surface_color: "#181c20".to_string(),
+            background_color: "#0f1113".to_string(),
+            accent_colors: vec![
+                "#2a98df".to_string(),
+                "#50b2fc".to_string(),
+                "#94ccff".to_string(),
+                "#d2bfe7".to_string(),
+            ],
+            active_wallpaper: "".to_string(),
+            border_radius: 12,
+            font_family: "Inter".to_string(),
+            font_mono: "JetBrains Mono".to_string(),
+            active_preset: "Dark".to_string(),
+            on_primary: "#ffffff".to_string(),
+            on_surface: "#e2e2e5".to_string(),
+            surface_container: "#272a2e".to_string(),
+            outline: "#72787e".to_string(),
+        }
+    }
+
+    pub fn light() -> Self {
+        Self {
+            is_dark: false,
+            primary_color: "#006398".to_string(),
+            secondary_color: "#51606f".to_string(),
+            surface_color: "#f1f4f9".to_string(),
+            background_color: "#fcfcff".to_string(),
+            accent_colors: vec![
+                "#006398".to_string(),
+                "#007dbe".to_string(),
+                "#51606f".to_string(),
+                "#67587a".to_string(),
+            ],
+            active_wallpaper: "".to_string(),
+            border_radius: 12,
+            font_family: "Inter".to_string(),
+            font_mono: "JetBrains Mono".to_string(),
+            active_preset: "Light".to_string(),
+            on_primary: "#ffffff".to_string(),
+            on_surface: "#1a1c1e".to_string(),
+            surface_container: "#e6e8ee".to_string(),
+            outline: "#72787e".to_string(),
+        }
+    }
+
+    pub fn tokyo_night() -> Self {
+        Self {
+            is_dark: true,
+            primary_color: "#7aa2f7".to_string(),
+            secondary_color: "#bb9af7".to_string(),
+            surface_color: "#1f2335".to_string(),
+            background_color: "#1a1b26".to_string(),
+            accent_colors: vec![
+                "#7aa2f7".to_string(),
+                "#bb9af7".to_string(),
+                "#7dcfff".to_string(),
+                "#f7768e".to_string(),
+            ],
+            active_wallpaper: "".to_string(),
+            border_radius: 12,
+            font_family: "Inter".to_string(),
+            font_mono: "JetBrains Mono".to_string(),
+            active_preset: "TokyoNight".to_string(),
+            on_primary: "#1a1b26".to_string(),
+            on_surface: "#c0caf5".to_string(),
+            surface_container: "#24283b".to_string(),
+            outline: "#565f89".to_string(),
+        }
+    }
+
+    pub fn catppuccin() -> Self {
+        Self {
+            is_dark: true,
+            primary_color: "#89b4fa".to_string(),
+            secondary_color: "#cba6f7".to_string(),
+            surface_color: "#1e1e2e".to_string(),
+            background_color: "#181825".to_string(),
+            accent_colors: vec![
+                "#89b4fa".to_string(),
+                "#cba6f7".to_string(),
+                "#f38ba8".to_string(),
+                "#a6e3a1".to_string(),
+            ],
+            active_wallpaper: "".to_string(),
+            border_radius: 12,
+            font_family: "Inter".to_string(),
+            font_mono: "JetBrains Mono".to_string(),
+            active_preset: "Catppuccin".to_string(),
+            on_primary: "#11111b".to_string(),
+            on_surface: "#cdd6f4".to_string(),
+            surface_container: "#313244".to_string(),
+            outline: "#6c7086".to_string(),
+        }
+    }
+
+    pub fn gruvbox() -> Self {
+        Self {
+            is_dark: true,
+            primary_color: "#fe8019".to_string(),
+            secondary_color: "#fabd2f".to_string(),
+            surface_color: "#3c3836".to_string(),
+            background_color: "#282828".to_string(),
+            accent_colors: vec![
+                "#fe8019".to_string(),
+                "#fabd2f".to_string(),
+                "#b8bb26".to_string(),
+                "#83a598".to_string(),
+            ],
+            active_wallpaper: "".to_string(),
+            border_radius: 12,
+            font_family: "Inter".to_string(),
+            font_mono: "JetBrains Mono".to_string(),
+            active_preset: "Gruvbox".to_string(),
+            on_primary: "#282828".to_string(),
+            on_surface: "#ebdbb2".to_string(),
+            surface_container: "#504945".to_string(),
+            outline: "#928374".to_string(),
+        }
+    }
+
+    pub fn from_preset(name: &str) -> Option<Self> {
+        match name.to_lowercase().replace(['-', '_', ' '], "").as_str() {
+            "dark" | "defaultdark" => Some(Self::dark()),
+            "light" | "defaultlight" => Some(Self::light()),
+            "tokyonight" | "tokyo" => Some(Self::tokyo_night()),
+            "catppuccin" | "catppuccinmocha" | "mocha" => Some(Self::catppuccin()),
+            "gruvbox" | "gruvboxdark" => Some(Self::gruvbox()),
+            _ => None,
+        }
+    }
 }
 
 /// Daemon runtime status.
@@ -499,7 +653,10 @@ impl From<SuitsPayload> for SuitsCatalog {
         match payload {
             SuitsPayload::Catalog(c) => c,
             SuitsPayload::List(list) => {
-                let active = list.first().map(|s| s.id.clone()).unwrap_or_else(default_active_id);
+                let active = list
+                    .first()
+                    .map(|s| s.id.clone())
+                    .unwrap_or_else(default_active_id);
                 SuitsCatalog {
                     active_id: active,
                     suites: list,
@@ -550,7 +707,9 @@ pub fn default_config_dir() -> std::path::PathBuf {
         std::path::PathBuf::from(xdg).join("agility-shell")
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        std::path::PathBuf::from(home).join(".config").join("agility-shell")
+        std::path::PathBuf::from(home)
+            .join(".config")
+            .join("agility-shell")
     }
 }
 
@@ -563,7 +722,9 @@ pub fn default_cache_dir() -> std::path::PathBuf {
         std::path::PathBuf::from(xdg).join("agility-shell")
     } else {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        std::path::PathBuf::from(home).join(".cache").join("agility-shell")
+        std::path::PathBuf::from(home)
+            .join(".cache")
+            .join("agility-shell")
     }
 }
 
@@ -693,4 +854,3 @@ pub const DEFAULT_SUITS_JSON: &str = r#"[
 
 /// Default `widget_settings.json` content.
 pub const DEFAULT_WIDGET_SETTINGS_JSON: &str = "{}";
-

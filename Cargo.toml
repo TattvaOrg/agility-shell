@@ -29,6 +29,7 @@ nucleo = "0.5"
 pam-sys = "0.5"
 libpulse-binding = "2.28"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+libc = "0.2"
 
 [profile.release]
 opt-level = 3

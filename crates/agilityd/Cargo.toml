@@ -22,6 +22,7 @@ async-trait.workspace = true
 pam-sys = { workspace = true, optional = true }
 libpulse-binding = { workspace = true, optional = true }
 image.workspace = true
+libc.workspace = true
 
 [features]
 default = ["audio", "pam"]

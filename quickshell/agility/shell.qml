@@ -2,12 +2,22 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "bar" as Bar
 
 ShellRoot {
     IpcHandler {
         target: "suits"
         function reload() {
             Theme.reloadSettings()
+        }
+    }
+
+    // Top Multi-Monitor Status Bar
+    Variants {
+        model: Quickshell.screens
+        Bar.BarWindow {
+            property var modelData
+            screenModel: modelData
         }
     }
 

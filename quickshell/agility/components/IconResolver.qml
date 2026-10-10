@@ -5,7 +5,11 @@ Item {
     id: root
 
     // Base directory for duotone SVG assets
-    readonly property string svgsDir: Qt.resolvedUrl("../../../svgs")
+    readonly property string svgsDir: {
+        var resolved = Qt.resolvedUrl("../../../svgs").toString()
+        if (resolved.startsWith("file://")) return resolved
+        return "file:///home/cachy/github-p/github-based/agility-shell/svgs"
+    }
 
     // Mapping from common app IDs & categories to Phosphor duotone SVGs
     readonly property var iconMap: ({

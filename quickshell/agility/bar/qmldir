@@ -1,0 +1,19 @@
+singleton BarDataService 1.0 BarDataService.qml
+BarWindow 1.0 BarWindow.qml
+WorkspacesWidget 1.0 WorkspacesWidget.qml
+ActiveWindowWidget 1.0 ActiveWindowWidget.qml
+ClockWidget 1.0 ClockWidget.qml
+VolumeWidget 1.0 VolumeWidget.qml
+BrightnessWidget 1.0 BrightnessWidget.qml
+BatteryWidget 1.0 BatteryWidget.qml
+NetworkWidget 1.0 NetworkWidget.qml
+BluetoothWidget 1.0 BluetoothWidget.qml
+MediaWidget 1.0 MediaWidget.qml
+QuickSettingsToggleWidget 1.0 QuickSettingsToggleWidget.qml
+NotificationBellWidget 1.0 NotificationBellWidget.qml
+SuitsSwitcherWidget 1.0 SuitsSwitcherWidget.qml
+SystemTrayWidget 1.0 SystemTrayWidget.qml
+CaffeineWidget 1.0 CaffeineWidget.qml
+NightLightWidget 1.0 NightLightWidget.qml
+SysMonWidget 1.0 SysMonWidget.qml
+SessionWidget 1.0 SessionWidget.qml

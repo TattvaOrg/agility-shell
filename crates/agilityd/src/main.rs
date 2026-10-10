@@ -96,6 +96,9 @@ async fn main() -> Result<()> {
     // Initialize Weather service (Open-Meteo & IP Geolocation background fetcher)
     let weather_service = modules::weather::WeatherService::new(state.cache_dir.clone());
 
+    // Initialize MediaCapture service (Screenshots via grim/slurp & recordings via wl-screenrec/wf-recorder)
+    let media_capture_service = modules::media_capture::MediaCaptureService::new(None, None);
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -114,6 +117,7 @@ async fn main() -> Result<()> {
             Arc::clone(&clipboard_service),
             Arc::clone(&power_service),
             Arc::clone(&weather_service),
+            Arc::clone(&media_capture_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -173,6 +177,9 @@ async fn main() -> Result<()> {
         state.subscribe_shutdown(),
     );
 
+    // Start media capture watcher (clean recording finalization on shutdown)
+    media_capture_service.start_watcher(state.subscribe_shutdown());
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
@@ -194,6 +201,7 @@ async fn main() -> Result<()> {
         Arc::clone(&clipboard_service),
         Arc::clone(&power_service),
         Arc::clone(&weather_service),
+        Arc::clone(&media_capture_service),
     )
     .await?;
 

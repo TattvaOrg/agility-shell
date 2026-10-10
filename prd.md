@@ -667,10 +667,10 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 11: Clipboard Manager Engine
-- [ ] 11.1 Implement Wayland data-control / cliphist event listener detecting new text selections.
-- [ ] 11.2 Maintain an in-memory 50-item deduplicated ring buffer with preview strings and timestamps.
-- [ ] 11.3 Expose D-Bus interface `org.agility.Daemon.Clipboard` with `CopyText()`, `RemoveItem()`, and `Clear()`.
-- [ ] 11.4 Ensure zero CPU usage when clipboard remains idle.
+- [X] 11.1 Implement Wayland data-control / cliphist event listener detecting new text selections.
+- [X] 11.2 Maintain an in-memory 50-item deduplicated ring buffer with preview strings and timestamps.
+- [X] 11.3 Expose D-Bus interface `org.agility.Daemon.Clipboard` with `CopyText()`, `RemoveItem()`, and `Clear()`.
+- [X] 11.4 Ensure zero CPU usage when clipboard remains idle.
 
 ---
 

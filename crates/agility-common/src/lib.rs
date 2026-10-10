@@ -320,6 +320,16 @@ pub struct NotificationItem {
     pub transient: bool,
 }
 
+/// Clipboard item entry with preview string and timestamp.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ClipboardItem {
+    pub id: u64,
+    pub text: String,
+    pub preview: String,
+    pub timestamp: String,
+    pub timestamp_epoch: u64,
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

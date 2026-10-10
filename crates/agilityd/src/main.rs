@@ -105,6 +105,9 @@ async fn main() -> Result<()> {
     // Initialize Sound effects dispatcher (pw-play / paplay)
     let sounds_service = modules::sounds::SoundService::new(None);
 
+    // Initialize Lock service (Secure Linux PAM Lockscreen Worker)
+    let lock_service = Arc::new(modules::lock::LockService::new(None));
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -126,6 +129,7 @@ async fn main() -> Result<()> {
             Arc::clone(&media_capture_service),
             Arc::clone(&tray_service),
             Arc::clone(&sounds_service),
+            Arc::clone(&lock_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -212,6 +216,7 @@ async fn main() -> Result<()> {
         Arc::clone(&media_capture_service),
         Arc::clone(&tray_service),
         Arc::clone(&sounds_service),
+        Arc::clone(&lock_service),
     )
     .await?;
 

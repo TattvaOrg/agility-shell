@@ -457,6 +457,14 @@ pub struct TrayItemInfo {
     pub status: Option<String>,
 }
 
+/// Screen lock status.
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LockStatus {
+    pub is_locked_out: bool,
+    pub failed_attempts: u32,
+    pub remaining_lockout_secs: u64,
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

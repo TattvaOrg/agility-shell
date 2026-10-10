@@ -41,6 +41,7 @@ dependencies = [
  "async-trait",
  "clap",
  "image",
+ "libc",
  "libpulse-binding",
  "nucleo",
  "pam-sys",

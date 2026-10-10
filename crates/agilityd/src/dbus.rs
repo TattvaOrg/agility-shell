@@ -75,6 +75,7 @@ pub async fn establish_dbus_connection(
     media_capture_service: Arc<crate::modules::media_capture::MediaCaptureService>,
     tray_service: Arc<crate::modules::tray::TrayService>,
     sounds_service: Arc<crate::modules::sounds::SoundService>,
+    lock_service: Arc<crate::modules::lock::LockService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -105,6 +106,7 @@ pub async fn establish_dbus_connection(
     let watcher_iface =
         crate::modules::tray::StatusNotifierWatcherInterface::new(Arc::clone(&tray_service));
     let sounds_iface = crate::modules::sounds::SoundsInterface::new(Arc::clone(&sounds_service));
+    let lock_iface = crate::modules::lock::LockInterface::new(Arc::clone(&lock_service));
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -136,6 +138,7 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::MEDIA_CAPTURE, media_capture_iface)?
         .serve_at(paths::STATUS_NOTIFIER_WATCHER, watcher_iface)?
         .serve_at(paths::SOUNDS, sounds_iface)?
+        .serve_at(paths::LOCK, lock_iface)?
         .build()
         .await
     {
@@ -171,7 +174,7 @@ pub async fn establish_dbus_connection(
             }
 
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -189,7 +192,8 @@ pub async fn establish_dbus_connection(
                 paths::WEATHER,
                 paths::MEDIA_CAPTURE,
                 paths::STATUS_NOTIFIER_WATCHER,
-                paths::SOUNDS
+                paths::SOUNDS,
+                paths::LOCK
             );
             Ok(Some(conn))
         }

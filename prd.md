@@ -709,11 +709,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 16: Secure Linux PAM Lockscreen Worker
-- [ ] 16.1 Implement isolated worker thread in `agilityd` wrapping Linux PAM (`libpam`).
-- [ ] 16.2 Handle standard PAM conversation functions (`PAM_PROMPT_ECHO_OFF`, `PAM_ERROR_MSG`).
-- [ ] 16.3 Expose D-Bus endpoint `org.agility.Daemon.Lock.Authenticate(password: string) -> bool`.
-- [ ] 16.4 Implement rate limiting and exponential backoff to prevent brute-force unlock attempts.
-- [ ] 16.5 Zero-out password buffers in memory immediately after authentication verification.
+- [X] 16.1 Implement isolated worker thread in `agilityd` wrapping Linux PAM (`libpam`).
+- [X] 16.2 Handle standard PAM conversation functions (`PAM_PROMPT_ECHO_OFF`, `PAM_ERROR_MSG`).
+- [X] 16.3 Expose D-Bus endpoint `org.agility.Daemon.Lock.Authenticate(password: string) -> bool`.
+- [X] 16.4 Implement rate limiting and exponential backoff to prevent brute-force unlock attempts.
+- [X] 16.5 Zero-out password buffers in memory immediately after authentication verification.
 
 ---
 

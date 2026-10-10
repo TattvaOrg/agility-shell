@@ -126,6 +126,421 @@ pub struct DaemonStatus {
     pub cache_dir: String,
 }
 
+// ─── Desktop Suites ("Suits") & Settings Schema ───
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_one_f64() -> f64 {
+    1.0
+}
+
+fn default_active_id() -> String {
+    "desktop-1".to_string()
+}
+
+/// Parameters describing the Doom Vertical Melt staggered column animation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DoomMeltParams {
+    pub duration_ms: u32,
+    pub num_columns: u32,
+    pub column_delays: Vec<f64>,
+    #[serde(default)]
+    pub snapshot_path: Option<String>,
+}
+
+/// Wallpaper layout and transition settings within a suite or base config.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SuiteWallpaperConfig {
+    #[serde(default)]
+    pub path: String,
+    #[serde(default = "default_wallpaper_transition_type")]
+    pub transition_type: String,
+    #[serde(default = "default_wallpaper_duration")]
+    pub transition_duration: f64,
+    #[serde(default = "default_wallpaper_speed")]
+    pub transition_speed: String,
+    #[serde(default = "default_wallpaper_fps")]
+    pub transition_fps: u32,
+    #[serde(default = "default_enabled_transitions")]
+    pub enabled_transitions: Vec<String>,
+    #[serde(default)]
+    pub custom_transitions: Vec<String>,
+    #[serde(default = "default_switcher_style")]
+    pub switcher_style: String,
+    #[serde(default = "default_true")]
+    pub hotkey_animations: bool,
+}
+
+fn default_wallpaper_transition_type() -> String {
+    "random".to_string()
+}
+fn default_wallpaper_duration() -> f64 {
+    0.7
+}
+fn default_wallpaper_speed() -> String {
+    "quick".to_string()
+}
+fn default_wallpaper_fps() -> u32 {
+    60
+}
+fn default_enabled_transitions() -> Vec<String> {
+    vec![
+        "grow".to_string(),
+        "wipe".to_string(),
+        "wave".to_string(),
+        "right".to_string(),
+        "outer".to_string(),
+    ]
+}
+fn default_switcher_style() -> String {
+    "mesh".to_string()
+}
+
+impl Default for SuiteWallpaperConfig {
+    fn default() -> Self {
+        Self {
+            path: "".to_string(),
+            transition_type: default_wallpaper_transition_type(),
+            transition_duration: default_wallpaper_duration(),
+            transition_speed: default_wallpaper_speed(),
+            transition_fps: default_wallpaper_fps(),
+            enabled_transitions: default_enabled_transitions(),
+            custom_transitions: Vec::new(),
+            switcher_style: default_switcher_style(),
+            hotkey_animations: true,
+        }
+    }
+}
+
+/// Theme preferences within a suite or base config.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SuiteThemeConfig {
+    #[serde(default = "default_light_theme")]
+    pub light_theme: String,
+    #[serde(default = "default_dark_theme")]
+    pub dark_theme: String,
+    #[serde(default = "default_accent")]
+    pub active_accent: String,
+    #[serde(default = "default_true")]
+    pub is_dark: bool,
+    #[serde(default = "default_scheme_type")]
+    pub scheme_type: String,
+    #[serde(default = "default_opacity")]
+    pub opacity: f64,
+    #[serde(default = "default_border_style")]
+    pub border_style: String,
+    #[serde(default = "default_font_style")]
+    pub font_monospace_style: String,
+    #[serde(default)]
+    pub font_family: Option<String>,
+    #[serde(default)]
+    pub font_monospace: Option<String>,
+}
+
+fn default_light_theme() -> String {
+    "catppuccin-latte".to_string()
+}
+fn default_dark_theme() -> String {
+    "Matugen".to_string()
+}
+fn default_accent() -> String {
+    "accent4".to_string()
+}
+fn default_scheme_type() -> String {
+    "scheme-tonal-spot".to_string()
+}
+fn default_opacity() -> f64 {
+    0.35
+}
+fn default_border_style() -> String {
+    "medium".to_string()
+}
+fn default_font_style() -> String {
+    "none".to_string()
+}
+
+impl Default for SuiteThemeConfig {
+    fn default() -> Self {
+        Self {
+            light_theme: default_light_theme(),
+            dark_theme: default_dark_theme(),
+            active_accent: default_accent(),
+            is_dark: true,
+            scheme_type: default_scheme_type(),
+            opacity: default_opacity(),
+            border_style: default_border_style(),
+            font_monospace_style: default_font_style(),
+            font_family: Some("Inter".to_string()),
+            font_monospace: Some("JetBrainsMono Nerd Font".to_string()),
+        }
+    }
+}
+
+/// System and widget behaviors within a suite or base config.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SuiteSettingsConfig {
+    #[serde(default)]
+    pub dnd: bool,
+    #[serde(default = "default_true")]
+    pub hover_open: bool,
+    #[serde(default = "default_hover_delay")]
+    pub hover_delay: u64,
+    #[serde(default)]
+    pub hover_widgets: Vec<String>,
+    #[serde(default = "default_bar_theme")]
+    pub bar_theme: String,
+    #[serde(default = "default_true")]
+    pub bar_blur: bool,
+    #[serde(default = "default_bar_opacity")]
+    pub bar_opacity: f64,
+    #[serde(default = "default_widget_opacity")]
+    pub widget_opacity: f64,
+    #[serde(default = "default_desktop_widget_opacity")]
+    pub desktop_widget_opacity: f64,
+    #[serde(default = "default_true")]
+    pub dash_blur: bool,
+    #[serde(default = "default_dash_dim_opacity")]
+    pub dash_dim_opacity: f64,
+    #[serde(default = "default_one_f64")]
+    pub dash_card_opacity: f64,
+    #[serde(default = "default_true")]
+    pub instant_dash: bool,
+    #[serde(default)]
+    pub awe_widgets_enabled: bool,
+    #[serde(default)]
+    pub bluetooth_on_startup: bool,
+    #[serde(default = "default_pinned_apps")]
+    pub pinned_apps: Vec<String>,
+    #[serde(default = "default_transition_mode")]
+    pub suits_transition: String,
+    #[serde(default = "default_profile")]
+    pub agility_profile: String,
+    #[serde(default = "default_bar_height")]
+    pub bar_height: u32,
+}
+
+fn default_hover_delay() -> u64 {
+    150
+}
+fn default_bar_theme() -> String {
+    "liquid-glass".to_string()
+}
+fn default_bar_opacity() -> f64 {
+    0.35
+}
+fn default_widget_opacity() -> f64 {
+    0.55
+}
+fn default_desktop_widget_opacity() -> f64 {
+    0.60
+}
+fn default_dash_dim_opacity() -> f64 {
+    0.20
+}
+fn default_pinned_apps() -> Vec<String> {
+    vec![
+        "thunar.desktop".to_string(),
+        "brave-browser.desktop".to_string(),
+        "kitty.desktop".to_string(),
+    ]
+}
+fn default_transition_mode() -> String {
+    "fluid".to_string()
+}
+fn default_profile() -> String {
+    "balanced".to_string()
+}
+fn default_bar_height() -> u32 {
+    30
+}
+
+impl Default for SuiteSettingsConfig {
+    fn default() -> Self {
+        Self {
+            dnd: false,
+            hover_open: true,
+            hover_delay: default_hover_delay(),
+            hover_widgets: Vec::new(),
+            bar_theme: default_bar_theme(),
+            bar_blur: true,
+            bar_opacity: default_bar_opacity(),
+            widget_opacity: default_widget_opacity(),
+            desktop_widget_opacity: default_desktop_widget_opacity(),
+            dash_blur: true,
+            dash_dim_opacity: default_dash_dim_opacity(),
+            dash_card_opacity: 1.0,
+            instant_dash: true,
+            awe_widgets_enabled: false,
+            bluetooth_on_startup: false,
+            pinned_apps: default_pinned_apps(),
+            suits_transition: default_transition_mode(),
+            agility_profile: default_profile(),
+            bar_height: default_bar_height(),
+        }
+    }
+}
+
+/// Dock configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SuiteDockConfig {
+    #[serde(default)]
+    pub entries: Vec<serde_json::Value>,
+}
+
+/// Launcher configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SuiteLauncherConfig {
+    #[serde(default)]
+    pub grid: bool,
+    #[serde(default = "default_keybind_position")]
+    pub keybind_position: String,
+}
+
+fn default_keybind_position() -> String {
+    "center".to_string()
+}
+
+impl Default for SuiteLauncherConfig {
+    fn default() -> Self {
+        Self {
+            grid: false,
+            keybind_position: default_keybind_position(),
+        }
+    }
+}
+
+/// Template triggers configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SuiteTemplatesConfig {
+    #[serde(default)]
+    pub enabled: Vec<String>,
+}
+
+/// Complete configuration snapshot for an individual desktop suite.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct SuiteConfig {
+    #[serde(default)]
+    pub bars: serde_json::Value,
+    #[serde(default)]
+    pub desktop_canvas: serde_json::Value,
+    #[serde(default)]
+    pub desktop_applets: serde_json::Value,
+    #[serde(default)]
+    pub quickshell_widgets: serde_json::Value,
+    #[serde(default)]
+    pub wallpaper: SuiteWallpaperConfig,
+    #[serde(default)]
+    pub theme: SuiteThemeConfig,
+    #[serde(default)]
+    pub settings: SuiteSettingsConfig,
+    #[serde(default)]
+    pub dock: SuiteDockConfig,
+    #[serde(default)]
+    pub launcher: SuiteLauncherConfig,
+    #[serde(default)]
+    pub templates: SuiteTemplatesConfig,
+}
+
+/// Individual desktop suite preset definition.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SuitePreset {
+    pub id: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub created_at: Option<f64>,
+    #[serde(default)]
+    pub config: Option<SuiteConfig>,
+    #[serde(default)]
+    pub theme: Option<String>,
+    #[serde(default)]
+    pub wallpaper: Option<String>,
+}
+
+/// In-memory catalog of all suites and active preset pointer.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SuitsCatalog {
+    #[serde(default = "default_active_id")]
+    pub active_id: String,
+    pub suites: Vec<SuitePreset>,
+}
+
+impl Default for SuitsCatalog {
+    fn default() -> Self {
+        Self {
+            active_id: default_active_id(),
+            suites: vec![SuitePreset {
+                id: "desktop-1".to_string(),
+                name: "Desktop 1".to_string(),
+                description: Some("Default desktop preset".to_string()),
+                created_at: Some(0.0),
+                config: Some(SuiteConfig::default()),
+                theme: Some("Matugen".to_string()),
+                wallpaper: Some("".to_string()),
+            }],
+        }
+    }
+}
+
+/// Untagged deserialization helper accepting both `{ "active_id": ..., "suites": [...] }` and `[...]`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SuitsPayload {
+    Catalog(SuitsCatalog),
+    List(Vec<SuitePreset>),
+}
+
+impl From<SuitsPayload> for SuitsCatalog {
+    fn from(payload: SuitsPayload) -> Self {
+        match payload {
+            SuitsPayload::Catalog(c) => c,
+            SuitsPayload::List(list) => {
+                let active = list.first().map(|s| s.id.clone()).unwrap_or_else(default_active_id);
+                SuitsCatalog {
+                    active_id: active,
+                    suites: list,
+                }
+            }
+        }
+    }
+}
+
+/// User profile section in `config.json`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct UserConfig {
+    #[serde(default)]
+    pub avatar: String,
+}
+
+/// Master application configuration (`config.json`).
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub struct AppConfig {
+    #[serde(default)]
+    pub user: UserConfig,
+    #[serde(default)]
+    pub settings: SuiteSettingsConfig,
+    #[serde(default)]
+    pub bars: serde_json::Value,
+    #[serde(default)]
+    pub timeouts: serde_json::Value,
+    #[serde(default)]
+    pub theme: SuiteThemeConfig,
+    #[serde(default)]
+    pub launcher: SuiteLauncherConfig,
+    #[serde(default)]
+    pub dock: SuiteDockConfig,
+    #[serde(default)]
+    pub world_clocks: serde_json::Value,
+    #[serde(default)]
+    pub wallpaper: SuiteWallpaperConfig,
+    #[serde(default)]
+    pub desktop_canvas: serde_json::Value,
+}
+
 /// Resolve the default configuration directory.
 pub fn default_config_dir() -> std::path::PathBuf {
     if let Ok(dir) = std::env::var("AGILITY_CONFIG_DIR") {

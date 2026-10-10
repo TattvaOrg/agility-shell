@@ -68,6 +68,12 @@ async fn main() -> Result<()> {
     // Initialize Launcher service (Application Indexer & Fuzzy Search)
     let launcher_service = modules::launcher::LauncherService::new();
 
+    // Initialize Suits service (Desktop Suites & Settings Engine)
+    let suits_service = modules::suits::SuitsService::new(
+        state.config_dir.clone(),
+        state.cache_dir.clone(),
+    );
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -80,6 +86,7 @@ async fn main() -> Result<()> {
             Arc::clone(&media_service),
             Arc::clone(&connectivity_service),
             Arc::clone(&launcher_service),
+            Arc::clone(&suits_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -138,6 +145,7 @@ async fn main() -> Result<()> {
         Arc::clone(&media_service),
         Arc::clone(&connectivity_service),
         Arc::clone(&launcher_service),
+        Arc::clone(&suits_service),
     )
     .await?;
 

@@ -728,19 +728,19 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 18: Quickshell Frontend — Multi-Monitor Status Bar & 25+ Bar Widgets
-- [ ] 18.1 Implement multi-monitor Status Bar surface (`WlrLayer.Top`) with configurable thickness (26-48px), mode (edge-to-edge vs floating island), and multi-monitor placement.
-- [ ] 18.2 Implement `WorkspacesWidget` with live Niri workspace pills, window icons, urgent alert glow, and scroll-to-switch.
-- [ ] 18.3 Implement `ActiveWindowWidget` showing current focused window title and app icon with smooth marquee and fade.
-- [ ] 18.4 Implement `ClockWidget` displaying customizable date/time chip with click-to-calendar trigger.
-- [ ] 18.5 Implement `VolumeWidget` and `BrightnessWidget` mini-pills with scroll-wheel adjustments and mute toggle.
-- [ ] 18.6 Implement `BatteryWidget` with dynamic level icon, charging pulse animation, and low-battery warning glow.
-- [ ] 18.7 Implement `NetworkWidget` and `BluetoothWidget` status pills with live SSID, signal strength, and connected device count.
-- [ ] 18.8 Implement `MediaWidget` now-playing pill with scrolling title, artist, and mini play/pause control.
-- [ ] 18.9 Implement `QuickSettingsToggleWidget` pill trigger for Control Center.
-- [ ] 18.10 Implement `NotificationBellWidget` with unread counter badge and Do-Not-Disturb indicator.
-- [ ] 18.11 Implement `SuitsSwitcherWidget` displaying active suite name and scroll/click suite cycling.
-- [ ] 18.12 Implement `SystemTrayWidget` streaming SNI tray items from `org.kde.StatusNotifierWatcher`.
-- [ ] 18.13 Implement toggles: `CaffeineWidget`, `NightLightWidget`, `SysMonWidget` (CPU/RAM sparkline mini-graph), and `SessionWidget` (Power button).
+- [X] 18.1 Implement multi-monitor Status Bar surface (`WlrLayer.Top`) with configurable thickness (26-48px), mode (edge-to-edge vs floating island), and multi-monitor placement.
+- [X] 18.2 Implement `WorkspacesWidget` with live Niri workspace pills, window icons, urgent alert glow, and scroll-to-switch.
+- [X] 18.3 Implement `ActiveWindowWidget` showing current focused window title and app icon with smooth marquee and fade.
+- [X] 18.4 Implement `ClockWidget` displaying customizable date/time chip with click-to-calendar trigger.
+- [X] 18.5 Implement `VolumeWidget` and `BrightnessWidget` mini-pills with scroll-wheel adjustments and mute toggle.
+- [X] 18.6 Implement `BatteryWidget` with dynamic level icon, charging pulse animation, and low-battery warning glow.
+- [X] 18.7 Implement `NetworkWidget` and `BluetoothWidget` status pills with live SSID, signal strength, and connected device count.
+- [X] 18.8 Implement `MediaWidget` now-playing pill with scrolling title, artist, and mini play/pause control.
+- [X] 18.9 Implement `QuickSettingsToggleWidget` pill trigger for Control Center.
+- [X] 18.10 Implement `NotificationBellWidget` with unread counter badge and Do-Not-Disturb indicator.
+- [X] 18.11 Implement `SuitsSwitcherWidget` displaying active suite name and scroll/click suite cycling.
+- [X] 18.12 Implement `SystemTrayWidget` streaming SNI tray items from `org.kde.StatusNotifierWatcher`.
+- [X] 18.13 Implement toggles: `CaffeineWidget`, `NightLightWidget`, `SysMonWidget` (CPU/RAM sparkline mini-graph), and `SessionWidget` (Power button).
 
 ---
 

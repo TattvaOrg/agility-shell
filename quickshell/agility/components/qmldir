@@ -1,0 +1,8 @@
+singleton IconResolver 1.0 IconResolver.qml
+GlassCard 1.0 GlassCard.qml
+GlassPill 1.0 GlassPill.qml
+GlassButton 1.0 GlassButton.qml
+GlassSlider 1.0 GlassSlider.qml
+GlassMenu 1.0 GlassMenu.qml
+GlassIcon 1.0 GlassIcon.qml
+GlassMarquee 1.0 GlassMarquee.qml

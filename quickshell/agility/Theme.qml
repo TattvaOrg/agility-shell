@@ -14,6 +14,21 @@ Item {
     property bool isLoaded: false
     property var widgetVisibility: ({})
 
+    // D-Bus Theme Tokens from org.agility.Daemon.Theme
+    property var dbusTokens: ({
+        "is_dark": true,
+        "primary_color": "#2a98df",
+        "secondary_color": "#8392a3",
+        "surface_color": "#181c20",
+        "background_color": "#0f1113",
+        "accent_colors": ["#2a98df", "#50b2fc", "#94ccff", "#d2bfe7"],
+        "active_wallpaper": "",
+        "border_radius": 16,
+        "font_family": "Inter",
+        "font_mono": "JetBrains Mono",
+        "active_preset": "liquid_glass"
+    })
+
     function isWidgetVisible(key) {
         return root.isLoaded && (root.widgetVisibility[key] === true)
     }
@@ -21,15 +36,15 @@ Item {
     // Theme metadata list for UI pickers
     readonly property var themes: [
         { id: "liquid_glass",    name: "Liquid Glass", icon: "🫧", desc: "Translucent water droplet glass with curved meniscus sheen" },
-        { id: "transparent",     name: "Transparent",  icon: "🪟", desc: "Minimal see-through floating aesthetic" },
-        { id: "material",        name: "Material 3",   icon: "🎨", desc: "Original dark slate with Pixel cyan" },
-        { id: "cyberpunk",       name: "Cyberpunk",    icon: "⚡", desc: "High-contrast neon glow on obsidian" },
-        { id: "nordic",          name: "Nordic Frost", icon: "❄️", desc: "Arctic cold blue & snow storm palette" },
-        { id: "oled",            name: "OLED Black",   icon: "🖤", desc: "100% pitch-black with crisp white typography" },
-        { id: "warm_latte",      name: "Warm Latte",   icon: "☕", desc: "Cozy espresso & caramel with warm amber" },
-        { id: "tokyo_night",     name: "Tokyo Night",  icon: "🌸", desc: "Midnight indigo-violet with lavender & cyan" },
+        { id: "aurora_prism",    name: "Aurora Prism", icon: "💎", desc: "Crystal glass with iridescent aurora reflections" },
         { id: "evergreen_moss",  name: "Evergreen",    icon: "🌲", desc: "Translucent forest green with phosphor telemetry" },
-        { id: "aurora_prism",    name: "Aurora Prism", icon: "💎", desc: "Crystal glass with iridescent aurora reflections" }
+        { id: "nordic",          name: "Nordic Frost", icon: "❄️", desc: "Arctic cold blue & snow storm palette" },
+        { id: "tokyo_night",     name: "Tokyo Night",  icon: "🌸", desc: "Midnight indigo-violet with lavender & cyan" },
+        { id: "oled",            name: "OLED Black",   icon: "🖤", desc: "100% pitch-black with crisp white typography" },
+        { id: "material",        name: "Material 3",   icon: "🎨", desc: "Adaptive dynamic color scheme from wallpaper" },
+        { id: "transparent",     name: "Transparent",  icon: "🪟", desc: "Minimal see-through floating aesthetic" },
+        { id: "cyberpunk",       name: "Cyberpunk",    icon: "⚡", desc: "High-contrast neon glow on obsidian" },
+        { id: "warm_latte",      name: "Warm Latte",   icon: "☕", desc: "Cozy espresso & caramel with warm amber" }
     ]
 
     // Convenience booleans
@@ -44,9 +59,14 @@ Item {
     readonly property bool isEvergreen: currentTheme === "evergreen_moss"
     readonly property bool isAurora: currentTheme === "aurora_prism"
 
+    // Fonts
+    readonly property string fontMain: (dbusTokens.font_family ? dbusTokens.font_family + ", " : "") + "Inter, sans-serif"
+    readonly property string fontMono: (dbusTokens.font_mono ? dbusTokens.font_mono + ", " : "") + "JetBrains Mono, monospace"
+
     // ─── Dynamic Palette Properties ───
     // Primary Panel Background
     readonly property color colBg: {
+        if (root.isMaterial && dbusTokens.background_color) return dbusTokens.background_color
         switch (currentTheme) {
             case "liquid_glass":   return "#550A1118"
             case "transparent":    return "#260B0E14"
@@ -64,6 +84,7 @@ Item {
 
     // Inner Sub-Card / Tile Background
     readonly property color colBgTile: {
+        if (root.isMaterial && dbusTokens.surface_color) return dbusTokens.surface_color
         switch (currentTheme) {
             case "liquid_glass":   return "#38141F2E"
             case "transparent":    return "#33141C26"
@@ -81,6 +102,7 @@ Item {
 
     // Pill / Button / Badge Background
     readonly property color colPillBg: {
+        if (root.isMaterial && dbusTokens.surface_container) return dbusTokens.surface_container
         switch (currentTheme) {
             case "liquid_glass":   return "#2D203045"
             case "transparent":    return "#4D212C3B"
@@ -98,6 +120,7 @@ Item {
 
     // Main Accent Color
     readonly property color colAccent: {
+        if (root.isMaterial && dbusTokens.primary_color) return dbusTokens.primary_color
         switch (currentTheme) {
             case "liquid_glass":   return "#7DD3FC"
             case "transparent":    return "#38BDF8"
@@ -166,6 +189,7 @@ Item {
 
     // Primary Text Color
     readonly property color colTextPrimary: {
+        if (root.isMaterial && dbusTokens.on_surface) return dbusTokens.on_surface
         switch (currentTheme) {
             case "nordic":         return "#ECEFF4"
             case "warm_latte":     return "#FDF8F5"
@@ -178,6 +202,7 @@ Item {
 
     // Secondary Text Color
     readonly property color colTextSecondary: {
+        if (root.isMaterial && dbusTokens.secondary_color) return dbusTokens.secondary_color
         switch (currentTheme) {
             case "liquid_glass":   return "#B0C4D4"
             case "transparent":    return "#94A3B8"
@@ -193,8 +218,13 @@ Item {
         }
     }
 
+    // Aliases for unified text references
+    readonly property color colText: colTextPrimary
+    readonly property color colTextSec: colTextSecondary
+
     // Border Color (Ultra-subtle, non-harsh)
     readonly property color borderColor: {
+        if (root.isMaterial && dbusTokens.outline) return dbusTokens.outline
         switch (currentTheme) {
             case "liquid_glass":   return "#28FFFFFF"
             case "transparent":    return "#1AFFFFFF"
@@ -223,9 +253,6 @@ Item {
         }
     }
 
-    // Legacy glassGloss kept for compatibility (transparent to prevent straight-line cuts)
-    readonly property color glassGloss: "transparent"
-
     // ─── Settings Persistence & Animations ───
     property var allSettings: ({})
     property int reloadVersion: 0
@@ -251,6 +278,9 @@ Item {
         if (!loadSettingsProc.running) {
             loadSettingsProc.running = true
         }
+        if (!loadTokensProc.running) {
+            loadTokensProc.running = true
+        }
     }
 
     function applyWidgetConfig(widget, key) {
@@ -273,9 +303,36 @@ Item {
         }
     }
 
+    // ─── Fast D-Bus & Cache Loader ───
+    Process {
+        id: loadTokensProc
+        command: ["sh", "-c", "cat ~/.cache/agility-shell/theme.json 2>/dev/null || busctl --user call org.agility.Daemon /org/agility/Daemon/Theme org.agility.Daemon.Theme GetTheme 2>/dev/null | sed 's/^[s ]*\"//;s/\"$//' || echo '{}'"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var parsed = JSON.parse(text)
+                    if (parsed && typeof parsed === "object") {
+                        root.dbusTokens = parsed
+                        if (parsed.active_preset && parsed.active_preset !== "") {
+                            // Map daemon preset if custom was set
+                            var pLower = parsed.active_preset.toLowerCase()
+                            for (var i = 0; i < root.themes.length; i++) {
+                                if (root.themes[i].id.toLowerCase() === pLower) {
+                                    root.currentTheme = root.themes[i].id
+                                    break
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
     Process {
         id: loadSettingsProc
-        command: ["sh", "-c", "cat ~/.config/quickshell/widget_settings.json 2>/dev/null || cat ~/.config/agility-shell/widget_settings.json 2>/dev/null || echo '{}'"]
+        command: ["sh", "-c", "cat ~/.config/agility-shell/widget_settings.json 2>/dev/null || cat ~/.config/quickshell/widget_settings.json 2>/dev/null || echo '{}'"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
@@ -305,39 +362,24 @@ Item {
 
     function saveWidgetConfig(widgetName, configObj) {
         if (!widgetName || !configObj) return
-        var script = "python3 -c '\n" +
-            "import json, os, subprocess\n" +
-            "for p in [os.path.expanduser(\"~/.config/agility-shell/widget_settings.json\"), os.path.expanduser(\"~/.config/quickshell/widget_settings.json\")]:\n" +
-            "    try:\n" +
-            "        os.makedirs(os.path.dirname(p), exist_ok=True)\n" +
-            "        d = json.load(open(p)) if os.path.exists(p) else {}\n" +
-            "        d[\"" + widgetName + "\"] = json.loads(\"\"\"" + JSON.stringify(configObj) + "\"\"\")\n" +
-            "        open(p, \"w\").write(json.dumps(d, indent=2))\n" +
-            "    except Exception:\n" +
-            "        pass\n" +
-            "try:\n" +
-            "    subprocess.run([\"fabric-cli\", \"exec\", \"agility-shell\", \"suits_service.sync_from_current()\"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=0.5)\n" +
-            "except Exception:\n" +
-            "    pass\n" +
-            "'"
-        saveSettingsProc.command = ["sh", "-c", script]
+        var cfgStr = JSON.stringify(configObj).replace(/'/g, "'\\''")
+        var shCmd = "mkdir -p ~/.config/agility-shell && " +
+            "jq '." + widgetName + " = " + JSON.stringify(configObj) + "' ~/.config/agility-shell/widget_settings.json > ~/.config/agility-shell/widget_settings.json.tmp 2>/dev/null && " +
+            "mv ~/.config/agility-shell/widget_settings.json.tmp ~/.config/agility-shell/widget_settings.json"
+        saveSettingsProc.command = ["sh", "-c", shCmd]
         saveSettingsProc.running = true
     }
 
     function setTheme(newTheme) {
         root.currentTheme = newTheme
-        var script = "python3 -c '\n" +
-            "import json, os\n" +
-            "for p in [os.path.expanduser(\"~/.config/agility-shell/widget_settings.json\"), os.path.expanduser(\"~/.config/quickshell/widget_settings.json\")]:\n" +
-            "    try:\n" +
-            "        os.makedirs(os.path.dirname(p), exist_ok=True)\n" +
-            "        d = json.load(open(p)) if os.path.exists(p) else {}\n" +
-            "        d.setdefault(\"manager\", {})[\"theme\"] = \"" + newTheme + "\"\n" +
-            "        open(p, \"w\").write(json.dumps(d, indent=2))\n" +
-            "    except Exception:\n" +
-            "        pass\n" +
-            "'"
-        saveSettingsProc.command = ["sh", "-c", script]
+        // Notify agilityd via D-Bus and persist in widget settings
+        var notifyDbus = "busctl --user call org.agility.Daemon /org/agility/Daemon/Theme org.agility.Daemon.Theme SetPreset s \"" + newTheme + "\" 2>/dev/null || true; " +
+            "mkdir -p ~/.config/agility-shell && " +
+            "if [ -f ~/.config/agility-shell/widget_settings.json ]; then " +
+            "  jq '.manager.theme = \"" + newTheme + "\"' ~/.config/agility-shell/widget_settings.json > ~/.config/agility-shell/widget_settings.json.tmp && " +
+            "  mv ~/.config/agility-shell/widget_settings.json.tmp ~/.config/agility-shell/widget_settings.json; " +
+            "fi"
+        saveSettingsProc.command = ["sh", "-c", notifyDbus]
         saveSettingsProc.running = true
     }
 
@@ -346,35 +388,31 @@ Item {
         vis[widgetName] = isVisible
         root.widgetVisibility = vis
 
-        var jsonStr = JSON.stringify({ visibility: vis }).replace(/'/g, "'\\''")
-        var script = "python3 -c '\n" +
-            "import json, os\n" +
-            "for p in [os.path.expanduser(\"~/.config/agility-shell/widget_settings.json\"), os.path.expanduser(\"~/.config/quickshell/widget_settings.json\")]:\n" +
-            "    try:\n" +
-            "        os.makedirs(os.path.dirname(p), exist_ok=True)\n" +
-            "        d = json.load(open(p)) if os.path.exists(p) else {}\n" +
-            "        d.setdefault(\"manager\", {})[\"visibility\"] = json.loads(\"\"\"" + JSON.stringify(vis) + "\"\"\")\n" +
-            "        open(p, \"w\").write(json.dumps(d, indent=2))\n" +
-            "    except Exception:\n" +
-            "        pass\n" +
-            "'"
-        saveSettingsProc.command = ["sh", "-c", script]
+        var jsonStr = JSON.stringify(vis).replace(/'/g, "'\\''")
+        var shCmd = "mkdir -p ~/.config/agility-shell && " +
+            "if [ -f ~/.config/agility-shell/widget_settings.json ]; then " +
+            "  jq '.manager.visibility = " + jsonStr + "' ~/.config/agility-shell/widget_settings.json > ~/.config/agility-shell/widget_settings.json.tmp && " +
+            "  mv ~/.config/agility-shell/widget_settings.json.tmp ~/.config/agility-shell/widget_settings.json; " +
+            "fi"
+        saveSettingsProc.command = ["sh", "-c", shCmd]
         saveSettingsProc.running = true
     }
 
-    // Watcher to keep theme & visibility in sync with Agility Shell Dash
+    // Watcher keeping theme & visibility synced with daemon
     Timer {
-        interval: 1500
+        interval: 2000
         running: true
         repeat: true
         onTriggered: {
             if (!loadSettingsProc.running && !saveSettingsProc.running && !root.isSwitching) {
                 loadSettingsProc.running = true
+                loadTokensProc.running = true
             }
         }
     }
 
     Component.onCompleted: {
         loadSettingsProc.running = true
+        loadTokensProc.running = true
     }
 }

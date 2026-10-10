@@ -718,12 +718,12 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 17: Quickshell Frontend — Liquid Glass Design System Primitives & Theme Integration
-- [ ] 17.1 Reorganize `quickshell/agility/` into modern modular structure (`components/`, `bar/`, `dock/`, `popouts/`, `launcher/`, `osd/`, `notifications/`, `canvas/`, `lockscreen/`).
-- [ ] 17.2 Build universal `GlassCard.qml` primitive with multi-layer translucency gradient (`#38141F2E` to `#550A1118`), specular curved meniscus highlight (`#38FFFFFF`), caustic bottom bounce rim (`#187DD3FC`), soft elevation shadow, and micro-border.
-- [ ] 17.3 Build interactive glass controls: `GlassPill.qml`, `GlassButton.qml`, `GlassSlider.qml`, `GlassMenu.qml`, `GlassIcon.qml`, and `GlassMarquee.qml` with hover glows, click ripples, and drag physics.
-- [ ] 17.4 Upgrade `Theme.qml` singleton to bind reactively to `org.agility.Daemon.Theme` D-Bus tokens with instant live updates and fallback presets (`liquid_glass`, `aurora_prism`, `evergreen_moss`, `nordic`, `tokyo_night`, `oled`, `material`).
-- [ ] 17.5 Implement Icon and SVG Duotone resolver service in QML resolving reverse-DNS app IDs to local `svgs/` icons and Freedesktop themes.
-- [ ] 17.6 Verify zero-flicker live theme reloading with `quickshell -p quickshell/agility/shell.qml`.
+- [X] 17.1 Reorganize `quickshell/agility/` into modern modular structure (`components/`, `bar/`, `dock/`, `popouts/`, `launcher/`, `osd/`, `notifications/`, `canvas/`, `lockscreen/`).
+- [X] 17.2 Build universal `GlassCard.qml` primitive with multi-layer translucency gradient (`#38141F2E` to `#550A1118`), specular curved meniscus highlight (`#38FFFFFF`), caustic bottom bounce rim (`#187DD3FC`), soft elevation shadow, and micro-border.
+- [X] 17.3 Build interactive glass controls: `GlassPill.qml`, `GlassButton.qml`, `GlassSlider.qml`, `GlassMenu.qml`, `GlassIcon.qml`, and `GlassMarquee.qml` with hover glows, click ripples, and drag physics.
+- [X] 17.4 Upgrade `Theme.qml` singleton to bind reactively to `org.agility.Daemon.Theme` D-Bus tokens with instant live updates and fallback presets (`liquid_glass`, `aurora_prism`, `evergreen_moss`, `nordic`, `tokyo_night`, `oled`, `material`).
+- [X] 17.5 Implement Icon and SVG Duotone resolver service in QML resolving reverse-DNS app IDs to local `svgs/` icons and Freedesktop themes.
+- [X] 17.6 Verify zero-flicker live theme reloading with `quickshell -p quickshell/agility/shell.qml`.
 
 ---
 

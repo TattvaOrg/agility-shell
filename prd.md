@@ -534,11 +534,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 5: Audio Engine, PipeWire/Pulse Mixer, MPRIS2 & Visualizer Stream
-- [ ] 5.1 Connect to PipeWire / WirePlumber audio daemon via PulseAudio protocol (`libpulse-binding`).
-- [ ] 5.2 Implement reactive volume listener for default audio sink (speakers/headphones) and default source (microphone).
-- [ ] 5.3 Expose D-Bus interface `org.agility.Daemon.Audio` with volume adjustment, mute toggles, and sink enumeration.
-- [ ] 5.4 Implement MPRIS2 player controller listening for Spotify, Firefox, MPV metadata and playback controls on `org.agility.Daemon.Media`.
-- [ ] 5.5 Implement lightweight PipeWire audio monitor / CAVA stream capturing audio amplitude bars for QML audio visualizers.
+- [X] 5.1 Connect to PipeWire / WirePlumber audio daemon via PulseAudio protocol (`libpulse-binding`).
+- [X] 5.2 Implement reactive volume listener for default audio sink (speakers/headphones) and default source (microphone).
+- [X] 5.3 Expose D-Bus interface `org.agility.Daemon.Audio` with volume adjustment, mute toggles, and sink enumeration.
+- [X] 5.4 Implement MPRIS2 player controller listening for Spotify, Firefox, MPV metadata and playback controls on `org.agility.Daemon.Media`.
+- [X] 5.5 Implement lightweight PipeWire audio monitor / CAVA stream capturing audio amplitude bars for QML audio visualizers.
 
 ---
 

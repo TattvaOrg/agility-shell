@@ -701,10 +701,10 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 15: System Tray Host (`StatusNotifierWatcher`) & Sound Effects Player
-- [ ] 15.1 Implement `org.kde.StatusNotifierWatcher` registration and protocol handler in `agilityd`.
-- [ ] 15.2 Stream registered tray items, icons, and context menus to Quickshell status bars.
-- [ ] 15.3 Implement native sound effects dispatcher calling `pw-play` or PulseAudio stream for shell sound events (`session-start`, `session-quit`, `notification`, `battery-low`, `confirm`, `error`).
-- [ ] 15.4 Expose D-Bus interface `org.agility.Daemon.Sounds`.
+- [X] 15.1 Implement `org.kde.StatusNotifierWatcher` registration and protocol handler in `agilityd`.
+- [X] 15.2 Stream registered tray items, icons, and context menus to Quickshell status bars.
+- [X] 15.3 Implement native sound effects dispatcher calling `pw-play` or PulseAudio stream for shell sound events (`session-start`, `session-quit`, `notification`, `battery-low`, `confirm`, `error`).
+- [X] 15.4 Expose D-Bus interface `org.agility.Daemon.Sounds`.
 
 ---
 

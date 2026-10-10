@@ -99,6 +99,12 @@ async fn main() -> Result<()> {
     // Initialize MediaCapture service (Screenshots via grim/slurp & recordings via wl-screenrec/wf-recorder)
     let media_capture_service = modules::media_capture::MediaCaptureService::new(None, None);
 
+    // Initialize System Tray Host (StatusNotifierWatcher)
+    let tray_service = modules::tray::TrayService::new();
+
+    // Initialize Sound effects dispatcher (pw-play / paplay)
+    let sounds_service = modules::sounds::SoundService::new(None);
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -118,6 +124,8 @@ async fn main() -> Result<()> {
             Arc::clone(&power_service),
             Arc::clone(&weather_service),
             Arc::clone(&media_capture_service),
+            Arc::clone(&tray_service),
+            Arc::clone(&sounds_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -202,6 +210,8 @@ async fn main() -> Result<()> {
         Arc::clone(&power_service),
         Arc::clone(&weather_service),
         Arc::clone(&media_capture_service),
+        Arc::clone(&tray_service),
+        Arc::clone(&sounds_service),
     )
     .await?;
 

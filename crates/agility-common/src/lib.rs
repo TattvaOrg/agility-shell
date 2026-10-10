@@ -447,6 +447,16 @@ pub struct MediaCaptureStatus {
     pub last_recording_path: String,
 }
 
+/// Status notifier tray item representation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TrayItemInfo {
+    pub service: String,
+    pub path: String,
+    pub title: Option<String>,
+    pub icon_name: Option<String>,
+    pub status: Option<String>,
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

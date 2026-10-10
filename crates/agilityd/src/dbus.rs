@@ -73,6 +73,8 @@ pub async fn establish_dbus_connection(
     power_service: Arc<crate::modules::power::PowerService>,
     weather_service: Arc<crate::modules::weather::WeatherService>,
     media_capture_service: Arc<crate::modules::media_capture::MediaCaptureService>,
+    tray_service: Arc<crate::modules::tray::TrayService>,
+    sounds_service: Arc<crate::modules::sounds::SoundService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -100,6 +102,9 @@ pub async fn establish_dbus_connection(
     let media_capture_iface = crate::modules::media_capture::MediaCaptureInterface::new(
         Arc::clone(&media_capture_service),
     );
+    let watcher_iface =
+        crate::modules::tray::StatusNotifierWatcherInterface::new(Arc::clone(&tray_service));
+    let sounds_iface = crate::modules::sounds::SoundsInterface::new(Arc::clone(&sounds_service));
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -129,6 +134,8 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::POWER, power_iface)?
         .serve_at(paths::WEATHER, weather_iface)?
         .serve_at(paths::MEDIA_CAPTURE, media_capture_iface)?
+        .serve_at(paths::STATUS_NOTIFIER_WATCHER, watcher_iface)?
+        .serve_at(paths::SOUNDS, sounds_iface)?
         .build()
         .await
     {
@@ -148,8 +155,23 @@ pub async fn establish_dbus_connection(
                 ),
             }
 
+            // Attempt to claim the well-known StatusNotifierWatcher bus name
+            match conn
+                .request_name(agility_common::interfaces::STATUS_NOTIFIER_WATCHER)
+                .await
+            {
+                Ok(_) => info!(
+                    "Successfully acquired D-Bus name '{}'",
+                    agility_common::interfaces::STATUS_NOTIFIER_WATCHER
+                ),
+                Err(e) => warn!(
+                    "Could not claim '{}': {e:#} (another tray host watcher may be active)",
+                    agility_common::interfaces::STATUS_NOTIFIER_WATCHER
+                ),
+            }
+
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -165,7 +187,9 @@ pub async fn establish_dbus_connection(
                 paths::CLIPBOARD,
                 paths::POWER,
                 paths::WEATHER,
-                paths::MEDIA_CAPTURE
+                paths::MEDIA_CAPTURE,
+                paths::STATUS_NOTIFIER_WATCHER,
+                paths::SOUNDS
             );
             Ok(Some(conn))
         }

@@ -62,6 +62,9 @@ async fn main() -> Result<()> {
     let audio_service = modules::audio::AudioService::new();
     let media_service = modules::audio::MediaService::new();
 
+    // Initialize Connectivity service (Network & Bluetooth)
+    let connectivity_service = modules::connectivity::ConnectivityService::new();
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -72,6 +75,7 @@ async fn main() -> Result<()> {
             Arc::clone(&system_service),
             Arc::clone(&audio_service),
             Arc::clone(&media_service),
+            Arc::clone(&connectivity_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -109,6 +113,12 @@ async fn main() -> Result<()> {
         state.subscribe_shutdown(),
     );
 
+    // Start connectivity poller
+    connectivity_service.start_polling(
+        std::time::Duration::from_secs(3),
+        state.subscribe_shutdown(),
+    );
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
@@ -122,6 +132,7 @@ async fn main() -> Result<()> {
         Arc::clone(&system_service),
         Arc::clone(&audio_service),
         Arc::clone(&media_service),
+        Arc::clone(&connectivity_service),
     )
     .await?;
 

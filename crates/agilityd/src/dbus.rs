@@ -63,6 +63,7 @@ pub async fn establish_dbus_connection(
     system_service: Arc<crate::modules::system::SystemService>,
     audio_service: Arc<crate::modules::audio::AudioService>,
     media_service: Arc<crate::modules::audio::MediaService>,
+    connectivity_service: Arc<crate::modules::connectivity::ConnectivityService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -70,6 +71,7 @@ pub async fn establish_dbus_connection(
     let system_iface = (*system_service).clone();
     let audio_iface = (*audio_service).clone();
     let media_iface = (*media_service).clone();
+    let connectivity_iface = (*connectivity_service).clone();
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -88,19 +90,21 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::SYSTEM, system_iface)?
         .serve_at(paths::AUDIO, audio_iface)?
         .serve_at(paths::MEDIA, media_iface)?
+        .serve_at(paths::CONNECTIVITY, connectivity_iface)?
         .build()
         .await
     {
         Ok(conn) => {
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', and '{}'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', and '{}'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
                 paths::HARDWARE,
                 paths::SYSTEM,
                 paths::AUDIO,
-                paths::MEDIA
+                paths::MEDIA,
+                paths::CONNECTIVITY
             );
             Ok(Some(conn))
         }

@@ -618,10 +618,10 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 6: Network & Bluetooth Connectivity Engine
-- [ ] 6.1 Implement NetworkManager D-Bus client (`org.freedesktop.NetworkManager`) to observe active connection status, WiFi state, SSID, and signal strength.
-- [ ] 6.2 Implement BlueZ D-Bus client (`org.bluez`) to monitor Bluetooth adapter power and connected devices.
-- [ ] 6.3 Expose consolidated interface `org.agility.Daemon.Connectivity` for high-level QML consumption.
-- [ ] 6.4 Implement async WiFi scanning and connection methods.
+- [X] 6.1 Implement NetworkManager D-Bus client (`org.freedesktop.NetworkManager`) to observe active connection status, WiFi state, SSID, and signal strength.
+- [X] 6.2 Implement BlueZ D-Bus client (`org.bluez`) to monitor Bluetooth adapter power and connected devices.
+- [X] 6.3 Expose consolidated interface `org.agility.Daemon.Connectivity` for high-level QML consumption.
+- [X] 6.4 Implement async WiFi scanning and connection methods.
 
 ---
 

@@ -675,11 +675,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 12: Power, Idle Inhibitor (Caffeine), Performance Profiles & Night Light
-- [ ] 12.1 Implement Wayland idle monitor / `ext-idle-notifier-v1` listener observing AC and Battery idle thresholds.
-- [ ] 12.2 Implement Caffeine mode acquiring Wayland idle inhibitor or systemd `Inhibit()` lock.
-- [ ] 12.3 Integrate Linux power profiles daemon (`power-profiles-daemon`) for `"power-saver"`, `"balanced"`, `"performance"`.
-- [ ] 12.4 Implement Night Light controller adjusting screen color temperature via `wlsunset` or compositor gamma protocol.
-- [ ] 12.5 Expose D-Bus interface `org.agility.Daemon.Power`.
+- [X] 12.1 Implement Wayland idle monitor / `ext-idle-notifier-v1` listener observing AC and Battery idle thresholds.
+- [X] 12.2 Implement Caffeine mode acquiring Wayland idle inhibitor or systemd `Inhibit()` lock.
+- [X] 12.3 Integrate Linux power profiles daemon (`power-profiles-daemon`) for `"power-saver"`, `"balanced"`, `"performance"`.
+- [X] 12.4 Implement Night Light controller adjusting screen color temperature via `wlsunset` or compositor gamma protocol.
+- [X] 12.5 Expose D-Bus interface `org.agility.Daemon.Power`.
 
 ---
 

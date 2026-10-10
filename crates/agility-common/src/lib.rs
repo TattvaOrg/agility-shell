@@ -330,6 +330,48 @@ pub struct ClipboardItem {
     pub timestamp_epoch: u64,
 }
 
+/// Power, idle inhibitor, performance profile, and night light snapshot.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PowerState {
+    pub caffeine_active: bool,
+    pub power_profile: String,
+    pub night_light_active: bool,
+    pub night_light_temperature: u32,
+    pub on_battery: bool,
+}
+
+impl Default for PowerState {
+    fn default() -> Self {
+        Self {
+            caffeine_active: false,
+            power_profile: "balanced".to_string(),
+            night_light_active: false,
+            night_light_temperature: 4000,
+            on_battery: false,
+        }
+    }
+}
+
+/// Idle timeout rule configuration for Wayland idle monitoring.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdleRule {
+    pub name: String,
+    pub timeout_ac_mins: u32,
+    pub timeout_bat_mins: u32,
+    pub enabled: bool,
+}
+
+impl Default for IdleRule {
+    fn default() -> Self {
+        Self {
+            name: "screen-off".to_string(),
+            timeout_ac_mins: 10,
+            timeout_bat_mins: 2,
+            enabled: true,
+        }
+    }
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

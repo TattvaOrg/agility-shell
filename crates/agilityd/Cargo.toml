@@ -17,6 +17,7 @@ thiserror.workspace = true
 anyhow.workspace = true
 sysinfo.workspace = true
 nucleo.workspace = true
+clap.workspace = true
 pam-sys = { workspace = true, optional = true }
 libpulse-binding = { workspace = true, optional = true }
 image = { workspace = true, optional = true }

@@ -502,12 +502,12 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 2: Core Rust Daemon Infrastructure (`agilityd`)
-- [ ] 2.1 Implement `main.rs` daemon initialization, structured logging via `tracing-subscriber`, and CLI flags (`--daemon`, `--foreground`, `--test`, `--version`).
-- [ ] 2.2 Implement Unix signal handling (`SIGINT`, `SIGTERM`, `SIGHUP`) for graceful daemon shutdown and configuration reloading.
-- [ ] 2.3 Establish D-Bus connection on `org.agility.Daemon` using `zbus::connection::Builder::session()`.
-- [ ] 2.4 Implement singleton state manager holding in-memory state structs and atomic broadcast channels.
-- [ ] 2.5 Seed and validate user configuration directories (`~/.config/agility-shell/`, `~/.cache/agility-shell/`).
-- [ ] 2.6 Verify D-Bus service registration with `busctl --user list | grep org.agility.Daemon`.
+- [X] 2.1 Implement `main.rs` daemon initialization, structured logging via `tracing-subscriber`, and CLI flags (`--daemon`, `--foreground`, `--test`, `--version`).
+- [X] 2.2 Implement Unix signal handling (`SIGINT`, `SIGTERM`, `SIGHUP`) for graceful daemon shutdown and configuration reloading.
+- [X] 2.3 Establish D-Bus connection on `org.agility.Daemon` using `zbus::connection::Builder::session()`.
+- [X] 2.4 Implement singleton state manager holding in-memory state structs and atomic broadcast channels.
+- [X] 2.5 Seed and validate user configuration directories (`~/.config/agility-shell/`, `~/.cache/agility-shell/`).
+- [X] 2.6 Verify D-Bus service registration with `busctl --user list | grep org.agility.Daemon`.
 
 ---
 

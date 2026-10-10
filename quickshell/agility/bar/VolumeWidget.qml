@@ -1,6 +1,7 @@
 import QtQuick
 import ".."
 import "../components"
+import "../popouts" as Popouts
 
 Item {
     id: root
@@ -15,9 +16,23 @@ Item {
     }
 
     GlassPill {
+        id: pill
         anchors.fill: parent
-        interactive: true
-        onClicked: BarDataService.toggleVolumeMute()
+        interactive: false
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
+            onClicked: function(mouse) {
+                if (mouse.button === Qt.RightButton) {
+                    Popouts.PopoutService.toggle("audio_mixer")
+                } else {
+                    BarDataService.toggleVolumeMute()
+                }
+            }
+        }
 
         Row {
             id: rowContent

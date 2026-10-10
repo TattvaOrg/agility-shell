@@ -1,6 +1,7 @@
 import QtQuick
 import ".."
 import "../components"
+import "../popouts" as Popouts
 
 Item {
     id: root
@@ -15,7 +16,7 @@ Item {
         interactive: true
         onClicked: {
             root.clicked()
-            BarDataService.lockSession()
+            Popouts.PopoutService.toggle("session")
         }
 
         GlassIcon {

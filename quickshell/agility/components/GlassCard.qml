@@ -7,8 +7,9 @@ Item {
     // Sizing & Appearance properties
     property real radius: 24
     property bool isTile: false // Set to true for inner sub-cards / sub-tiles
-    property color dropletColorTop: Theme.isGlass ? (isTile ? "#321C2A38" : "#38141F2E") : (isTile ? Theme.colBgTile : Theme.colBg)
-    property color dropletColorBottom: Theme.isGlass ? (isTile ? "#4E121B24" : "#550A1118") : (isTile ? Theme.colBgTile : Theme.colBg)
+    property color color: "transparent"
+    property color dropletColorTop: (color !== "#00000000" && color !== "transparent") ? color : (Theme.isGlass ? (isTile ? "#321C2A38" : "#38141F2E") : (isTile ? Theme.colBgTile : Theme.colBg))
+    property color dropletColorBottom: (color !== "#00000000" && color !== "transparent") ? Qt.darker(color, 1.15) : (Theme.isGlass ? (isTile ? "#4E121B24" : "#550A1118") : (isTile ? Theme.colBgTile : Theme.colBg))
     property color rimColor: Theme.isGlass ? (isTile ? "#1AFFFFFF" : "#26FFFFFF") : Theme.borderColor
     property real rimWidth: Theme.isGlass ? 1.0 : Theme.borderWidth
 

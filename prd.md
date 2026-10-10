@@ -754,15 +754,15 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 20: Quickshell Frontend — Control Center, Popouts & Device Sub-Menus
-- [ ] 20.1 Build smooth slide-down glass Control Center overlay anchored to top-right status bar island.
-- [ ] 20.2 Implement interactive glass sliders for Volume, Microphone, and Screen Brightness with real-time D-Bus sync.
-- [ ] 20.3 Implement quick toggle tiles grid (WiFi, Bluetooth, Caffeine, Night Light, Power Profile, Do Not Disturb, Screen Record, Screenshot).
-- [ ] 20.4 Build expandable standalone sub-menu popouts:
+- [X] 20.1 Build smooth slide-down glass Control Center overlay anchored to top-right status bar island.
+- [X] 20.2 Implement interactive glass sliders for Volume, Microphone, and Screen Brightness with real-time D-Bus sync.
+- [X] 20.3 Implement quick toggle tiles grid (WiFi, Bluetooth, Caffeine, Night Light, Power Profile, Do Not Disturb, Screen Record, Screenshot).
+- [X] 20.4 Build expandable standalone sub-menu popouts:
   - WiFi Network Selector: list available SSIDs, signal indicators, secure passphrase input dialog.
   - Bluetooth Manager: list paired and discoverable devices, connect/disconnect, battery indicators.
   - Audio Mixer Popout: switch default output sink / input source, adjust individual application stream volumes.
   - Power & Session Menu: Lock, Suspend, Hibernate, Reboot, Shutdown, Logout with confirmation modal.
-- [ ] 20.5 Add smooth entry/exit spring physics and click-outside dismissal.
+- [X] 20.5 Add smooth entry/exit spring physics and click-outside dismissal.
 
 ---
 

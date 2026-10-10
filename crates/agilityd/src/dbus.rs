@@ -70,6 +70,7 @@ pub async fn establish_dbus_connection(
     theme_service: Arc<crate::modules::theme::ThemeService>,
     notifications_service: Arc<crate::modules::notifications::NotificationService>,
     clipboard_service: Arc<crate::modules::clipboard::ClipboardService>,
+    power_service: Arc<crate::modules::power::PowerService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -91,6 +92,7 @@ pub async fn establish_dbus_connection(
     );
     let clipboard_iface =
         crate::modules::clipboard::ClipboardInterface::new(Arc::clone(&clipboard_service));
+    let power_iface = crate::modules::power::PowerInterface::new(Arc::clone(&power_service));
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -117,6 +119,7 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::NOTIFICATIONS, notifications_iface)?
         .serve_at("/org/agility/Daemon/Notifications", notif_drawer_iface)?
         .serve_at(paths::CLIPBOARD, clipboard_iface)?
+        .serve_at(paths::POWER, power_iface)?
         .build()
         .await
     {
@@ -137,7 +140,7 @@ pub async fn establish_dbus_connection(
             }
 
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -150,7 +153,8 @@ pub async fn establish_dbus_connection(
                 paths::SUITS,
                 paths::THEME,
                 paths::NOTIFICATIONS,
-                paths::CLIPBOARD
+                paths::CLIPBOARD,
+                paths::POWER
             );
             Ok(Some(conn))
         }

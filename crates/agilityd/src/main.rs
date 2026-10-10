@@ -89,6 +89,10 @@ async fn main() -> Result<()> {
         modules::clipboard::MAX_CLIPBOARD_ITEMS,
     );
 
+    // Initialize Power service (Caffeine inhibitor, power profiles, night light & idle monitoring)
+    let power_service =
+        modules::power::PowerService::new(state.config_dir.clone(), state.cache_dir.clone());
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -105,6 +109,7 @@ async fn main() -> Result<()> {
             Arc::clone(&theme_service),
             Arc::clone(&notifications_service),
             Arc::clone(&clipboard_service),
+            Arc::clone(&power_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -155,6 +160,9 @@ async fn main() -> Result<()> {
     // Start clipboard event listener (wl-paste --watch cliphist store)
     clipboard_service.start_watcher(state.subscribe_shutdown());
 
+    // Start power & idle watcher (swayidle and battery monitoring)
+    power_service.start_watcher(state.subscribe_shutdown());
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
@@ -174,6 +182,7 @@ async fn main() -> Result<()> {
         Arc::clone(&theme_service),
         Arc::clone(&notifications_service),
         Arc::clone(&clipboard_service),
+        Arc::clone(&power_service),
     )
     .await?;
 

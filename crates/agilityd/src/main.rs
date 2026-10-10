@@ -58,6 +58,10 @@ async fn main() -> Result<()> {
     let hardware_service = modules::telemetry::HardwareService::new();
     let system_service = modules::system::SystemService::new();
 
+    // Initialize Audio & Media services
+    let audio_service = modules::audio::AudioService::new();
+    let media_service = modules::audio::MediaService::new();
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -66,6 +70,8 @@ async fn main() -> Result<()> {
             Arc::clone(&workspaces_service),
             Arc::clone(&hardware_service),
             Arc::clone(&system_service),
+            Arc::clone(&audio_service),
+            Arc::clone(&media_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -93,6 +99,16 @@ async fn main() -> Result<()> {
         state.subscribe_shutdown(),
     );
 
+    // Start audio & media pollers
+    audio_service.start_polling(
+        std::time::Duration::from_millis(500),
+        state.subscribe_shutdown(),
+    );
+    media_service.start_polling(
+        std::time::Duration::from_secs(1),
+        state.subscribe_shutdown(),
+    );
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
@@ -104,6 +120,8 @@ async fn main() -> Result<()> {
         Arc::clone(&workspaces_service),
         Arc::clone(&hardware_service),
         Arc::clone(&system_service),
+        Arc::clone(&audio_service),
+        Arc::clone(&media_service),
     )
     .await?;
 

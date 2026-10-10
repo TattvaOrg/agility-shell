@@ -444,9 +444,9 @@ Agility Shell stores configuration in standard XDG paths (`~/.config/agility-she
 
 ---
 
-## 5. Quickshell Frontend Architecture & UI Hierarchy
+## 5. Quickshell Frontend Architecture & Liquid Glassmorphism Design System
 
-The Quickshell UI uses `wlr-layer-shell` surfaces divided into 7 distinct rendering layers:
+The Quickshell UI is built natively in QML using `wlr-layer-shell` surfaces divided into 7 distinct rendering layers:
 
 ```
 [Layer 7] Wayland ext-session-lock-v1 Screen Lock Surface (Exclusive Security Barrier)
@@ -464,9 +464,84 @@ The Quickshell UI uses `wlr-layer-shell` surfaces divided into 7 distinct render
 [Layer 1] Desktop Background Canvas: Draggable Widgets & Visualizers (Layer: Bottom)
 ```
 
-### Complete Widget Inventory to be Implemented in QML:
-1. **Bar Widgets (25+):** `Launcher`, `Processes` (CPU graph), `Energy` (Battery), `Bluetooth`, `Notifications`, `Settings`, `Clock`, `Media`, `Workspaces`, `Weather`, `Volume`, `Tray`, `Calendar`, `Focused` (Window Title), `Wifi`, `Session` (Power Menu), `Calculator`, `Keyboard`, `Screenshot`, `Dock`, `Brightness`, `Dash`, `Clipboard`, `Caffeine`, `SysMon`, `NightLight`, `Suits`.
-2. **Desktop Canvas Applets (20+):** `Clock`, `BatteryWidget`, `CalcWidget`, `CalendarWidget`, `ClipboardWidget`, `CryptoWidget`, `GitDashboardWidget`, `HabitsWidget`, `LiquidCard`, `MediaWidget`, `NetworkWidget`, `NotesWidget`, `PingWidget`, `PosterWidget`, `QuoteWidget`, `ResourceWheelWidget`, `StorageMapWidget`, `SystemInfo`, `ThermalWidget`, `TimerWidget`, `TodoWidget`, `VisualizerWidget` (Audio FFT), `VolumeBrightnessWidget`, `WeatherWidget`, `WorldClockWidget`.
+### Liquid Glassmorphism ("Liquid Glass") Design System Specifications
+
+Every surface, widget, button, slider, and popout in the shell shares an ultra-rich, cohesive Liquid Glassmorphic aesthetic:
+
+1. **Multi-Stop Vertical Translucency Gradient:**
+   - Panel Top: Deep translucent navy-slate (`#38141F2E` with 22-35% alpha) allowing wallpaper tones and shapes to bleed through naturally.
+   - Panel Center: Soft midtone gradient (`#4216222E`).
+   - Panel Bottom: Rich refractive base (`#550A1118`).
+2. **Convex Specular Meniscus Dome Sheen:**
+   - Organic curved highlight along the top rounded dome fading from `#38FFFFFF` (or `#22FFFFFF` on sub-cards) down to transparent, simulating curved surface tension reflections of a physical liquid droplet.
+3. **Caustic Bottom Bounce Rim:**
+   - Subtle bottom-edge accent illumination (`#187DD3FC`) simulating light refracting through the bottom rim of curved physical glass onto the backdrop.
+4. **Soft Ambient Elevation Shadow:**
+   - Smooth 4px ambient drop-shadow (`#38000000`) creating physical depth and elevation separation above wallpapers and tiled windows.
+5. **Crisp Micro-Borders:**
+   - 1px high-precision rim borders (`#26FFFFFF` or dynamic accent border `Theme.borderColor`) providing razor-sharp contrast against both light and dark backdrops.
+6. **Smooth Spring Physics & Transitions:**
+   - 60 FPS / 144 FPS fluid animations with `Easing.OutCubic` and `Easing.OutQuad` for hover glows, sliders, volume bounces, and workspace indicator pills.
+7. **Hardware & Vintage GPU Compatibility:**
+   - Universal 60 FPS performance backed by Qt Quick scene graph, with seamless fallback to `QT_QUICK_BACKEND=software` on vintage Intel HD Graphics without shaders or frame drops.
+
+### Component Architecture Hierarchy in `quickshell/agility/`:
+
+```
+quickshell/agility/
+├── shell.qml                         # Root shell coordinator & Wayland layer orchestrator
+├── Theme.qml                         # Reactive D-Bus theme singleton (tokens, presets, fonts)
+├── components/                       # Shared Liquid Glass primitive library
+│   ├── GlassCard.qml                 # Universal glass panel container with dome sheen & caustic rim
+│   ├── GlassPill.qml                 # Capsule chip primitive for bar items & status badges
+│   ├── GlassButton.qml               # Interactive glass button with hover glow & ripple
+│   ├── GlassSlider.qml               # Liquid slider for volume, mic & backlight
+│   ├── GlassMenu.qml                 # Glass context popover & dropdown menu
+│   ├── GlassIcon.qml                 # Duotone and Freedesktop icon resolver
+│   └── GlassMarquee.qml              # Smooth scrolling text for long titles
+├── bar/                              # Status Bar surfaces & 25+ modular bar widgets
+│   ├── BarWindow.qml                 # Multi-monitor layer-shell bar container
+│   ├── WorkspacesWidget.qml          # Niri interactive workspace pills & window icons
+│   ├── ActiveWindowWidget.qml        # Focused window title marquee
+│   ├── ClockWidget.qml               # Date/time/timezone pill
+│   ├── VolumeWidget.qml              # Volume status & scroll adjuster
+│   ├── BrightnessWidget.qml          # Backlight status & scroll adjuster
+│   ├── BatteryWidget.qml             # Battery percentage & charging pulse
+│   ├── NetworkWidget.qml             # WiFi SSID & signal strength
+│   ├── BluetoothWidget.qml           # Bluetooth adapter & connected device counter
+│   ├── MediaWidget.qml               # Mini now-playing pill
+│   ├── QuickSettingsToggleWidget.qml # Pill trigger for Control Center
+│   ├── NotificationBellWidget.qml    # Notification count badge
+│   ├── SuitsSwitcherWidget.qml       # Desktop suite chip & switcher
+│   ├── SystemTrayWidget.qml          # SNI tray icon host
+│   ├── CaffeineWidget.qml            # Idle inhibitor toggle
+│   ├── NightLightWidget.qml          # Night light warm tint toggle
+│   ├── SysMonWidget.qml              # CPU/RAM sparkline mini-graph
+│   └── SessionWidget.qml             # Power menu trigger
+├── dock/                             # Floating Application Dock
+│   ├── DockWindow.qml                # Floating dock container with autohide
+│   └── DockItem.qml                  # App icon with parabolic hover zoom & running dots
+├── popouts/                          # Island Popouts & Dropdown Dialogs
+│   ├── ControlCenter.qml             # Slide-down control hub with sliders & quick toggles
+│   ├── WifiPopout.qml                # WiFi network scanner & password modal
+│   ├── BluetoothPopout.qml           # Bluetooth device list & pair modal
+│   ├── AudioMixerPopout.qml          # Sink/source switcher & app volume streams
+│   └── SessionMenu.qml               # Lock, logout, reboot, shutdown confirmation modal
+├── launcher/                         # Modal Application Launcher & Dash
+│   ├── LauncherWindow.qml            # Centered modal fuzzy search overlay
+│   └── CategoryDrawer.qml            # Category filter chips & quick calc mode
+├── osd/                              # On-Screen Display (OSD) Overlay
+│   └── OsdWindow.qml                 # Floating volume/backlight/keyboard glass pill
+├── notifications/                    # Notification System
+│   ├── NotificationToasts.qml        # Floating toast banners with dismiss animations
+│   └── NotificationDrawer.qml        # Slide-out notification history center
+├── canvas/                           # Desktop Background Canvas & 20+ Applets
+│   ├── DesktopCanvas.qml             # Multi-screen canvas layer (WlrLayer.Bottom)
+│   ├── DesktopEditMode.qml           # Interactive drag, resize & snap-to-grid controller
+│   └── applets/                      # 20+ rich liquid glass desktop widgets
+└── lockscreen/                       # Secure Screen Lock
+    └── LockWindow.qml                # Ext-session-lock-v1 PAM authentication barrier
+```
 
 ---
 
@@ -534,11 +609,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 5: Audio Engine, PipeWire/Pulse Mixer, MPRIS2 & Visualizer Stream
-- [ ] 5.1 Connect to PipeWire / WirePlumber audio daemon via PulseAudio protocol (`libpulse-binding`).
-- [ ] 5.2 Implement reactive volume listener for default audio sink (speakers/headphones) and default source (microphone).
-- [ ] 5.3 Expose D-Bus interface `org.agility.Daemon.Audio` with volume adjustment, mute toggles, and sink enumeration.
-- [ ] 5.4 Implement MPRIS2 player controller listening for Spotify, Firefox, MPV metadata and playback controls on `org.agility.Daemon.Media`.
-- [ ] 5.5 Implement lightweight PipeWire audio monitor / CAVA stream capturing audio amplitude bars for QML audio visualizers.
+- [X] 5.1 Connect to PipeWire / WirePlumber audio daemon via PulseAudio protocol (`libpulse-binding`).
+- [X] 5.2 Implement reactive volume listener for default audio sink (speakers/headphones) and default source (microphone).
+- [X] 5.3 Expose D-Bus interface `org.agility.Daemon.Audio` with volume adjustment, mute toggles, and sink enumeration.
+- [X] 5.4 Implement MPRIS2 player controller listening for Spotify, Firefox, MPV metadata and playback controls on `org.agility.Daemon.Media`.
+- [X] 5.5 Implement lightweight PipeWire audio monitor / CAVA stream capturing audio amplitude bars for QML audio visualizers.
 
 ---
 
@@ -642,39 +717,117 @@ Use this checklist to track progress throughout the implementation. Mark items w
 
 ---
 
-### Step 17: Quickshell Frontend — Shell Entry, Theme Singleton & Status Bars / Dock
-- [ ] 17.1 Reorganize `quickshell/agility/` into clean component architecture (`shell.qml`, `Theme.qml`, `bar/`, `dock/`, `popouts/`, `launcher/`, `lockscreen/`, `canvas/`).
-- [ ] 17.2 Implement `Theme.qml` singleton binding reactively to `org.agility.Daemon.Theme` D-Bus properties.
-- [ ] 17.3 Implement multi-monitor Status Bar(s) reading `config.json` layout (alignment, heights, floating options).
-- [ ] 17.4 Implement Bar Widgets: Workspaces, Window Title, Clock, Volume, Brightness, Battery, Wifi, Bluetooth, Suits switcher, Tray, Media.
-- [ ] 17.5 Implement standalone floating Application Dock with pinned apps and active running indicators.
-- [ ] 17.6 Test hot-reloading with `quickshell -p quickshell/agility/shell.qml`.
+### Step 17: Quickshell Frontend — Liquid Glass Design System Primitives & Theme Integration
+- [ ] 17.1 Reorganize `quickshell/agility/` into modern modular structure (`components/`, `bar/`, `dock/`, `popouts/`, `launcher/`, `osd/`, `notifications/`, `canvas/`, `lockscreen/`).
+- [ ] 17.2 Build universal `GlassCard.qml` primitive with multi-layer translucency gradient (`#38141F2E` to `#550A1118`), specular curved meniscus highlight (`#38FFFFFF`), caustic bottom bounce rim (`#187DD3FC`), soft elevation shadow, and micro-border.
+- [ ] 17.3 Build interactive glass controls: `GlassPill.qml`, `GlassButton.qml`, `GlassSlider.qml`, `GlassMenu.qml`, `GlassIcon.qml`, and `GlassMarquee.qml` with hover glows, click ripples, and drag physics.
+- [ ] 17.4 Upgrade `Theme.qml` singleton to bind reactively to `org.agility.Daemon.Theme` D-Bus tokens with instant live updates and fallback presets (`liquid_glass`, `aurora_prism`, `evergreen_moss`, `nordic`, `tokyo_night`, `oled`, `material`).
+- [ ] 17.5 Implement Icon and SVG Duotone resolver service in QML resolving reverse-DNS app IDs to local `svgs/` icons and Freedesktop themes.
+- [ ] 17.6 Verify zero-flicker live theme reloading with `quickshell -p quickshell/agility/shell.qml`.
 
 ---
 
-### Step 18: Quickshell Frontend — Control Center, Popouts, OSD & Launcher Dash
-- [ ] 18.1 Build smooth slide-down Control Center overlay anchored to top-right bar island.
-- [ ] 18.2 Implement interactive sliders for Volume, Mic, and Screen Brightness.
-- [ ] 18.3 Implement quick toggle tiles for WiFi, Bluetooth, Caffeine, Night Light, and Power Profile.
-- [ ] 18.4 Implement standalone popout menus for WiFi network selection, Bluetooth pairing, Audio device mixer, and Power/Session logout.
-- [ ] 18.5 Implement On-Screen Display (OSD) overlay for hardware Volume/Backlight adjustments, Keyboard Layout switching, Power Profile changes, and Update Available notification alerts.
-- [ ] 18.6 Implement centered modal Application Launcher / Dash with sub-2ms fuzzy search, categories, and calculator mode.
+### Step 18: Quickshell Frontend — Multi-Monitor Status Bar & 25+ Bar Widgets
+- [ ] 18.1 Implement multi-monitor Status Bar surface (`WlrLayer.Top`) with configurable thickness (26-48px), mode (edge-to-edge vs floating island), and multi-monitor placement.
+- [ ] 18.2 Implement `WorkspacesWidget` with live Niri workspace pills, window icons, urgent alert glow, and scroll-to-switch.
+- [ ] 18.3 Implement `ActiveWindowWidget` showing current focused window title and app icon with smooth marquee and fade.
+- [ ] 18.4 Implement `ClockWidget` displaying customizable date/time chip with click-to-calendar trigger.
+- [ ] 18.5 Implement `VolumeWidget` and `BrightnessWidget` mini-pills with scroll-wheel adjustments and mute toggle.
+- [ ] 18.6 Implement `BatteryWidget` with dynamic level icon, charging pulse animation, and low-battery warning glow.
+- [ ] 18.7 Implement `NetworkWidget` and `BluetoothWidget` status pills with live SSID, signal strength, and connected device count.
+- [ ] 18.8 Implement `MediaWidget` now-playing pill with scrolling title, artist, and mini play/pause control.
+- [ ] 18.9 Implement `QuickSettingsToggleWidget` pill trigger for Control Center.
+- [ ] 18.10 Implement `NotificationBellWidget` with unread counter badge and Do-Not-Disturb indicator.
+- [ ] 18.11 Implement `SuitsSwitcherWidget` displaying active suite name and scroll/click suite cycling.
+- [ ] 18.12 Implement `SystemTrayWidget` streaming SNI tray items from `org.kde.StatusNotifierWatcher`.
+- [ ] 18.13 Implement toggles: `CaffeineWidget`, `NightLightWidget`, `SysMonWidget` (CPU/RAM sparkline mini-graph), and `SessionWidget` (Power button).
 
 ---
 
-### Step 19: Quickshell Frontend — Desktop Applets Canvas, Edit Mode & Ext-Session-Lock Lockscreen
-- [ ] 19.1 Implement desktop canvas surface anchored to `Layer::Bottom` rendering freeform widgets from `widget_settings.json`.
-- [ ] 19.2 Integrate 20+ desktop widgets (`ResourceWheelWidget`, `ThermalWidget`, `StorageMapWidget`, `VisualizerWidget`, `WeatherWidget`, `CalendarWidget`, `NotesWidget`, `TodoWidget`, `HabitsWidget`, `CryptoWidget`, `GitDashboardWidget`).
-- [ ] 19.3 Implement interactive Desktop Edit Mode allowing users to drag, resize, and configure canvas widgets.
-- [ ] 19.4 Implement Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
-- [ ] 19.5 Render blurred wallpaper surface, clock, date, avatar, and secure password input connected to PAM worker.
-- [ ] 19.6 Ensure screen remains fully locked across monitor connect/disconnect events.
-- [ ] 19.7 Implement User Plugin & Custom Applets dynamic loader: scan `~/.local/share/agility-shell/plugins/` and load user-defined QML applets into the Desktop Canvas and Status Bar menus.
+### Step 19: Quickshell Frontend — Floating Application Dock
+- [ ] 19.1 Implement standalone floating dock surface anchored to screen edge (`WlrLayer.Top`) with configurable autohide and exclusive zone.
+- [ ] 19.2 Read pinned applications from `dock.entries` in `config.json` with dynamic add/remove support.
+- [ ] 19.3 Track running applications via Niri IPC and display active running dots / focus indicators.
+- [ ] 19.4 Implement macOS-style hover scale / parabolic zoom magnification and app launch bounce physics.
+- [ ] 19.5 Implement right-click glass context menu for dock items (Pin, Unpin, New Window, Close).
 
 ---
 
-### Step 20: CLI Tool (`agl`), Systemd Integration, Backward Compatibility & Packaging
-- [ ] 20.1 Build `crates/agility-cli` (`agl`) binary in Rust dispatching high-speed D-Bus calls to `agilityd`:
+### Step 20: Quickshell Frontend — Control Center, Popouts & Device Sub-Menus
+- [ ] 20.1 Build smooth slide-down glass Control Center overlay anchored to top-right status bar island.
+- [ ] 20.2 Implement interactive glass sliders for Volume, Microphone, and Screen Brightness with real-time D-Bus sync.
+- [ ] 20.3 Implement quick toggle tiles grid (WiFi, Bluetooth, Caffeine, Night Light, Power Profile, Do Not Disturb, Screen Record, Screenshot).
+- [ ] 20.4 Build expandable standalone sub-menu popouts:
+  - WiFi Network Selector: list available SSIDs, signal indicators, secure passphrase input dialog.
+  - Bluetooth Manager: list paired and discoverable devices, connect/disconnect, battery indicators.
+  - Audio Mixer Popout: switch default output sink / input source, adjust individual application stream volumes.
+  - Power & Session Menu: Lock, Suspend, Hibernate, Reboot, Shutdown, Logout with confirmation modal.
+- [ ] 20.5 Add smooth entry/exit spring physics and click-outside dismissal.
+
+---
+
+### Step 21: Quickshell Frontend — Modal Application Launcher Dash & On-Screen Display (OSD)
+- [ ] 21.1 Build centered modal Application Launcher Dash anchored to `WlrLayer.Top` / `Overlay` with frosted glass backdrop:
+  - In-memory sub-2ms fuzzy search connected to `org.agility.Daemon.Launcher`.
+  - Category filter chips (All, Internet, Development, Media, Office, System, Utilities, Games).
+  - In-line calculator math evaluation (`calc: 12 * 8`).
+  - Web search shortcuts (`g: query`, `gh: repo`, `yt: video`).
+  - Recent applications and pinned favorites section.
+- [ ] 21.2 Build floating On-Screen Display (OSD) pill surface anchored to `WlrLayer.Overlay`:
+  - Volume change pill (speaker icon + bar gauge + percentage).
+  - Brightness change pill (sun icon + bar gauge + percentage).
+  - Keyboard layout switch pill (e.g., "US" -> "DE").
+  - Power profile change pill ("Performance", "Balanced", "Power Saver").
+  - Auto-dismiss after 1500ms with smooth fade and slide animations.
+
+---
+
+### Step 22: Quickshell Frontend — Toast Notifications & Notification History Center Drawer
+- [ ] 22.1 Build floating toast notification banners anchored to top-right (`WlrLayer.Overlay`):
+  - Liquid glass card with app icon, summary, body, action buttons, and countdown dismiss bar.
+  - Swipe-to-dismiss gesture and sound effect trigger via `pw-play` (`sounds/notification.wav`).
+  - Stacking physics with smooth collapse on dismissal.
+- [ ] 22.2 Build slide-in Notification History Drawer:
+  - Scrollable history list of past notifications retrieved from `org.agility.Daemon.Notifications`.
+  - Group notifications by application with timestamps.
+  - "Clear All" action and individual item dismissal.
+  - Do Not Disturb mode switch suppressing toasts while logging to history.
+
+---
+
+### Step 23: Quickshell Frontend — Desktop Background Canvas, 20+ Draggable Applets & Edit Mode
+- [ ] 23.1 Implement multi-monitor Desktop Canvas surface anchored to `WlrLayer.Bottom`.
+- [ ] 23.2 Complete full inventory of 20+ liquid glass applets:
+  - `Clock`: analog, digital, dual-zone layouts.
+  - `ResourceWheelWidget` & `SystemInfo`: circular gauges for CPU, RAM, and GPU.
+  - `ThermalWidget` & `StorageMapWidget`: sensor temperatures and disk partition usage bars.
+  - `VisualizerWidget`: 16-64 band real-time PipeWire audio FFT spectrum.
+  - `WeatherWidget`: current weather, temperature, 5-day forecast, duotone weather icons.
+  - `CalendarWidget` & `WorldClockWidget`: interactive month calendar and multi-city clocks.
+  - `NotesWidget` & `TodoWidget`: glass sticky notes and interactive task checklist.
+  - `HabitsWidget`: habit tracker streak matrix.
+  - `GitDashboardWidget`: local git repositories status, commit streaks, branch monitors.
+  - `CryptoWidget` & `PingWidget`: live ticker tracker and network latency graph.
+  - `TimerWidget` & `CalcWidget`: countdown timer, stopwatch, and glass calculator.
+  - `MediaWidget`: vinyl album artwork card with seekbar and playback controls.
+- [ ] 23.3 Implement interactive Desktop Edit Mode:
+  - Drag, reposition, resize, and snap-to-grid canvas applets.
+  - Right-click configuration popover for widget settings.
+  - Save and load layout configurations reactively into `suits.json` / `widget_settings.json`.
+
+---
+
+### Step 24: Quickshell Frontend — Secure Wayland Screen Lock & Doom Melt Transitions
+- [ ] 24.1 Implement exclusive Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
+- [ ] 24.2 Render blurred wallpaper glass surface, clock, date, user avatar, and battery status.
+- [ ] 24.3 Implement glass password input field connected to `org.agility.Daemon.Lock.Authenticate` PAM worker with shake animation on failure.
+- [ ] 24.4 Verify screen remains locked across all monitor connect/disconnect events and hotkey bypass attempts.
+- [ ] 24.5 Implement Doom Vertical Melt screen transition overlay playing staggered column melt animation across monitors when switching desktop suites.
+
+---
+
+### Step 25: CLI Tool (`agl`), Systemd Integration, Backward Compatibility & Packaging
+- [ ] 25.1 Build `crates/agility-cli` (`agl`) binary in Rust dispatching high-speed D-Bus calls to `agilityd`:
   - `agl start [--legacy]`: Start daemon and Quickshell (or legacy Python stack).
   - `agl stop`: Cleanly stop daemon and Quickshell.
   - `agl restart`: Gracefully restart UI surfaces and daemon in < 15ms.
@@ -691,22 +844,22 @@ Use this checklist to track progress throughout the implementation. Mark items w
   - `agl caffeine <toggle>`: Toggle idle inhibitor state.
   - `agl deps`: Verify system runtime and compositor dependencies.
   - `agl update`: Perform self-update check and upgrade.
-- [ ] 20.2 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
-- [ ] 20.3 Implement fallback switch: allow users to launch legacy Python shell via `agl start --legacy`.
-- [ ] 20.4 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.
-- [ ] 20.5 Update installer scripts (`install.sh`, `scripts/install.sh`) to build and deploy the Rust daemon and Quickshell frontend.
-- [ ] 20.6 Update Arch `PKGBUILD` and verify `makepkg -si` produces a clean pacman package.
-- [ ] 20.7 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
-- [ ] 20.8 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
-- [ ] 20.9 Update `README.md` documentation, architecture diagrams, and quick-start guides.
+- [ ] 25.2 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
+- [ ] 25.3 Implement fallback switch: allow users to launch legacy Python shell via `agl start --legacy`.
+- [ ] 25.4 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.
+- [ ] 25.5 Update installer scripts (`install.sh`, `scripts/install.sh`) to build and deploy the Rust daemon and Quickshell frontend.
+- [ ] 25.6 Update Arch `PKGBUILD` and verify `makepkg -si` produces a clean pacman package.
+- [ ] 25.7 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
+- [ ] 25.8 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
+- [ ] 25.9 Update `README.md` documentation, architecture diagrams, and quick-start guides.
 
 ---
 
-### Step 21: Headless CI/CD, Automated Mock Testing Harness & Benchmarks
-- [ ] 21.1 Implement headless test harness with mock Niri socket and virtual D-Bus session bus in `tests/` or `crates/agility-test-harness`.
-- [ ] 21.2 Add integration tests verifying all 19 D-Bus endpoints respond within SLA (< 2ms for Launcher, < 4ms for Workspaces).
-- [ ] 21.3 Implement automated GitHub Actions CI pipeline running `cargo test`, `cargo clippy --all-targets`, and formatting checks on push.
-- [ ] 21.4 Implement automated memory benchmark test asserting `agilityd` idle RSS < 15MB.
+### Step 26: Headless CI/CD, Automated Mock Testing Harness & Benchmarks
+- [ ] 26.1 Implement headless test harness with mock Niri socket and virtual D-Bus session bus in `tests/` or `crates/agility-test-harness`.
+- [ ] 26.2 Add integration tests verifying all 19 D-Bus endpoints respond within SLA (< 2ms for Launcher, < 4ms for Workspaces).
+- [ ] 26.3 Implement automated GitHub Actions CI pipeline running `cargo test`, `cargo clippy --all-targets`, and formatting checks on push.
+- [ ] 26.4 Implement automated memory benchmark test asserting `agilityd` idle RSS < 15MB.
 
 ---
 

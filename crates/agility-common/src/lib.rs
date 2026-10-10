@@ -269,6 +269,57 @@ impl ThemeTokens {
     }
 }
 
+/// Notification urgency levels per Freedesktop spec.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub enum NotificationUrgency {
+    Low = 0,
+    #[default]
+    Normal = 1,
+    Critical = 2,
+}
+
+impl From<u8> for NotificationUrgency {
+    fn from(val: u8) -> Self {
+        match val {
+            0 => Self::Low,
+            2 => Self::Critical,
+            _ => Self::Normal,
+        }
+    }
+}
+
+/// Action button associated with a notification.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NotificationAction {
+    pub key: String,
+    pub label: String,
+}
+
+/// Persistent notification record stored in history and emitted to UI.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NotificationItem {
+    pub id: u32,
+    pub app_name: String,
+    pub app_icon: String,
+    pub summary: String,
+    pub body: String,
+    pub actions: Vec<NotificationAction>,
+    pub urgency: NotificationUrgency,
+    pub timestamp: u64,
+    #[serde(default)]
+    pub desktop_entry: Option<String>,
+    #[serde(default)]
+    pub image_path: Option<String>,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub expire_timeout_ms: i32,
+    #[serde(default)]
+    pub resident: bool,
+    #[serde(default)]
+    pub transient: bool,
+}
+
 /// Daemon runtime status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DaemonStatus {

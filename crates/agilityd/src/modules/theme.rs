@@ -916,9 +916,15 @@ mod tests {
         }
     }
 
+    static TEST_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
     fn create_test_theme_service() -> (Arc<ThemeService>, TestDirGuard) {
-        let unique = Instant::now().elapsed().as_nanos();
-        let temp_dir = std::env::temp_dir().join(format!("agility_test_theme_{unique}"));
+        let seq = TEST_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("agility_test_theme_{nanos}_{seq}"));
         let config_dir = temp_dir.join("config");
         let cache_dir = temp_dir.join("cache");
         let _ = fs::create_dir_all(&config_dir);

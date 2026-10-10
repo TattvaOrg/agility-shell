@@ -658,11 +658,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 10: Freedesktop Notification Server & Persistent History Store
-- [ ] 10.1 Implement `org.freedesktop.Notifications` D-Bus service directly in `agilityd`.
-- [ ] 10.2 Parse incoming notification specifications (summary, body, app_icon, actions, urgency, hints).
-- [ ] 10.3 Persist notifications into SQLite/JSON database at `~/.cache/agility-shell/notifications.db`.
-- [ ] 10.4 Expose notification history querying and clearing methods for Quickshell Notification Drawer.
-- [ ] 10.5 Emit toast notification signals to Quickshell and dispatch audio trigger (`sounds/notification.wav`).
+- [X] 10.1 Implement `org.freedesktop.Notifications` D-Bus service directly in `agilityd`.
+- [X] 10.2 Parse incoming notification specifications (summary, body, app_icon, actions, urgency, hints).
+- [X] 10.3 Persist notifications into SQLite/JSON database at `~/.cache/agility-shell/notifications.db`.
+- [X] 10.4 Expose notification history querying and clearing methods for Quickshell Notification Drawer.
+- [X] 10.5 Emit toast notification signals to Quickshell and dispatch audio trigger (`sounds/notification.wav`).
 
 ---
 

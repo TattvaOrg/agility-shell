@@ -77,6 +77,12 @@ async fn main() -> Result<()> {
     let theme_service =
         modules::theme::ThemeService::new(state.config_dir.clone(), state.cache_dir.clone());
 
+    // Initialize Notifications service (Freedesktop Notification Server & Persistent Store)
+    let notifications_service = modules::notifications::NotificationService::new(
+        state.config_dir.clone(),
+        state.cache_dir.clone(),
+    );
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -91,6 +97,7 @@ async fn main() -> Result<()> {
             Arc::clone(&launcher_service),
             Arc::clone(&suits_service),
             Arc::clone(&theme_service),
+            Arc::clone(&notifications_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -155,6 +162,7 @@ async fn main() -> Result<()> {
         Arc::clone(&launcher_service),
         Arc::clone(&suits_service),
         Arc::clone(&theme_service),
+        Arc::clone(&notifications_service),
     )
     .await?;
 

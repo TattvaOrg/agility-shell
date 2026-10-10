@@ -68,6 +68,7 @@ pub async fn establish_dbus_connection(
     launcher_service: Arc<crate::modules::launcher::LauncherService>,
     suits_service: Arc<crate::modules::suits::SuitsService>,
     theme_service: Arc<crate::modules::theme::ThemeService>,
+    notifications_service: Arc<crate::modules::notifications::NotificationService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -81,6 +82,12 @@ pub async fn establish_dbus_connection(
     let theme_iface = crate::modules::theme::ThemeInterface::new(Arc::clone(&theme_service));
     let portal_iface =
         crate::modules::theme::PortalSettingsInterface::new(Arc::clone(&theme_service));
+    let notifications_iface = crate::modules::notifications::NotificationsInterface::new(
+        Arc::clone(&notifications_service),
+    );
+    let notif_drawer_iface = crate::modules::notifications::NotificationsInterface::new(
+        Arc::clone(&notifications_service),
+    );
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -104,12 +111,29 @@ pub async fn establish_dbus_connection(
         .serve_at(paths::SUITS, suits_iface)?
         .serve_at(paths::THEME, theme_iface)?
         .serve_at("/org/freedesktop/portal/desktop", portal_iface)?
+        .serve_at(paths::NOTIFICATIONS, notifications_iface)?
+        .serve_at("/org/agility/Daemon/Notifications", notif_drawer_iface)?
         .build()
         .await
     {
         Ok(conn) => {
+            // Attempt to claim the well-known Freedesktop Notifications bus name
+            match conn
+                .request_name(agility_common::DBUS_NOTIFICATIONS_NAME)
+                .await
+            {
+                Ok(_) => info!(
+                    "Successfully acquired D-Bus name '{}'",
+                    agility_common::DBUS_NOTIFICATIONS_NAME
+                ),
+                Err(e) => warn!(
+                    "Could not claim '{}': {e:#} (another notification daemon may be active)",
+                    agility_common::DBUS_NOTIFICATIONS_NAME
+                ),
+            }
+
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -120,7 +144,8 @@ pub async fn establish_dbus_connection(
                 paths::CONNECTIVITY,
                 paths::LAUNCHER,
                 paths::SUITS,
-                paths::THEME
+                paths::THEME,
+                paths::NOTIFICATIONS
             );
             Ok(Some(conn))
         }

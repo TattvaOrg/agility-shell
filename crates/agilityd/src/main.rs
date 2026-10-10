@@ -83,6 +83,12 @@ async fn main() -> Result<()> {
         state.cache_dir.clone(),
     );
 
+    // Initialize Clipboard service (Ring buffer & wl-copy/cliphist integration)
+    let clipboard_service = modules::clipboard::ClipboardService::new(
+        state.cache_dir.clone(),
+        modules::clipboard::MAX_CLIPBOARD_ITEMS,
+    );
+
     // Self-test execution mode (--test)
     if args.test {
         info!("Running agilityd self-test verification...");
@@ -98,6 +104,7 @@ async fn main() -> Result<()> {
             Arc::clone(&suits_service),
             Arc::clone(&theme_service),
             Arc::clone(&notifications_service),
+            Arc::clone(&clipboard_service),
         )
         .await?;
         if dbus_conn.is_some() {
@@ -145,6 +152,9 @@ async fn main() -> Result<()> {
         state.subscribe_shutdown(),
     );
 
+    // Start clipboard event listener (wl-paste --watch cliphist store)
+    clipboard_service.start_watcher(state.subscribe_shutdown());
+
     // Start asynchronous event stream if Niri is active
     if niri_sock.is_some() {
         workspaces_service.start_event_stream(niri_sock, state.subscribe_shutdown());
@@ -163,6 +173,7 @@ async fn main() -> Result<()> {
         Arc::clone(&suits_service),
         Arc::clone(&theme_service),
         Arc::clone(&notifications_service),
+        Arc::clone(&clipboard_service),
     )
     .await?;
 

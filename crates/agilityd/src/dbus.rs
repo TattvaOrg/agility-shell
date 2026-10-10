@@ -69,6 +69,7 @@ pub async fn establish_dbus_connection(
     suits_service: Arc<crate::modules::suits::SuitsService>,
     theme_service: Arc<crate::modules::theme::ThemeService>,
     notifications_service: Arc<crate::modules::notifications::NotificationService>,
+    clipboard_service: Arc<crate::modules::clipboard::ClipboardService>,
 ) -> Result<Option<Connection>> {
     let daemon_iface = DaemonInterface::new(Arc::clone(&state));
     let workspaces_iface = (*workspaces_service).clone();
@@ -88,6 +89,8 @@ pub async fn establish_dbus_connection(
     let notif_drawer_iface = crate::modules::notifications::NotificationsInterface::new(
         Arc::clone(&notifications_service),
     );
+    let clipboard_iface =
+        crate::modules::clipboard::ClipboardInterface::new(Arc::clone(&clipboard_service));
 
     let builder_res = Builder::session();
     let builder = match builder_res {
@@ -113,6 +116,7 @@ pub async fn establish_dbus_connection(
         .serve_at("/org/freedesktop/portal/desktop", portal_iface)?
         .serve_at(paths::NOTIFICATIONS, notifications_iface)?
         .serve_at("/org/agility/Daemon/Notifications", notif_drawer_iface)?
+        .serve_at(paths::CLIPBOARD, clipboard_iface)?
         .build()
         .await
     {
@@ -133,7 +137,7 @@ pub async fn establish_dbus_connection(
             }
 
             info!(
-                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
+                "Successfully registered D-Bus service '{}' with interfaces at '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', and '/org/freedesktop/portal/desktop'",
                 DBUS_NAME,
                 paths::DAEMON,
                 paths::WORKSPACES,
@@ -145,7 +149,8 @@ pub async fn establish_dbus_connection(
                 paths::LAUNCHER,
                 paths::SUITS,
                 paths::THEME,
-                paths::NOTIFICATIONS
+                paths::NOTIFICATIONS,
+                paths::CLIPBOARD
             );
             Ok(Some(conn))
         }

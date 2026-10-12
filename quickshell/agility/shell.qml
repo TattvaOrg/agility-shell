@@ -5,12 +5,56 @@ import Quickshell.Io
 import "bar" as Bar
 import "dock" as Dock
 import "popouts" as Popouts
+import "launcher" as Launcher
+import "osd" as Osd
 
 ShellRoot {
     IpcHandler {
         target: "suits"
         function reload() {
             Theme.reloadSettings()
+        }
+    }
+
+    IpcHandler {
+        target: "launcher"
+        function toggle() {
+            Launcher.LauncherService.toggle()
+        }
+        function open() {
+            Launcher.LauncherService.open()
+        }
+        function close() {
+            Launcher.LauncherService.close()
+        }
+    }
+
+    IpcHandler {
+        target: "dash"
+        function toggle() {
+            Launcher.LauncherService.toggle()
+        }
+        function open() {
+            Launcher.LauncherService.open()
+        }
+        function close() {
+            Launcher.LauncherService.close()
+        }
+    }
+
+    IpcHandler {
+        target: "osd"
+        function volume(val: real) {
+            Osd.OsdService.triggerVolume(val)
+        }
+        function brightness(val: real) {
+            Osd.OsdService.triggerBrightness(val)
+        }
+        function keyboard(layout: string) {
+            Osd.OsdService.triggerKeyboard(layout)
+        }
+        function power(profile: string) {
+            Osd.OsdService.triggerPower(profile)
         }
     }
 
@@ -36,6 +80,24 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         Dock.DockWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Centered Modal Application Launcher Dash
+    Variants {
+        model: Quickshell.screens
+        Launcher.LauncherWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Floating On-Screen Display (OSD) Overlays
+    Variants {
+        model: Quickshell.screens
+        Osd.OsdWindow {
             property var modelData
             screenModel: modelData
         }

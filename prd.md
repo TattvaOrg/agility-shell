@@ -767,13 +767,13 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 21: Quickshell Frontend — Modal Application Launcher Dash & On-Screen Display (OSD)
-- [ ] 21.1 Build centered modal Application Launcher Dash anchored to `WlrLayer.Top` / `Overlay` with frosted glass backdrop:
+- [X] 21.1 Build centered modal Application Launcher Dash anchored to `WlrLayer.Top` / `Overlay` with frosted glass backdrop:
   - In-memory sub-2ms fuzzy search connected to `org.agility.Daemon.Launcher`.
   - Category filter chips (All, Internet, Development, Media, Office, System, Utilities, Games).
   - In-line calculator math evaluation (`calc: 12 * 8`).
   - Web search shortcuts (`g: query`, `gh: repo`, `yt: video`).
   - Recent applications and pinned favorites section.
-- [ ] 21.2 Build floating On-Screen Display (OSD) pill surface anchored to `WlrLayer.Overlay`:
+- [X] 21.2 Build floating On-Screen Display (OSD) pill surface anchored to `WlrLayer.Overlay`:
   - Volume change pill (speaker icon + bar gauge + percentage).
   - Brightness change pill (sun icon + bar gauge + percentage).
   - Keyboard layout switch pill (e.g., "US" -> "DE").

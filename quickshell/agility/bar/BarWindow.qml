@@ -47,6 +47,10 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 
+            LauncherWidget {
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
             WorkspacesWidget {
                 anchors.verticalCenter: parent.verticalCenter
             }

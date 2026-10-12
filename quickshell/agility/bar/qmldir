@@ -17,3 +17,4 @@ CaffeineWidget 1.0 CaffeineWidget.qml
 NightLightWidget 1.0 NightLightWidget.qml
 SysMonWidget 1.0 SysMonWidget.qml
 SessionWidget 1.0 SessionWidget.qml
+LauncherWidget 1.0 LauncherWidget.qml

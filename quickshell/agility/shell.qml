@@ -7,6 +7,7 @@ import "dock" as Dock
 import "popouts" as Popouts
 import "launcher" as Launcher
 import "osd" as Osd
+import "notifications" as Notifications
 
 ShellRoot {
     IpcHandler {
@@ -58,6 +59,22 @@ ShellRoot {
         }
     }
 
+    IpcHandler {
+        target: "notifications"
+        function toggle() {
+            Notifications.NotificationService.toggleDrawer()
+        }
+        function open() {
+            Notifications.NotificationService.openDrawer()
+        }
+        function close() {
+            Notifications.NotificationService.closeDrawer()
+        }
+        function clear() {
+            Notifications.NotificationService.clearAllHistory()
+        }
+    }
+
     // Top Multi-Monitor Status Bar
     Variants {
         model: Quickshell.screens
@@ -98,6 +115,24 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         Osd.OsdWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Floating Notification Toasts Overlay
+    Variants {
+        model: Quickshell.screens
+        Notifications.NotificationToasts {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Slide-in Notification History Drawer
+    Variants {
+        model: Quickshell.screens
+        Notifications.NotificationDrawer {
             property var modelData
             screenModel: modelData
         }

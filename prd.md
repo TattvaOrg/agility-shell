@@ -783,11 +783,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 22: Quickshell Frontend — Toast Notifications & Notification History Center Drawer
-- [ ] 22.1 Build floating toast notification banners anchored to top-right (`WlrLayer.Overlay`):
+- [X] 22.1 Build floating toast notification banners anchored to top-right (`WlrLayer.Overlay`):
   - Liquid glass card with app icon, summary, body, action buttons, and countdown dismiss bar.
   - Swipe-to-dismiss gesture and sound effect trigger via `pw-play` (`sounds/notification.wav`).
   - Stacking physics with smooth collapse on dismissal.
-- [ ] 22.2 Build slide-in Notification History Drawer:
+- [X] 22.2 Build slide-in Notification History Drawer:
   - Scrollable history list of past notifications retrieved from `org.agility.Daemon.Notifications`.
   - Group notifications by application with timestamps.
   - "Clear All" action and individual item dismissal.

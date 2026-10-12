@@ -1,6 +1,7 @@
 import QtQuick
 import ".."
 import "../components"
+import "../notifications" as Notifications
 
 Item {
     id: root
@@ -15,7 +16,10 @@ Item {
         interactive: true
         active: BarDataService.unreadNotifications > 0
         badgeText: BarDataService.unreadNotifications > 0 ? BarDataService.unreadNotifications.toString() : ""
-        onClicked: root.clicked()
+        onClicked: {
+            root.clicked()
+            Notifications.NotificationService.toggleDrawer()
+        }
 
         Row {
             id: rowContent

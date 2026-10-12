@@ -59,15 +59,9 @@ enum Commands {
         args: Vec<String>,
     },
     /// Control audio volume ('up', 'down', 'mute')
-    Volume {
-        action: String,
-        step: Option<f64>,
-    },
+    Volume { action: String, step: Option<f64> },
     /// Control display brightness ('up', 'down')
-    Brightness {
-        action: String,
-        step: Option<u32>,
-    },
+    Brightness { action: String, step: Option<u32> },
     /// Trigger screenshot capture ('full', 'window', 'region')
     Screenshot {
         #[arg(default_value = "region")]
@@ -151,18 +145,20 @@ async fn handle_start(legacy: bool) -> Result<()> {
     // Direct background spawn
     println!("🚀 Starting Agility Shell Next-Gen stack (agilityd + quickshell)...");
     let daemon_pid = get_process_pid("agilityd");
-    if daemon_pid.is_none() {
+    if let Some(pid) = daemon_pid {
+        println!("ℹ agilityd is already running (PID: {pid}).");
+    } else {
         let spawn_daemon = Command::new("agilityd").spawn();
         match spawn_daemon {
             Ok(_) => println!("✓ Spawned agilityd daemon."),
             Err(e) => eprintln!("⚠ Failed to spawn agilityd: {e}"),
         }
-    } else {
-        println!("ℹ agilityd is already running (PID: {}).", daemon_pid.unwrap());
     }
 
     let quickshell_pid = get_process_pid("quickshell");
-    if quickshell_pid.is_none() {
+    if let Some(pid) = quickshell_pid {
+        println!("ℹ quickshell is already running (PID: {pid}).");
+    } else {
         let shell_qml = locate_shell_qml();
         if let Some(path) = shell_qml {
             let spawn_qs = Command::new("quickshell")
@@ -175,8 +171,6 @@ async fn handle_start(legacy: bool) -> Result<()> {
         } else {
             eprintln!("⚠ Could not locate shell.qml in standard search paths.");
         }
-    } else {
-        println!("ℹ quickshell is already running (PID: {}).", quickshell_pid.unwrap());
     }
 
     Ok(())
@@ -194,7 +188,9 @@ async fn handle_stop() -> Result<()> {
     // Gracefully terminate daemon and frontend
     let _ = Command::new("killall").arg("-q").arg("quickshell").status();
     let _ = Command::new("killall").arg("-q").arg("agilityd").status();
-    let _ = Command::new("pkill").args(["-f", "python.*agility-shell"]).status();
+    let _ = Command::new("pkill")
+        .args(["-f", "python.*agility-shell"])
+        .status();
 
     println!("✓ Agility Shell stopped.");
     Ok(())
@@ -252,7 +248,11 @@ async fn handle_status() -> Result<()> {
     let total_rss = daemon_pid.map(get_process_rss_mb).unwrap_or(0.0)
         + qs_pid.map(get_process_rss_mb).unwrap_or(0.0);
     if total_rss > 0.0 {
-        println!("⚡ Combined Memory RSS: {:.1} MB / 40.0 MB Target ({:.1}%)", total_rss, (total_rss / 40.0) * 100.0);
+        println!(
+            "⚡ Combined Memory RSS: {:.1} MB / 40.0 MB Target ({:.1}%)",
+            total_rss,
+            (total_rss / 40.0) * 100.0
+        );
     }
 
     // D-Bus interfaces inspection
@@ -291,7 +291,10 @@ async fn handle_status() -> Result<()> {
                     .await
                 {
                     if let Ok(caf) = reply.body().deserialize::<bool>() {
-                        println!("  - Caffeine Inhibitor: {}", if caf { "ACTIVE (Awake)" } else { "INACTIVE" });
+                        println!(
+                            "  - Caffeine Inhibitor: {}",
+                            if caf { "ACTIVE (Awake)" } else { "INACTIVE" }
+                        );
                     }
                 }
 
@@ -330,7 +333,10 @@ async fn handle_status() -> Result<()> {
                         if let Ok(val) = serde_json::from_str::<serde_json::Value>(&lock_json) {
                             let locked_out = val["is_locked_out"].as_bool().unwrap_or(false);
                             let fails = val["failed_attempts"].as_u64().unwrap_or(0);
-                            println!("  - Lock Status       : {}", if locked_out { "LOCKED OUT" } else { "Normal" });
+                            println!(
+                                "  - Lock Status       : {}",
+                                if locked_out { "LOCKED OUT" } else { "Normal" }
+                            );
                             if fails > 0 {
                                 println!("  - Failed Attempts   : {fails}");
                             }
@@ -368,7 +374,11 @@ async fn handle_lock() -> Result<()> {
     let _ = Command::new("qs")
         .args(["ipc", "call", "lock", "lock"])
         .status()
-        .or_else(|_| Command::new("quickshell").args(["ipc", "call", "lock", "lock"]).status());
+        .or_else(|_| {
+            Command::new("quickshell")
+                .args(["ipc", "call", "lock", "lock"])
+                .status()
+        });
 
     println!("✓ Lock request dispatched.");
     Ok(())
@@ -379,22 +389,14 @@ async fn handle_toggle(target: &str) -> Result<()> {
     println!("🔘 Toggling surface: {normalized}");
 
     let res = match normalized.as_str() {
-        "launcher" | "dash" | "dashboard" => {
-            dispatch_qs_ipc("launcher", "toggle", &[])
-        }
-        "notifications" => {
-            dispatch_qs_ipc("notifications", "toggle", &[])
-        }
-        "canvas" | "applets-edit" => {
-            dispatch_qs_ipc("canvas", "toggleEdit", &[])
-        }
+        "launcher" | "dash" | "dashboard" => dispatch_qs_ipc("launcher", "toggle", &[]),
+        "notifications" => dispatch_qs_ipc("notifications", "toggle", &[]),
+        "canvas" | "applets-edit" => dispatch_qs_ipc("canvas", "toggleEdit", &[]),
         "suits" => {
             // Cycle suite or reload
             dispatch_qs_ipc("suits", "reload", &[])
         }
-        "osd" => {
-            dispatch_qs_ipc("osd", "volume", &["50"])
-        }
+        "osd" => dispatch_qs_ipc("osd", "volume", &["50"]),
         other => {
             // Forward to qs ipc directly
             dispatch_qs_ipc(other, "toggle", &[])
@@ -411,7 +413,9 @@ async fn handle_toggle(target: &str) -> Result<()> {
 }
 
 async fn handle_profile(action: &str) -> Result<()> {
-    let conn = Connection::session().await.context("Failed to connect to D-Bus session bus")?;
+    let conn = Connection::session()
+        .await
+        .context("Failed to connect to D-Bus session bus")?;
 
     if action == "get" || action.is_empty() {
         let reply = conn
@@ -471,7 +475,11 @@ async fn handle_bar(args: &[String]) -> Result<()> {
             }
         }
         "width" => {
-            let mode = if args.len() >= 2 { args[1].as_str() } else { "toggle" };
+            let mode = if args.len() >= 2 {
+                args[1].as_str()
+            } else {
+                "toggle"
+            };
             println!("✓ Status bar width mode set to: {mode}");
             update_config_key("bar_width_mode", serde_json::json!(mode));
             dispatch_qs_ipc("suits", "reload", &[]);
@@ -490,7 +498,9 @@ async fn handle_suits(args: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    let conn = Connection::session().await.context("Failed to connect to D-Bus session bus")?;
+    let conn = Connection::session()
+        .await
+        .context("Failed to connect to D-Bus session bus")?;
 
     match args[0].as_str() {
         "list" => {
@@ -628,7 +638,9 @@ async fn handle_brightness(action: &str, step: Option<u32>) -> Result<()> {
 
 async fn handle_screenshot(mode: &str) -> Result<()> {
     println!("📸 Capturing screenshot ({mode})...");
-    let conn = Connection::session().await.context("Failed to connect to D-Bus session bus")?;
+    let conn = Connection::session()
+        .await
+        .context("Failed to connect to D-Bus session bus")?;
 
     let reply = conn
         .call_method(
@@ -652,7 +664,9 @@ async fn handle_screenshot(mode: &str) -> Result<()> {
 }
 
 async fn handle_record(action: &str, with_audio: bool) -> Result<()> {
-    let conn = Connection::session().await.context("Failed to connect to D-Bus session bus")?;
+    let conn = Connection::session()
+        .await
+        .context("Failed to connect to D-Bus session bus")?;
 
     match action.to_lowercase().as_str() {
         "start" => {
@@ -700,7 +714,9 @@ async fn handle_record(action: &str, with_audio: bool) -> Result<()> {
 }
 
 async fn handle_caffeine() -> Result<()> {
-    let conn = Connection::session().await.context("Failed to connect to D-Bus session bus")?;
+    let conn = Connection::session()
+        .await
+        .context("Failed to connect to D-Bus session bus")?;
 
     let reply = conn
         .call_method(
@@ -714,7 +730,14 @@ async fn handle_caffeine() -> Result<()> {
         .context("D-Bus ToggleCaffeine call failed")?;
 
     let state: bool = reply.body().deserialize()?;
-    println!("☕ Caffeine state: {}", if state { "ACTIVE (Idle Inhibited)" } else { "INACTIVE" });
+    println!(
+        "☕ Caffeine state: {}",
+        if state {
+            "ACTIVE (Idle Inhibited)"
+        } else {
+            "INACTIVE"
+        }
+    );
 
     Ok(())
 }
@@ -770,9 +793,7 @@ async fn handle_deps() -> Result<()> {
 async fn handle_update() -> Result<()> {
     println!("🔍 Checking for Agility Shell updates...");
 
-    let git_status = Command::new("git")
-        .args(["remote", "update"])
-        .status();
+    let git_status = Command::new("git").args(["remote", "update"]).status();
 
     if let Ok(s) = git_status {
         if s.success() {
@@ -780,7 +801,10 @@ async fn handle_update() -> Result<()> {
                 .args(["rev-list", "HEAD..@{u}", "--count"])
                 .output();
             if let Ok(out) = rev_list {
-                let count = String::from_utf8_lossy(&out.stdout).trim().parse::<u32>().unwrap_or(0);
+                let count = String::from_utf8_lossy(&out.stdout)
+                    .trim()
+                    .parse::<u32>()
+                    .unwrap_or(0);
                 if count > 0 {
                     println!("🚀 {count} new update(s) available from upstream repository!");
                     println!("Run 'git pull && make' to install the latest version.");
@@ -800,16 +824,17 @@ async fn handle_update() -> Result<()> {
 
 fn is_command_available(cmd: &str) -> bool {
     if cmd == "pam" {
-        return Path::new("/etc/pam.d").exists() || Path::new("/lib/security").exists() || Path::new("/usr/lib/security").exists();
+        return Path::new("/etc/pam.d").exists()
+            || Path::new("/lib/security").exists()
+            || Path::new("/usr/lib/security").exists();
     }
-    if cmd == "agilityd" {
-        if Path::new("target/release/agilityd").exists()
+    if cmd == "agilityd"
+        && (Path::new("target/release/agilityd").exists()
             || Path::new("target/debug/agilityd").exists()
             || Path::new("/tmp/cargo-target/debug/agilityd").exists()
-            || Path::new("/usr/bin/agilityd").exists()
-        {
-            return true;
-        }
+            || Path::new("/usr/bin/agilityd").exists())
+    {
+        return true;
     }
     Command::new("which")
         .arg(cmd)
@@ -931,7 +956,10 @@ fn update_config_key(key: &str, val: serde_json::Value) {
                 if let Ok(mut json) = serde_json::from_str::<serde_json::Value>(&content) {
                     if let Some(obj) = json.as_object_mut() {
                         obj.insert(key.to_string(), val);
-                        let _ = fs::write(config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
+                        let _ = fs::write(
+                            config_path,
+                            serde_json::to_string_pretty(&json).unwrap_or_default(),
+                        );
                     }
                 }
             }

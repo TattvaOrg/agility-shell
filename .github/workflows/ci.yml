@@ -2,24 +2,56 @@ name: CI
 
 on:
   push:
-    branches: [ main, expansions ]
+    branches: [ main, rust-rewrite, rust-ccc ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, rust-rewrite ]
 
 jobs:
-  validate:
-    name: Lint & Build Validation
+  rust-and-qml-ci:
+    name: Rust & QML CI Validation
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.11"
-
-      - name: Validate Python Syntax
+      - name: Install System Dependencies
         run: |
-          python3 -m py_compile main.py user_options.py lockscreen.py services/paths.py services/style.py services/themes.py services/wallpaper.py services/suits_service.py services/templates.py utils/sounds.py utils/svg.py windows/launcher.py bar_widgets/dock/dock_state.py snippets/blur/blur.py snippets/hacktk/hacktk.py
+          sudo apt-get update
+          sudo apt-get install -y libpam0g-dev libpulse-dev pkg-config
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Dependency Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Rust Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Cargo Check Workspace
+        run: cargo check --workspace --all-targets
+
+      - name: Cargo Clippy
+        run: cargo clippy --all-targets --workspace -- -D warnings
+
+      - name: Run Tests & Headless Mock Harness
+        run: cargo test --workspace --verbose
+
+      - name: Optional QML Lint Verification
+        run: |
+          if command -v qmllint >/dev/null 2>&1; then
+            qmllint quickshell/agility/shell.qml \
+                    quickshell/agility/bar/*.qml \
+                    quickshell/agility/dock/*.qml \
+                    quickshell/agility/launcher/*.qml \
+                    quickshell/agility/notifications/*.qml \
+                    quickshell/agility/osd/*.qml \
+                    quickshell/agility/popouts/*.qml \
+                    quickshell/agility/canvas/*.qml \
+                    quickshell/agility/lockscreen/*.qml
+          else
+            echo "qmllint not available in ubuntu runner; skipping"
+          fi

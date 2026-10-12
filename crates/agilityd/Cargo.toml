@@ -28,3 +28,6 @@ libc.workspace = true
 default = ["audio", "pam"]
 audio = ["dep:libpulse-binding"]
 pam = ["dep:pam-sys"]
+
+[dev-dependencies]
+tempfile.workspace = true

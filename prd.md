@@ -796,8 +796,8 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 23: Quickshell Frontend — Desktop Background Canvas, 20+ Draggable Applets & Edit Mode
-- [ ] 23.1 Implement multi-monitor Desktop Canvas surface anchored to `WlrLayer.Bottom`.
-- [ ] 23.2 Complete full inventory of 20+ liquid glass applets:
+- [X] 23.1 Implement multi-monitor Desktop Canvas surface anchored to `WlrLayer.Bottom`.
+- [X] 23.2 Complete full inventory of 20+ liquid glass applets:
   - `Clock`: analog, digital, dual-zone layouts.
   - `ResourceWheelWidget` & `SystemInfo`: circular gauges for CPU, RAM, and GPU.
   - `ThermalWidget` & `StorageMapWidget`: sensor temperatures and disk partition usage bars.
@@ -810,7 +810,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
   - `CryptoWidget` & `PingWidget`: live ticker tracker and network latency graph.
   - `TimerWidget` & `CalcWidget`: countdown timer, stopwatch, and glass calculator.
   - `MediaWidget`: vinyl album artwork card with seekbar and playback controls.
-- [ ] 23.3 Implement interactive Desktop Edit Mode:
+- [X] 23.3 Implement interactive Desktop Edit Mode:
   - Drag, reposition, resize, and snap-to-grid canvas applets.
   - Right-click configuration popover for widget settings.
   - Save and load layout configurations reactively into `suits.json` / `widget_settings.json`.

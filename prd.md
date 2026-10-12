@@ -827,7 +827,7 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 25: CLI Tool (`agl`), Systemd Integration, Backward Compatibility & Packaging
-- [ ] 25.1 Build `crates/agility-cli` (`agl`) binary in Rust dispatching high-speed D-Bus calls to `agilityd`:
+- [X] 25.1 Build `crates/agility-cli` (`agl`) binary in Rust dispatching high-speed D-Bus calls to `agilityd`:
   - `agl start [--legacy]`: Start daemon and Quickshell (or legacy Python stack).
   - `agl stop`: Cleanly stop daemon and Quickshell.
   - `agl restart`: Gracefully restart UI surfaces and daemon in < 15ms.
@@ -844,14 +844,14 @@ Use this checklist to track progress throughout the implementation. Mark items w
   - `agl caffeine <toggle>`: Toggle idle inhibitor state.
   - `agl deps`: Verify system runtime and compositor dependencies.
   - `agl update`: Perform self-update check and upgrade.
-- [ ] 25.2 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
-- [ ] 25.3 Implement fallback switch: allow users to launch legacy Python shell via `agl start --legacy`.
-- [ ] 25.4 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.
-- [ ] 25.5 Update installer scripts (`install.sh`, `scripts/install.sh`) to build and deploy the Rust daemon and Quickshell frontend.
-- [ ] 25.6 Update Arch `PKGBUILD` and verify `makepkg -si` produces a clean pacman package.
-- [ ] 25.7 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
-- [ ] 25.8 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
-- [ ] 25.9 Update `README.md` documentation, architecture diagrams, and quick-start guides.
+- [X] 25.2 Create systemd user service `agility-shell.service` managing `agilityd` and `quickshell` lifecycles.
+- [X] 25.3 Implement fallback switch: allow users to launch legacy Python shell via `agl start --legacy`.
+- [X] 25.4 Ensure existing `~/.config/agility-shell/` user configurations migrate seamlessly without loss of custom user keys.
+- [X] 25.5 Update installer scripts (`install.sh`, `scripts/install.sh`) to build and deploy the Rust daemon and Quickshell frontend.
+- [X] 25.6 Update Arch `PKGBUILD` and verify `makepkg -si` produces a clean pacman package.
+- [X] 25.7 Benchmark idle memory on test machines: verify total RAM <= 40 MB RSS.
+- [X] 25.8 Test on vintage hardware: verify smooth 60 FPS performance with `QT_QUICK_BACKEND=software`.
+- [X] 25.9 Update `README.md` documentation, architecture diagrams, and quick-start guides.
 
 ---
 

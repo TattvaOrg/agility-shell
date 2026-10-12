@@ -9,6 +9,7 @@ import "launcher" as Launcher
 import "osd" as Osd
 import "notifications" as Notifications
 import "canvas" as Canvas
+import "lockscreen" as Lockscreen
 
 ShellRoot {
     IpcHandler {
@@ -93,6 +94,23 @@ ShellRoot {
         }
     }
 
+    IpcHandler {
+        target: "lock"
+        function lock() {
+            Lockscreen.LockService.lockSession()
+        }
+        function unlock() {
+            Lockscreen.LockService.unlockSession()
+        }
+    }
+
+    IpcHandler {
+        target: "melt"
+        function trigger(duration: real, cols: int) {
+            Lockscreen.DoomMeltService.triggerMelt("", duration, cols, [])
+        }
+    }
+
     // Top Multi-Monitor Status Bar
     Variants {
         model: Quickshell.screens
@@ -169,6 +187,18 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
         Canvas.DesktopEditMode {
+            property var modelData
+            screenModel: modelData
+        }
+    }
+
+    // Exclusive Wayland Session Lock Screen (ext-session-lock-v1)
+    Lockscreen.LockWindow {}
+
+    // Multi-Monitor Doom Vertical Melt Screen Transition Overlay
+    Variants {
+        model: Quickshell.screens
+        Lockscreen.DoomMeltOverlay {
             property var modelData
             screenModel: modelData
         }

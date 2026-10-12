@@ -818,11 +818,11 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 24: Quickshell Frontend — Secure Wayland Screen Lock & Doom Melt Transitions
-- [ ] 24.1 Implement exclusive Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
-- [ ] 24.2 Render blurred wallpaper glass surface, clock, date, user avatar, and battery status.
-- [ ] 24.3 Implement glass password input field connected to `org.agility.Daemon.Lock.Authenticate` PAM worker with shake animation on failure.
-- [ ] 24.4 Verify screen remains locked across all monitor connect/disconnect events and hotkey bypass attempts.
-- [ ] 24.5 Implement Doom Vertical Melt screen transition overlay playing staggered column melt animation across monitors when switching desktop suites.
+- [X] 24.1 Implement exclusive Wayland session lock window using Quickshell `WlrSessionLock` / `ext-session-lock-v1`.
+- [X] 24.2 Render blurred wallpaper glass surface, clock, date, user avatar, and battery status.
+- [X] 24.3 Implement glass password input field connected to `org.agility.Daemon.Lock.Authenticate` PAM worker with shake animation on failure.
+- [X] 24.4 Verify screen remains locked across all monitor connect/disconnect events and hotkey bypass attempts.
+- [X] 24.5 Implement Doom Vertical Melt screen transition overlay playing staggered column melt animation across monitors when switching desktop suites.
 
 ---
 

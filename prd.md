@@ -856,10 +856,10 @@ Use this checklist to track progress throughout the implementation. Mark items w
 ---
 
 ### Step 26: Headless CI/CD, Automated Mock Testing Harness & Benchmarks
-- [ ] 26.1 Implement headless test harness with mock Niri socket and virtual D-Bus session bus in `tests/` or `crates/agility-test-harness`.
-- [ ] 26.2 Add integration tests verifying all 19 D-Bus endpoints respond within SLA (< 2ms for Launcher, < 4ms for Workspaces).
-- [ ] 26.3 Implement automated GitHub Actions CI pipeline running `cargo test`, `cargo clippy --all-targets`, and formatting checks on push.
-- [ ] 26.4 Implement automated memory benchmark test asserting `agilityd` idle RSS < 15MB.
+- [X] 26.1 Implement headless test harness with mock Niri socket and virtual D-Bus session bus in `tests/` or `crates/agility-test-harness`.
+- [X] 26.2 Add integration tests verifying all 19 D-Bus endpoints respond within SLA (< 2ms for Launcher, < 4ms for Workspaces).
+- [X] 26.3 Implement automated GitHub Actions CI pipeline running `cargo test`, `cargo clippy --all-targets`, and formatting checks on push.
+- [X] 26.4 Implement automated memory benchmark test asserting `agilityd` idle RSS < 15MB.
 
 ---
 

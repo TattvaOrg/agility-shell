@@ -133,6 +133,26 @@ Root backup scripts (`install.sh`, `update.sh`, `uninstall.sh`, `start.sh`, `res
 
 ---
 
+## Uninstallation
+
+To completely remove Agility Shell from your system (including running services, system binaries, desktop entries, sudoers charge limit rules, compositor includes, and matugen templates):
+
+```bash
+# Using CLI
+agl uninstall
+
+# To also purge all user configuration (~/.config/agility-shell) and caches:
+agl uninstall --purge
+
+# Using local script
+./uninstall.sh
+
+# Using curl oneliner
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/uninstall.sh | bash
+```
+
+---
+
 ## Configuration & Autostart
 
 Agility Shell can be managed via the systemd user service (recommended) or started directly by your Wayland compositor:

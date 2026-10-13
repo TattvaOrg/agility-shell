@@ -92,6 +92,15 @@ enum Commands {
     Deps,
     /// Perform self-update check and upgrade
     Update,
+    /// Completely uninstall Agility Shell from system
+    Uninstall {
+        /// Completely purge user configuration and cached states
+        #[arg(long)]
+        purge: bool,
+        /// Do not prompt for confirmation
+        #[arg(short, long)]
+        yes: bool,
+    },
     /// PAM Authentication verification
     Auth {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -162,6 +171,7 @@ async fn main() -> Result<()> {
         Commands::BarData => handle_bar_data().await?,
         Commands::Deps => handle_deps().await?,
         Commands::Update => handle_update().await?,
+        Commands::Uninstall { purge, yes } => handle_uninstall(purge, yes).await?,
         Commands::Auth { args } => {
             std::process::exit(tools::auth::run(&args));
         }
@@ -903,6 +913,60 @@ async fn handle_update() -> Result<()> {
     }
 
     println!("✓ Local build is current.");
+    Ok(())
+}
+
+async fn handle_uninstall(purge: bool, yes: bool) -> Result<()> {
+    println!("Initiating Agility Shell uninstallation...");
+
+    let script_candidates = [
+        Path::new("scripts/uninstall.sh"),
+        Path::new("/usr/share/agility-shell/scripts/uninstall.sh"),
+    ];
+
+    let mut script_path = None;
+    for candidate in &script_candidates {
+        if candidate.exists() {
+            script_path = Some(candidate.to_path_buf());
+            break;
+        }
+    }
+
+    let mut cmd = if let Some(path) = script_path {
+        let mut c = Command::new("bash");
+        c.arg(path);
+        c
+    } else {
+        let root_uninstall = Path::new("uninstall.sh");
+        if root_uninstall.exists() {
+            let mut c = Command::new("bash");
+            c.arg(root_uninstall);
+            c
+        } else {
+            let mut c = Command::new("bash");
+            c.args([
+                "-c",
+                "curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/scripts/uninstall.sh | bash -s -- \"$@\"",
+                "bash",
+            ]);
+            c
+        }
+    };
+
+    if purge {
+        cmd.arg("--purge");
+    }
+    if yes {
+        cmd.arg("-y");
+    }
+
+    let status = cmd
+        .status()
+        .context("Failed to execute uninstaller script")?;
+    if !status.success() {
+        bail!("Uninstallation exited with status: {status}");
+    }
+
     Ok(())
 }
 

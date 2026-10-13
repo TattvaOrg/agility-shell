@@ -74,5 +74,6 @@ uninstall:
 	rm -f $(DESTDIR)$(SYSTEMDDIR)/agility-shell.service
 	rm -f $(DESTDIR)$(APPLICATIONSDIR)/agility-shell.desktop
 	rm -f $(DESTDIR)$(APPLICATIONSDIR)/minflair-*.desktop
+	rm -f /etc/sudoers.d/agility-battery
 	rm -rf $(DESTDIR)$(DATADIR)
 	@echo "==> Uninstall complete."

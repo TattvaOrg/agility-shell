@@ -598,9 +598,21 @@ download_and_extract_prebuilt() {
 
     if [[ -n "$tag" && "$tag" != "latest" ]]; then
         local tag_ref="$tag"
-        [[ "$tag_ref" =~ ^[0-9] ]] && tag_ref="v$tag_ref"
         download_url="${base_url}/download/${tag_ref}/${tarball_name}"
         checksum_url="${base_url}/download/${tag_ref}/${tarball_name}.sha256"
+        # Verify if asset exists under literal tag; if not, test alternate tag prefix (v1.x vs 1.x)
+        if ! curl -f -sI -L "$download_url" &>/dev/null; then
+            local alt_ref="$tag_ref"
+            if [[ "$alt_ref" =~ ^[0-9] ]]; then
+                alt_ref="v$alt_ref"
+            elif [[ "$alt_ref" =~ ^v[0-9] ]]; then
+                alt_ref="${alt_ref#v}"
+            fi
+            if curl -f -sI -L "${base_url}/download/${alt_ref}/${tarball_name}" &>/dev/null; then
+                download_url="${base_url}/download/${alt_ref}/${tarball_name}"
+                checksum_url="${base_url}/download/${alt_ref}/${tarball_name}.sha256"
+            fi
+        fi
     else
         download_url="${base_url}/latest/download/${tarball_name}"
         checksum_url="${base_url}/latest/download/${tarball_name}.sha256"

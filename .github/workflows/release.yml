@@ -43,6 +43,31 @@ jobs:
       - name: Install Cross Dependencies (aarch64)
         if: ${{ matrix.use_cross }}
         run: |
+          UBUNTU_CODENAME=$(lsb_release -cs)
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            if grep -q "^Architectures:" /etc/apt/sources.list.d/ubuntu.sources; then
+              sudo sed -i 's/^Architectures:.*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
+            else
+              sudo sed -i 's/^Suites:/Architectures: amd64\nSuites:/g' /etc/apt/sources.list.d/ubuntu.sources
+            fi
+            cat <<EOF | sudo tee /etc/apt/sources.list.d/arm64.sources
+Types: deb
+URIs: http://ports.ubuntu.com/ubuntu-ports/
+Suites: ${UBUNTU_CODENAME} ${UBUNTU_CODENAME}-updates ${UBUNTU_CODENAME}-backports ${UBUNTU_CODENAME}-security
+Components: main restricted universe multiverse
+Architectures: arm64
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+EOF
+          elif [ -f /etc/apt/sources.list ]; then
+            sudo sed -i -e 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
+            sudo sed -i -e 's/deb mirror/deb [arch=amd64] mirror/g' /etc/apt/sources.list
+            cat <<EOF | sudo tee /etc/apt/sources.list.d/arm64.list
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${UBUNTU_CODENAME} main restricted universe multiverse
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${UBUNTU_CODENAME}-updates main restricted universe multiverse
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${UBUNTU_CODENAME}-security main restricted universe multiverse
+deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ ${UBUNTU_CODENAME}-backports main restricted universe multiverse
+EOF
+          fi
           sudo dpkg --add-architecture arm64
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
@@ -62,9 +87,11 @@ jobs:
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
           PKG_CONFIG_ALLOW_CROSS: "1"
-          PKG_CONFIG_PATH_aarch64_unknown_linux_gnu: /usr/lib/aarch64-linux-gnu/pkgconfig
-          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+          PKG_CONFIG_PATH_aarch64_unknown_linux_gnu: /usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
         run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+          fi
           cargo build --release --target ${{ matrix.target }}
 
       - name: Package Release Archives
@@ -89,6 +116,7 @@ jobs:
           cp systemd/agility-shell.service "$BUNDLE_DIR/systemd/"
           cp agility-shell.desktop "$BUNDLE_DIR/"
           cp Makefile install.sh LICENSE README.md "$BUNDLE_DIR/"
+          cp -f uninstall.sh "$BUNDLE_DIR/" 2>/dev/null || true
 
           cp -r config themes wallpapers svgs sounds quickshell scripts "$BUNDLE_DIR/"
 

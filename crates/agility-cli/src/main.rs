@@ -569,7 +569,10 @@ async fn handle_profile(action: &str) -> Result<()> {
             )
             .await
         {
-            Ok(reply) => reply.body().deserialize::<String>().unwrap_or_else(|_| "balanced".to_string()),
+            Ok(reply) => reply
+                .body()
+                .deserialize::<String>()
+                .unwrap_or_else(|_| "balanced".to_string()),
             Err(_) => {
                 let reply = conn
                     .call_method(
@@ -583,7 +586,10 @@ async fn handle_profile(action: &str) -> Result<()> {
                     .context("D-Bus GetPowerState call failed")?;
                 let json_str: String = reply.body().deserialize()?;
                 let val: serde_json::Value = serde_json::from_str(&json_str).unwrap_or_default();
-                val["power_profile"].as_str().unwrap_or("balanced").to_string()
+                val["power_profile"]
+                    .as_str()
+                    .unwrap_or("balanced")
+                    .to_string()
             }
         };
         println!("Current Power Profile: {current}");
@@ -1446,10 +1452,8 @@ fn try_unix_socket_connect(path: &str) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::net::UnixStream;
-        if std::path::Path::new(path).exists() {
-            if UnixStream::connect(path).is_ok() {
-                return true;
-            }
+        if std::path::Path::new(path).exists() && UnixStream::connect(path).is_ok() {
+            return true;
         }
     }
     false

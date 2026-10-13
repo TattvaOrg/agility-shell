@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Minflair Keybinds
+Comment=Cheat sheet for system keybindings
+Exec=sh -c 'if [ -f "$HOME/.config/quickshell/Modules/KeybindsCheatSheet/scripts/toggle_minflair_keybinds.sh" ]; then "$HOME/.config/quickshell/Modules/KeybindsCheatSheet/scripts/toggle_minflair_keybinds.sh"; elif [ -f /usr/share/agility-shell/quickshell/agility/Modules/KeybindsCheatSheet/scripts/toggle_minflair_keybinds.sh ]; then /usr/share/agility-shell/quickshell/agility/Modules/KeybindsCheatSheet/scripts/toggle_minflair_keybinds.sh; else echo "" | socat - UNIX-CONNECT:/tmp/quickshell_minflair_keybinds; fi'
+Icon=/usr/share/agility-shell/quickshell/agility/assets/keybinds-icon.svg
+Terminal=false
+Categories=Utility;

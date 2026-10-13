@@ -48,6 +48,9 @@ install-prebuilt:
 
 	# Install desktop entry
 	install -m 644 agility-shell.desktop $(DESTDIR)$(APPLICATIONSDIR)/agility-shell.desktop
+	@if [ -d quickshell/agility/Applications ]; then \
+		install -m 644 quickshell/agility/Applications/*.desktop $(DESTDIR)$(APPLICATIONSDIR)/; \
+	fi
 
 	# Install application files and assets
 	cp -r config themes wallpapers svgs sounds quickshell scripts $(DESTDIR)$(DATADIR)/
@@ -70,5 +73,6 @@ uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/agl
 	rm -f $(DESTDIR)$(SYSTEMDDIR)/agility-shell.service
 	rm -f $(DESTDIR)$(APPLICATIONSDIR)/agility-shell.desktop
+	rm -f $(DESTDIR)$(APPLICATIONSDIR)/minflair-*.desktop
 	rm -rf $(DESTDIR)$(DATADIR)
 	@echo "==> Uninstall complete."

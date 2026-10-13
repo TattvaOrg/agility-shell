@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Minflair Package Manager
+Comment=Search, install, and manage packages
+Exec=sh -c 'if [ -f "$HOME/.config/quickshell/Modules/PackageManager/scripts/toggle_minflair_packagemanager.sh" ]; then "$HOME/.config/quickshell/Modules/PackageManager/scripts/toggle_minflair_packagemanager.sh"; elif [ -f /usr/share/agility-shell/quickshell/agility/Modules/PackageManager/scripts/toggle_minflair_packagemanager.sh ]; then /usr/share/agility-shell/quickshell/agility/Modules/PackageManager/scripts/toggle_minflair_packagemanager.sh; else echo "" | socat - UNIX-CONNECT:/tmp/quickshell_packagemanager; fi'
+Icon=/usr/share/agility-shell/quickshell/agility/assets/packagemanager-icon.svg
+Terminal=false
+Categories=System;Utility;

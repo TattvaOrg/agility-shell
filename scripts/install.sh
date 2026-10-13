@@ -135,6 +135,16 @@ PACMAN_DEPS=(
     curl
     tar
     gzip
+    socat
+    pamixer
+    grim
+    slurp
+    cliphist
+    wl-clipboard
+    qt6-5compat
+    qt6-imageformats
+    python-pam
+    pacman-contrib
 )
 
 # Build dependencies required ONLY when compiling from source
@@ -852,6 +862,16 @@ MATUGEN_EOF
     success "Matugen configured."
 }
 
+setup_battery_limit_sudoers() {
+    if [[ -d /sys/class/power_supply/BAT0 || -d /sys/class/power_supply/BAT1 || -d /sys/class/power_supply/BAT ]]; then
+        info "Configuring passwordless sudo rule for battery charge limiter..."
+        local sudoers_file="/etc/sudoers.d/agility-battery"
+        echo "$USER ALL=(ALL) NOPASSWD: /usr/share/agility-shell/quickshell/agility/Scripts/system/toggle_battery_limit.sh, $HOME/.config/quickshell/Scripts/system/toggle_battery_limit.sh" | sudo tee "$sudoers_file" >/dev/null || true
+        sudo chmod 0440 "$sudoers_file" 2>/dev/null || true
+        success "Battery charge limit sudoers rule configured."
+    fi
+}
+
 setup_systemd_service() {
     if command -v systemctl &>/dev/null; then
         info "Reloading systemd user daemon..."
@@ -938,6 +958,7 @@ do_install() {
     seed_user_configuration
     inject_niri_include
     setup_matugen
+    setup_battery_limit_sudoers
     setup_systemd_service
 
     if [[ "$cleanup_work_dir" == "true" ]]; then

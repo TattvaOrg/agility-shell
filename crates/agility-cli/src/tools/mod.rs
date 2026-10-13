@@ -3,7 +3,7 @@ pub mod auth;
 pub mod connectivity;
 pub mod gamemode;
 pub mod hypr_prefs;
+pub mod keybinds;
 pub mod mpris;
 pub mod packages;
 pub mod sysinfo;
-pub mod keybinds;

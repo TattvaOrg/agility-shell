@@ -229,7 +229,11 @@ pub fn get_processes() -> Vec<ProcessItem> {
         });
     }
 
-    list.sort_by(|a, b| b.cpu.partial_cmp(&a.cpu).unwrap_or(std::cmp::Ordering::Equal));
+    list.sort_by(|a, b| {
+        b.cpu
+            .partial_cmp(&a.cpu)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     list
 }
 

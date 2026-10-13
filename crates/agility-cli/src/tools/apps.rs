@@ -69,7 +69,7 @@ pub fn get_apps() -> Vec<AppInfo> {
         }
     }
 
-    apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    apps.sort_by_key(|a| a.name.to_lowercase());
     apps
 }
 
@@ -82,7 +82,8 @@ fn parse_desktop_file(content: &str) -> Option<AppInfo> {
     let mut no_display = false;
     let mut hidden = false;
     let mut action_keys: Vec<String> = Vec::new();
-    let mut action_map: std::collections::HashMap<String, (String, String)> = std::collections::HashMap::new();
+    let mut action_map: std::collections::HashMap<String, (String, String)> =
+        std::collections::HashMap::new();
 
     for line in content.lines() {
         let trimmed = line.trim();
@@ -116,8 +117,7 @@ fn parse_desktop_file(content: &str) -> Option<AppInfo> {
                     }
                     _ => {}
                 }
-            } else if current_section.starts_with("Desktop Action ") {
-                let action_name = &current_section["Desktop Action ".len()..];
+            } else if let Some(action_name) = current_section.strip_prefix("Desktop Action ") {
                 let entry = action_map
                     .entry(action_name.to_string())
                     .or_insert_with(|| (String::new(), String::new()));

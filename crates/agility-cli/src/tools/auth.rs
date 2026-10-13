@@ -103,12 +103,7 @@ pub fn authenticate(password: &str) -> bool {
 
         unsafe {
             let mut pamh: *const pam_sys::types::PamHandle = std::ptr::null();
-            let ret = pam_sys::raw::pam_start(
-                service.as_ptr(),
-                user_c.as_ptr(),
-                &conv,
-                &mut pamh,
-            );
+            let ret = pam_sys::raw::pam_start(service.as_ptr(), user_c.as_ptr(), &conv, &mut pamh);
 
             if ret != pam_sys::types::PamReturnCode::SUCCESS as libc::c_int || pamh.is_null() {
                 continue;

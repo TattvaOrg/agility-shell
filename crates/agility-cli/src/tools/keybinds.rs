@@ -157,8 +157,7 @@ pub fn parse_keybinds(filepath: Option<PathBuf>) -> Result<()> {
                     let clean = arg
                         .replace("mainMod", "SUPER")
                         .replace("..", "")
-                        .replace('"', "")
-                        .replace('\'', "")
+                        .replace(['"', '\''], "")
                         .trim()
                         .to_string();
                     let parts: Vec<&str> = clean.split(" + ").collect();
@@ -176,8 +175,8 @@ pub fn parse_keybinds(filepath: Option<PathBuf>) -> Result<()> {
                 let inside = &after[open_paren + 1..];
                 let tokens: Vec<&str> = inside.split(',').collect();
                 if tokens.len() >= 3 {
-                    raw_mods = tokens[1].replace('"', "").replace('\'', "").trim().to_string();
-                    raw_key = tokens[2].replace('"', "").replace('\'', "").trim().to_string();
+                    raw_mods = tokens[1].replace(['"', '\''], "").trim().to_string();
+                    raw_key = tokens[2].replace(['"', '\''], "").trim().to_string();
                 }
             }
         }
@@ -203,15 +202,15 @@ pub fn parse_keybinds(filepath: Option<PathBuf>) -> Result<()> {
         let mod_parts: Vec<String> = raw_mods
             .replace("mainMod", "SUPER")
             .replace("..", "")
-            .replace('"', "")
-            .replace('\'', "")
+            .replace(['"', '\''], "")
             .split_whitespace()
             .map(map_mod)
             .collect();
 
         let key = map_key(&raw_key);
 
-        let (desc_clean, keys) = if let (Some(start), Some(end)) = (desc.find('('), desc.rfind(')')) {
+        let (desc_clean, keys) = if let (Some(start), Some(end)) = (desc.find('('), desc.rfind(')'))
+        {
             if start < end {
                 let hint = desc[start + 1..end].to_string();
                 let clean = desc[..start].trim().to_string();

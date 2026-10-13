@@ -49,7 +49,11 @@ fn parse_pacman_ss(output: &str, installed: &HashSet<String>, results: &mut Vec<
             if let Some((repo, name, ver)) = current_header.take() {
                 let desc = line.trim().to_string();
                 let is_inst = installed.contains(&name);
-                let source = if repo.eq_ignore_ascii_case("aur") { "AUR".to_string() } else { "pacman".to_string() };
+                let source = if repo.eq_ignore_ascii_case("aur") {
+                    "AUR".to_string()
+                } else {
+                    "pacman".to_string()
+                };
                 results.push(PackageItem {
                     name,
                     version: ver,
@@ -127,7 +131,11 @@ pub fn run(args: &[String]) -> i32 {
         }
         "search" => {
             let query = args.get(1).map(|s| s.as_str()).unwrap_or("");
-            if query.is_empty() { Vec::new() } else { search_packages(query) }
+            if query.is_empty() {
+                Vec::new()
+            } else {
+                search_packages(query)
+            }
         }
         other => {
             if other.is_empty() {

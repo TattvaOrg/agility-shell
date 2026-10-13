@@ -527,28 +527,50 @@ scan_and_remove_old_shell() {
     if [[ -f "$USER_CONFIG/main.py" || -f "$USER_CONFIG/bar.py" || -d "$USER_CONFIG/bar_widgets" || -d "$USER_CONFIG/venv" || -d "$USER_CONFIG/services" ]]; then
         has_old_shell=true
     fi
+    if [[ -f "/usr/bin/agl" ]]; then
+        if ! file -b "/usr/bin/agl" 2>/dev/null | grep -q "ELF" || [[ ! -f "/usr/bin/agilityd" ]]; then
+            has_old_shell=true
+        fi
+    fi
+    if [[ -f "$SYSTEM_DATA/main.py" || -f "$SYSTEM_DATA/bar.py" ]]; then
+        has_old_shell=true
+    fi
 
     if [[ "$has_old_shell" == "true" ]]; then
         echo
-        info "Scanning ~/.config/agility-shell for old monolithic shell..."
-        warn "Old shell detected in $USER_CONFIG!"
-        info "Deleting old shell from ~/.config/agility-shell and transitioning to distributed system installation..."
+        info "Scanning system and ~/.config/agility-shell for legacy shell components..."
+        warn "Legacy shell components detected!"
+        info "Cleaning legacy shell components and transitioning to native architecture..."
         
-        local timestamp
-        timestamp="$(date +%Y%m%d_%H%M%S)"
-        local backup_dir="$HOME/.config/agility-shell.backup-$timestamp"
-        
-        info "Creating safety backup of user configurations at $backup_dir..."
-        cp -r "$USER_CONFIG" "$backup_dir"
-        success "Backup created at $backup_dir"
+        if [[ -d "$USER_CONFIG" ]]; then
+            local timestamp
+            timestamp="$(date +%Y%m%d_%H%M%S)"
+            local backup_dir="$HOME/.config/agility-shell.backup-$timestamp"
+            
+            info "Creating safety backup of user configurations at $backup_dir..."
+            cp -r "$USER_CONFIG" "$backup_dir"
+            success "Backup created at $backup_dir"
 
-        info "Removing obsolete shell source files from $USER_CONFIG while preserving all user configurations..."
-        rm -rf "$USER_CONFIG/main.py" "$USER_CONFIG/bar.py" "$USER_CONFIG/bar_widgets" \
-               "$USER_CONFIG/venv" "$USER_CONFIG/services" "$USER_CONFIG/desktop_applets" \
-               "$USER_CONFIG/windows" "$USER_CONFIG/utils" "$USER_CONFIG/snippets" \
-               "$USER_CONFIG/quickshell" "$USER_CONFIG/scripts" "$USER_CONFIG/agility-shell" \
-               "$USER_CONFIG/requirements.txt" "$USER_CONFIG/Makefile" "$USER_CONFIG/PKGBUILD" 2>/dev/null || true
-        success "Preserved user configs. ~/.config/agility-shell now cleanly holds configurations only."
+            info "Removing obsolete shell runtime files from $USER_CONFIG while preserving all user configurations..."
+            rm -rf "$USER_CONFIG/main.py" "$USER_CONFIG/bar.py" "$USER_CONFIG/bar_widgets" \
+                   "$USER_CONFIG/venv" "$USER_CONFIG/services" "$USER_CONFIG/desktop_applets" \
+                   "$USER_CONFIG/windows" "$USER_CONFIG/utils" "$USER_CONFIG/snippets" \
+                   "$USER_CONFIG/quickshell" "$USER_CONFIG/scripts" "$USER_CONFIG/agility-shell" \
+                   "$USER_CONFIG/requirements.txt" "$USER_CONFIG/Makefile" "$USER_CONFIG/PKGBUILD" 2>/dev/null || true
+            success "Preserved user configs. ~/.config/agility-shell now cleanly holds configurations only."
+        fi
+
+        if [[ -f "/usr/bin/agl" ]]; then
+            if ! file -b "/usr/bin/agl" 2>/dev/null | grep -q "ELF" || [[ ! -f "/usr/bin/agilityd" ]]; then
+                info "Removing obsolete legacy /usr/bin/agl..."
+                sudo rm -f "/usr/bin/agl" 2>/dev/null || true
+            fi
+        fi
+
+        if [[ -f "$SYSTEM_DATA/main.py" || -f "$SYSTEM_DATA/bar.py" ]]; then
+            info "Cleaning legacy files from $SYSTEM_DATA..."
+            sudo rm -rf "$SYSTEM_DATA/main.py" "$SYSTEM_DATA/bar.py" "$SYSTEM_DATA/services" "$SYSTEM_DATA/bar_widgets" 2>/dev/null || true
+        fi
     fi
 }
 
@@ -889,11 +911,85 @@ setup_systemd_service() {
     fi
 }
 
+# -- Check if Agility Shell is already installed --------------------------------
+is_agility_installed() {
+    if [[ -f "/usr/bin/agl" || -f "/usr/bin/agilityd" || -f "/usr/bin/agility-shell" || -d "$SYSTEM_DATA" ]]; then
+        return 0
+    fi
+    if [[ -d "$USER_CONFIG" && (-f "$USER_CONFIG/config/config.json" || -f "$USER_CONFIG/main.py" || -f "$USER_CONFIG/bar.py") ]]; then
+        return 0
+    fi
+    if pacman -Qq agility-shell agility-shell-git &>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# -- Update Shell and Cure Configurations --------------------------------------
+do_update_and_cure() {
+    local tag="${1:-}"
+    info "Starting update and configuration cure for Agility Shell..."
+
+    check_and_install_deps
+
+    local work_dir=""
+    local cleanup_work_dir=false
+    local selected_tag="$tag"
+
+    if [[ "$IS_LOCAL_REPO" == "true" ]]; then
+        if [[ "$(realpath "$LOCAL_SRC_DIR" 2>/dev/null)" == "$(realpath "$USER_CONFIG" 2>/dev/null)"* ]]; then
+            work_dir="$(mktemp -d)"
+            cleanup_work_dir=true
+            info "Staging installer sources from $LOCAL_SRC_DIR..."
+            cp -r "$LOCAL_SRC_DIR"/* "$work_dir/"
+        else
+            work_dir="$LOCAL_SRC_DIR"
+        fi
+    else
+        work_dir="$(mktemp -d)"
+        cleanup_work_dir=true
+        info "Cloning Agility Shell from $REPO_URL..."
+        git clone "$REPO_URL" "$work_dir/repo"
+        work_dir="$work_dir/repo"
+
+        cd "$work_dir"
+        git fetch --prune --tags origin
+        git checkout -f main 2>/dev/null || git checkout -b main origin/main
+        git reset --hard origin/main
+        selected_tag="latest"
+    fi
+
+    # 1. Clean legacy shell files & backup user configs
+    scan_and_remove_old_shell
+
+    # 2. Update system files
+    install_system_files "$work_dir" "make" false "$selected_tag"
+
+    # 3. Cure configuration & setup hooks
+    seed_user_configuration
+    inject_niri_include
+    setup_matugen
+    setup_battery_limit_sudoers
+    setup_systemd_service
+
+    if [[ "$cleanup_work_dir" == "true" ]]; then
+        rm -rf "$work_dir"
+    fi
+
+    echo
+    success "Agility Shell successfully updated and configuration cured!"
+    echo
+    echo -e "  ${BOLD}Restart shell to apply changes:${RESET}"
+    echo -e "    ${CYAN}agl restart${RESET}   (or systemctl --user restart agility-shell)"
+    echo
+}
+
+# -- Install Shell (Fresh / Core) -----------------------------------------------
 do_install() {
     local method="${1:-make}"
     local from_source="${2:-false}"
     local tag="${3:-}"
-    info "Starting installation of Agility Shell (Method: $method, Prebuilt: $([[ "$from_source" == "true" ]] && echo "no (from source)" || echo "yes"))..."
+    info "Starting installation of Agility Shell (Prebuilt: $([[ "$from_source" == "true" ]] && echo "no (from source)" || echo "yes"))..."
 
     check_and_install_deps
 
@@ -921,37 +1017,28 @@ do_install() {
         cd "$work_dir"
         git fetch --prune --tags origin
 
-        if [[ -z "$selected_tag" ]]; then
-            local latest_tag
-            latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
-            latest_tag="${latest_tag:-1.0.3}"
-
-            echo ""
-            echo -e "${BOLD}Select installation version / channel:${RESET}"
-            echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM:-}Tested, prebuilt release binary${RESET}"
-            echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM:-}Newest features & bug fixes (Recommended)${RESET}"
-            echo ""
-            prompt_user "  Enter choice [1/2] (default: 2): " inst_channel "2"
-            case "$inst_channel" in
-                1|[rR]|[rR][eE][lL]*)
-                    info "Checking out release v$latest_tag..."
-                    git checkout -f "$latest_tag" 2>/dev/null || git checkout -f "tags/$latest_tag"
-                    selected_tag="$latest_tag"
-                    ;;
-                *)
-                    info "Checking out latest main branch..."
-                    git checkout -f main 2>/dev/null || git checkout -b main origin/main
-                    git reset --hard origin/main
-                    selected_tag="latest"
-                    ;;
-            esac
-        else
+        if [[ -n "$selected_tag" && "$selected_tag" != "latest" ]]; then
             info "Checking out requested tag: $selected_tag..."
             git checkout -f "$selected_tag" 2>/dev/null || git checkout -f "tags/$selected_tag" 2>/dev/null || true
+        elif [[ "$from_source" == "false" ]]; then
+            local latest_tag
+            latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+            if [[ -n "$latest_tag" ]]; then
+                info "Using latest release tag v$latest_tag..."
+                git checkout -f "$latest_tag" 2>/dev/null || git checkout -f "tags/$latest_tag" 2>/dev/null || true
+                selected_tag="$latest_tag"
+            else
+                selected_tag="latest"
+            fi
+        else
+            info "Using latest development source from main..."
+            git checkout -f main 2>/dev/null || git checkout -b main origin/main
+            git reset --hard origin/main
+            selected_tag="latest"
         fi
     fi
 
-    # Scan and delete old shell from ~/.config/agility-shell
+    # Scan and delete old shell from ~/.config/agility-shell and system
     scan_and_remove_old_shell
 
     install_system_files "$work_dir" "$method" "$from_source" "$selected_tag"
@@ -990,7 +1077,9 @@ USAGE:
     install.sh [OPTIONS]
 
 OPTIONS:
-    --prebuilt                  Install prebuilt release binaries from GitHub Releases (Default)
+    --update, --cure            Update shell and cure existing configurations
+    --fresh                     Open fresh installation menu
+    --prebuilt                  Install prebuilt release binaries (Default)
     --from-source, --build, -b  Compile Rust workspace from source using cargo
     --pacman, -p                Install using native Arch pacman package (makepkg -si)
     --make, -m                  Install using Makefile directly (/usr/bin & /usr/share)
@@ -998,46 +1087,75 @@ OPTIONS:
     --deps, --check-deps, -d    Test and install dependencies step-by-step
     --help, -h                  Show this help message
 
-TWO-STEP WORKFLOW:
-    1. Check and install runtime dependencies:
-       curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash -s -- --deps
-
-    2. Install Agility Shell (direct prebuilt binaries):
-       curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash
+ONELINER:
+    curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash
 
 EOF
 }
 
-main_menu_choice() {
-    echo -e "  Please choose an option:"
-    echo -e "  ${BOLD}1)${RESET} ${CYAN}Native Arch Package (makepkg -si)${RESET}   (Recommended - tracked by pacman, prebuilt binary)"
-    echo -e "  ${BOLD}2)${RESET} ${GREEN}Direct System Install (make install)${RESET}  (Fast prebuilt binary install to /usr/bin)"
-    echo -e "  ${BOLD}3)${RESET} ${YELLOW}Compile From Source (cargo build)${RESET}     (Build rust binaries locally)"
-    echo -e "  ${BOLD}4)${RESET} ${BLUE}Test & Install Dependencies Step-by-Step${RESET}"
-    echo -e "  ${BOLD}5)${RESET} Cancel"
+fresh_install_menu() {
+    local tag="${1:-}"
     echo
-    prompt_user "  Choice [1/2/3/4/5]: " choice "1"
-    case "$choice" in
-        1)
-            do_install "pacman" false ""
+    echo -e "  ${BOLD}Select installation method:${RESET}"
+    echo -e "  ${BOLD}1)${RESET} ${CYAN}Latest Release${RESET} (Prebuilt binary) ${GREEN}(Recommended)${RESET}"
+    echo -e "     ${DIM}Directly downloads and installs official release binaries.${RESET}"
+    echo -e "  ${BOLD}2)${RESET} ${YELLOW}Compile by yourself${RESET} (Build from source)"
+    echo -e "     ${DIM}Compiles the Rust workspace locally using cargo.${RESET}"
+    echo -e "  ${BOLD}3)${RESET} Cancel"
+    echo
+    prompt_user "  Enter choice [1/2/3] (default: 1): " inst_choice "1"
+    case "$inst_choice" in
+        1|[bB][iI][nN]*|[pP][rR][eE]*)
+            do_install "make" false "$tag"
             ;;
-        2)
-            do_install "make" false ""
+        2|[sS][oO][uU][rR][cC][eE]*|[bB][uU][iI][lL][dD]*)
+            do_install "make" true "$tag"
             ;;
-        3)
-            do_install "make" true ""
-            ;;
-        4)
-            test_and_install_deps_step_by_step true
-            ;;
-        5|[qQ]|[eE][xX][iI][tT])
+        3|[cC]|[qQ]|[eE][xX][iI][tT])
             info "Installation cancelled."
             exit 0
             ;;
         *)
-            die "Invalid choice: '$choice'"
+            die "Invalid choice: '$inst_choice'"
             ;;
     esac
+}
+
+main_menu_choice() {
+    if is_agility_installed; then
+        echo -e "  ${BOLD}Existing Agility Shell installation detected.${RESET}"
+        echo
+        echo -e "  Please choose an option:"
+        echo -e "  ${BOLD}1)${RESET} ${CYAN}Update Shell & Cure Configs${RESET} ${GREEN}(Recommended)${RESET}"
+        echo -e "     ${DIM}Safely cures and migrates configs, cleans legacy files, and updates shell.${RESET}"
+        echo -e "  ${BOLD}2)${RESET} ${GREEN}Fresh Install${RESET}"
+        echo -e "     ${DIM}Perform a fresh install (latest release binary or compile by yourself).${RESET}"
+        echo -e "  ${BOLD}3)${RESET} ${BLUE}Test & Install Dependencies Step-by-Step${RESET}"
+        echo -e "  ${BOLD}4)${RESET} Cancel"
+        echo
+        prompt_user "  Enter choice [1/2/3/4] (default: 1): " choice "1"
+        case "$choice" in
+            1|[uU]|[uU][pP]*)
+                do_update_and_cure ""
+                ;;
+            2|[fF]|[fF][rR]*)
+                fresh_install_menu ""
+                ;;
+            3|[dD]*)
+                test_and_install_deps_step_by_step true
+                ;;
+            4|[qQ]|[eE][xX][iI][tT])
+                info "Installation cancelled."
+                exit 0
+                ;;
+            *)
+                die "Invalid choice: '$choice'"
+                ;;
+        esac
+    else
+        echo -e "  No previous Agility Shell installation found."
+        fresh_install_menu ""
+    fi
 }
 
 main() {
@@ -1048,6 +1166,7 @@ main() {
     local from_source=false
     local tag=""
     local check_deps_only=false
+    local do_update=false
     local interactive=true
 
     while [[ $# -gt 0 ]]; do
@@ -1055,6 +1174,14 @@ main() {
         case "$1" in
             --deps|--check-deps|-d|deps)
                 check_deps_only=true
+                shift
+                ;;
+            --update|--cure|update|cure)
+                do_update=true
+                shift
+                ;;
+            --fresh|fresh)
+                interactive=true
                 shift
                 ;;
             --pacman|-p|pacman)
@@ -1091,6 +1218,11 @@ main() {
 
     if [[ "$check_deps_only" == "true" ]]; then
         test_and_install_deps_step_by_step true
+        exit 0
+    fi
+
+    if [[ "$do_update" == "true" ]]; then
+        do_update_and_cure "$tag"
         exit 0
     fi
 

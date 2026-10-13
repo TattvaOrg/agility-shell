@@ -58,7 +58,9 @@ pub fn get_bluetooth_status() -> BtStatus {
 
             let connected = info_out.contains("Connected: yes");
             let paired = info_out.contains("Paired: yes");
-            let icon = if info_out.contains("Icon: audio-card") || info_out.contains("Icon: audio-headset") {
+            let icon = if info_out.contains("Icon: audio-card")
+                || info_out.contains("Icon: audio-headset")
+            {
                 "audio-headset".to_string()
             } else if info_out.contains("Icon: input-mouse") {
                 "input-mouse".to_string()
@@ -101,7 +103,9 @@ pub fn run_bluetooth(args: &[String]) -> i32 {
         "toggle-power" => {
             let st = get_bluetooth_status();
             let target = if st.powered { "off" } else { "on" };
-            let _ = Command::new("bluetoothctl").args(["power", target]).status();
+            let _ = Command::new("bluetoothctl")
+                .args(["power", target])
+                .status();
             0
         }
         "toggle-connect" => {
@@ -109,7 +113,9 @@ pub fn run_bluetooth(args: &[String]) -> i32 {
                 let st = get_bluetooth_status();
                 let is_conn = st.devices.iter().any(|d| d.mac == *mac && d.connected);
                 if is_conn {
-                    let _ = Command::new("bluetoothctl").args(["disconnect", mac]).status();
+                    let _ = Command::new("bluetoothctl")
+                        .args(["disconnect", mac])
+                        .status();
                 } else {
                     let _ = Command::new("bluetoothctl").args(["connect", mac]).status();
                 }
@@ -120,7 +126,9 @@ pub fn run_bluetooth(args: &[String]) -> i32 {
             }
         }
         "scan" => {
-            let _ = Command::new("bluetoothctl").args(["--timeout", "5", "scan", "on"]).status();
+            let _ = Command::new("bluetoothctl")
+                .args(["--timeout", "5", "scan", "on"])
+                .status();
             let st = get_bluetooth_status();
             println!("{}", serde_json::to_string(&st).unwrap_or_default());
             0
@@ -201,9 +209,7 @@ pub fn get_wifi_status() -> WifiStatus {
         }
     }
 
-    let icon = if !radio {
-        "wifi-off"
-    } else if connected_ssid == "Disconnected" {
+    let icon = if !radio || connected_ssid == "Disconnected" {
         "wifi-off"
     } else if strength > 75 {
         "wifi"
@@ -213,7 +219,8 @@ pub fn get_wifi_status() -> WifiStatus {
         "wifi-1"
     } else {
         "wifi-0"
-    }.to_string();
+    }
+    .to_string();
 
     WifiStatus {
         radio,
@@ -226,7 +233,14 @@ pub fn get_wifi_status() -> WifiStatus {
 
 pub fn get_wifi_networks() -> Vec<WifiNetwork> {
     let out = Command::new("nmcli")
-        .args(["-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list"])
+        .args([
+            "-t",
+            "-f",
+            "IN-USE,SSID,SIGNAL,SECURITY",
+            "device",
+            "wifi",
+            "list",
+        ])
         .output()
         .ok()
         .and_then(|o| String::from_utf8(o.stdout).ok())
@@ -254,7 +268,11 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
         }
     }
 
-    networks.sort_by(|a, b| b.in_use.cmp(&a.in_use).then_with(|| b.strength.cmp(&a.strength)));
+    networks.sort_by(|a, b| {
+        b.in_use
+            .cmp(&a.in_use)
+            .then_with(|| b.strength.cmp(&a.strength))
+    });
     networks
 }
 
@@ -269,7 +287,9 @@ pub fn run_wifi(args: &[String]) -> i32 {
         "toggle-radio" => {
             let st = get_wifi_status();
             let target = if st.radio { "off" } else { "on" };
-            let _ = Command::new("nmcli").args(["radio", "wifi", target]).status();
+            let _ = Command::new("nmcli")
+                .args(["radio", "wifi", target])
+                .status();
             0
         }
         "scan" => {
@@ -282,7 +302,11 @@ pub fn run_wifi(args: &[String]) -> i32 {
                 let status = Command::new("nmcli")
                     .args(["device", "wifi", "connect", ssid])
                     .status();
-                if status.map(|s| s.success()).unwrap_or(false) { 0 } else { 1 }
+                if status.map(|s| s.success()).unwrap_or(false) {
+                    0
+                } else {
+                    1
+                }
             } else {
                 eprintln!("Missing SSID");
                 1
@@ -290,7 +314,9 @@ pub fn run_wifi(args: &[String]) -> i32 {
         }
         "disconnect" => {
             if let Some(ssid) = args.get(1) {
-                let _ = Command::new("nmcli").args(["connection", "down", "id", ssid]).status();
+                let _ = Command::new("nmcli")
+                    .args(["connection", "down", "id", ssid])
+                    .status();
                 0
             } else {
                 eprintln!("Missing SSID");
@@ -299,7 +325,9 @@ pub fn run_wifi(args: &[String]) -> i32 {
         }
         "forget" => {
             if let Some(ssid) = args.get(1) {
-                let _ = Command::new("nmcli").args(["connection", "delete", "id", ssid]).status();
+                let _ = Command::new("nmcli")
+                    .args(["connection", "delete", "id", ssid])
+                    .status();
                 0
             } else {
                 eprintln!("Missing SSID");

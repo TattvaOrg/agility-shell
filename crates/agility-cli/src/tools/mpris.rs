@@ -33,9 +33,20 @@ pub fn get_music_players() -> Vec<MusicPlayerEntry> {
         .unwrap_or_default();
 
     let known_players = [
-        "spotify", "vlc", "mpv", "amberol", "audacious", "rhythmbox",
-        "clementine", "strawberry", "feishin", "tauon", "deadbeef",
-        "elisa", "cmus", "ncspot",
+        "spotify",
+        "vlc",
+        "mpv",
+        "amberol",
+        "audacious",
+        "rhythmbox",
+        "clementine",
+        "strawberry",
+        "feishin",
+        "tauon",
+        "deadbeef",
+        "elisa",
+        "cmus",
+        "ncspot",
     ];
 
     let xdg_data_dirs = std::env::var("XDG_DATA_DIRS")
@@ -69,7 +80,9 @@ pub fn get_music_players() -> Vec<MusicPlayerEntry> {
             }
 
             if let Ok(content) = fs::read_to_string(&path) {
-                if let Some(player) = parse_music_desktop(&content, &known_players, &running_players) {
+                if let Some(player) =
+                    parse_music_desktop(&content, &known_players, &running_players)
+                {
                     if !seen_ids.contains(&player.id) {
                         seen_ids.insert(player.id.clone());
                         results.push(player);
@@ -80,7 +93,9 @@ pub fn get_music_players() -> Vec<MusicPlayerEntry> {
     }
 
     results.sort_by(|a, b| {
-        b.running.cmp(&a.running).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        b.running
+            .cmp(&a.running)
+            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     results
 }
@@ -111,7 +126,9 @@ fn parse_music_desktop(
             if let Some((k, v)) = trimmed.split_once('=') {
                 match k.trim() {
                     "Name" if name.is_empty() => name = v.trim().to_string(),
-                    "Exec" if exec.is_empty() => exec = v.trim().split(" %").next().unwrap_or("").to_string(),
+                    "Exec" if exec.is_empty() => {
+                        exec = v.trim().split(" %").next().unwrap_or("").to_string()
+                    }
                     "Icon" if icon.is_empty() => icon = v.trim().to_string(),
                     "Categories" => categories = v.trim().to_lowercase(),
                     "NoDisplay" => no_display = v.trim().eq_ignore_ascii_case("true"),
@@ -126,8 +143,12 @@ fn parse_music_desktop(
     }
 
     let exec_lower = exec.to_lowercase();
-    let is_known = known.iter().any(|k| exec_lower.contains(k) || name.to_lowercase().contains(k));
-    let is_audio = categories.contains("audio") || categories.contains("music") || categories.contains("audiovideo");
+    let is_known = known
+        .iter()
+        .any(|k| exec_lower.contains(k) || name.to_lowercase().contains(k));
+    let is_audio = categories.contains("audio")
+        || categories.contains("music")
+        || categories.contains("audiovideo");
 
     if is_known || is_audio {
         let id = Path::new(&exec)

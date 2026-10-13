@@ -64,7 +64,13 @@ pub fn update_prefs(json_str: &str) -> bool {
         if let Some(obj) = data.as_object() {
             for (k, v) in obj {
                 let val_str = match v {
-                    Value::Bool(b) => if *b { "1".to_string() } else { "0".to_string() },
+                    Value::Bool(b) => {
+                        if *b {
+                            "1".to_string()
+                        } else {
+                            "0".to_string()
+                        }
+                    }
                     Value::Number(n) => n.to_string(),
                     Value::String(s) => s.clone(),
                     _ => v.to_string(),
@@ -87,13 +93,21 @@ pub fn run(args: &[String]) -> i32 {
         0
     } else if first == "update" {
         if let Some(arg) = args.get(1) {
-            if update_prefs(arg) { 0 } else { 1 }
+            if update_prefs(arg) {
+                0
+            } else {
+                1
+            }
         } else {
             eprintln!("Missing JSON args for update");
             1
         }
     } else if first.trim().starts_with('{') {
-        if update_prefs(first) { 0 } else { 1 }
+        if update_prefs(first) {
+            0
+        } else {
+            1
+        }
     } else {
         let prefs = read_prefs();
         println!("{}", serde_json::to_string(&prefs).unwrap_or_default());

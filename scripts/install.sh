@@ -9,7 +9,6 @@ set -euo pipefail
 REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
 SYSTEM_DATA="/usr/share/agility-shell"
 SYSTEM_LIB="/usr/lib/agility-shell"
-SYSTEM_VENV="$SYSTEM_LIB/venv"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
 USER_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
 
@@ -24,10 +23,10 @@ fi
 
 IS_LOCAL_REPO=false
 LOCAL_SRC_DIR=""
-if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/main.py" && -f "$REPO_ROOT/bar.py" && -d "$REPO_ROOT/bar_widgets" ]]; then
+if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/Cargo.toml" && -f "$REPO_ROOT/Makefile" && -d "$REPO_ROOT/quickshell" ]]; then
     IS_LOCAL_REPO=true
     LOCAL_SRC_DIR="$REPO_ROOT"
-elif [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/main.py" && -f "$SCRIPT_DIR/bar.py" && -d "$SCRIPT_DIR/bar_widgets" ]]; then
+elif [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/Cargo.toml" && -f "$SCRIPT_DIR/Makefile" && -d "$SCRIPT_DIR/quickshell" ]]; then
     IS_LOCAL_REPO=true
     LOCAL_SRC_DIR="$SCRIPT_DIR"
 fi
@@ -135,30 +134,22 @@ PACMAN_DEPS=(
     swayidle
     networkmanager
     bluez
-    python
-    python-pip
-    python-gobject
-    python-cairo
-    python-pillow
-    python-psutil
-    python-cffi
-    python-click
-    python-loguru
-    python-setproctitle
-    python-rapidfuzz
-    python-pam
     wayland
     pkgconf
-    awww
     base-devel
     git
     make
     gcc
     niri
+    rust
+    cargo
+    quickshell
+    pam
+    libpulse
+    jq
 )
 
 AUR_DEPS=(
-    fabric-cli-git
 )
 
 is_pkg_installed() {
@@ -556,14 +547,11 @@ install_system_files() {
             make
             sudo make PREFIX="/usr" install
         fi
-        sudo make PREFIX="/usr" install-venv
-        success "Dedicated virtualenv verified at /usr/lib/agility-shell/venv."
     else
-        info "Building native snippets and installing via root Makefile..."
+        info "Compiling Next-Gen Rust binaries and installing via root Makefile..."
         make
         sudo make PREFIX="/usr" install
-        sudo make PREFIX="/usr" install-venv
-        success "System files and dedicated virtualenv installed to /usr/share and /usr/lib."
+        success "System files and Next-Gen binaries installed to /usr/bin and /usr/share."
     fi
 }
 

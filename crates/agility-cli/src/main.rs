@@ -126,16 +126,8 @@ async fn main() -> Result<()> {
 
 async fn handle_start(legacy: bool) -> Result<()> {
     if legacy {
-        println!("🚀 Starting legacy Python Agility Shell stack...");
-        let status = Command::new("agility-shell")
-            .arg("--legacy")
-            .status()
-            .or_else(|_| Command::new("python3").arg("main.py").status());
-        match status {
-            Ok(s) if s.success() => println!("✓ Legacy shell started."),
-            _ => eprintln!("⚠ Could not start legacy shell. Ensure python runtime is installed."),
-        }
-        return Ok(());
+        println!("ℹ Notice: Legacy Python stack has been completely removed.");
+        println!("  Agility Shell is now 100% Rust & QML. Starting Next-Gen shell...");
     }
 
     // Next-Gen start: Check systemd user service first
@@ -198,8 +190,9 @@ async fn handle_stop() -> Result<()> {
     // Gracefully terminate daemon and frontend
     let _ = Command::new("killall").arg("-q").arg("quickshell").status();
     let _ = Command::new("killall").arg("-q").arg("agilityd").status();
-    let _ = Command::new("pkill")
-        .args(["-f", "python.*agility-shell"])
+    let _ = Command::new("killall")
+        .arg("-q")
+        .arg("agility-shell")
         .status();
 
     println!("✓ Agility Shell stopped.");

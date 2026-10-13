@@ -1,22 +1,17 @@
 # Maintainer: AbsolOrg <https://github.com/AbsolOrg>
 pkgname=agility-shell-git
-pkgver=1.3.0.r366.ge270d87
+pkgver=2.0.0.r0.g0000000
 pkgrel=1
 pkgdesc="Next-generation Wayland desktop shell powered by Rust daemon and Quickshell"
 arch=('x86_64' 'aarch64')
 url="https://github.com/TattvaOrg/agility-shell"
 license=('GPL-3.0-or-later')
 depends=(
-    'gtk3'
-    'cairo'
-    'libgirepository'
-    'gobject-introspection-runtime'
-    'gtk-layer-shell'
-    'libdbusmenu-gtk3'
-    'gtk-session-lock'
-    'cinnamon-desktop'
-    'gnome-bluetooth-3.0'
-    'matugen'
+    'wayland'
+    'niri'
+    'quickshell'
+    'pam'
+    'libpulse'
     'playerctl'
     'brightnessctl'
     'wf-recorder'
@@ -24,33 +19,20 @@ depends=(
     'swayidle'
     'networkmanager'
     'bluez'
-    'python'
-    'python-pip'
-    'python-gobject'
-    'python-cairo'
-    'python-pillow'
-    'python-psutil'
-    'python-cffi'
-    'python-click'
-    'python-loguru'
-    'python-setproctitle'
-    'python-rapidfuzz'
-    'python-pam'
-    'wayland'
-    'awww'
-    'niri'
-    'quickshell'
-    'pam'
-    'libpulse'
+    'matugen'
+    'jq'
 )
 makedepends=('git' 'gcc' 'make' 'pkgconf' 'cargo')
 optdepends=(
     'pipewire: for audio playback support'
     'wireplumber: for audio device and volume management'
+    'grim: for screenshot region capture'
+    'slurp: for interactive screen area selection'
 )
 provides=('agility-shell' 'agilityd' 'agl')
 conflicts=('agility-shell')
-if [[ -f "${startdir}/main.py" && -f "${startdir}/Makefile" ]]; then
+
+if [[ -f "${startdir}/Cargo.toml" && -f "${startdir}/Makefile" ]]; then
     _intree=true
     source=()
     sha256sums=()
@@ -67,9 +49,9 @@ pkgver() {
         cd "${srcdir}/${pkgname}"
     fi
     if git rev-parse --git-dir &>/dev/null; then
-        printf "1.3.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+        printf "2.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
     else
-        echo "1.3.0"
+        echo "2.0.0"
     fi
 }
 
@@ -79,7 +61,7 @@ build() {
     else
         cd "${srcdir}/${pkgname}"
     fi
-    make
+    make build
 }
 
 package() {
@@ -90,4 +72,3 @@ package() {
     fi
     make DESTDIR="${pkgdir}" PREFIX="/usr" install
 }
-

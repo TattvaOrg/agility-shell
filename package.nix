@@ -1,169 +1,71 @@
 { lib
-, stdenv
-, pkgs
-, pythonEnv
-, gtk3
-, gtk-layer-shell
-, gtk-session-lock
-, gobject-introspection
-, libdbusmenu-gtk3
-, gdk-pixbuf
-, librsvg
-, wayland
-, pkg-config
-, cinnamon-desktop
-, glib
-, gnome-bluetooth
-, pango
-, harfbuzz
-, atk
-, playerctl
-, networkmanager
-, pipewire
-, upower
-, bluez
-, brightnessctl
-, swayidle
-, wlsunset
-, wf-recorder
-, swww
-, gsettings-desktop-schemas
-, hicolor-icon-theme
-, adwaita-icon-theme
-, morewaita-icon-theme
+, rustPlatform
 , makeWrapper
-, wrapGAppsHook3
+, pkg-config
+, wayland
+, pam
+, libpulseaudio
+, playerctl
+, brightnessctl
+, wf-recorder
+, upower
+, swayidle
+, networkmanager
+, bluez
+, quickshell
+, matugen
+, jq
 }:
 
-let
-  # Build libhacktk.so from source — depends on GTK3
-  libhacktk = stdenv.mkDerivation {
-    pname = "libhacktk";
-    version = "0.1.0";
-    src = ./snippets/hacktk/lib;
-
-    nativeBuildInputs = [ pkg-config ];
-    buildInputs = [ gtk3 ];
-
-    buildPhase = ''
-      gcc -fPIC -Wall -Wextra -O2 -Wno-deprecated-declarations -DGLIB_DISABLE_DEPRECATION_WARNINGS -shared \
-        -o libhacktk.so hacktk.c \
-        $(pkg-config --cflags --libs gtk+-3.0) -lm
-    '';
-
-    installPhase = ''
-      mkdir -p $out/lib
-      cp libhacktk.so $out/lib/
-    '';
-  };
-
-  # Build libblur.so from source — depends on wayland-client
-  libblur = stdenv.mkDerivation {
-    pname = "libblur";
-    version = "0.1.0";
-    src = ./snippets/blur/lib;
-
-    nativeBuildInputs = [ pkg-config ];
-    buildInputs = [ wayland ];
-
-    buildPhase = ''
-      gcc -shared -fPIC -fvisibility=default \
-        -o libblur.so blur.c ext-background-effect-v1-protocol.c \
-        $(pkg-config --cflags wayland-client) -lwayland-client
-    '';
-
-    installPhase = ''
-      mkdir -p $out/lib
-      cp libblur.so $out/lib/
-    '';
-  };
-
-  # All runtime libs that provide typelibs
-  runtimeLibs = [
-    gtk3
-    gtk-layer-shell
-    gobject-introspection
-    gtk-session-lock
-    libdbusmenu-gtk3
-    gdk-pixbuf
-    librsvg
-    cinnamon-desktop
-    glib
-    gnome-bluetooth
-    pango
-    harfbuzz
-    atk
-    playerctl
-    networkmanager
-    upower
-  ];
-
-  typelibPath = lib.makeSearchPathOutput "lib" "lib/girepository-1.0" runtimeLibs;
-  libraryPath = lib.makeLibraryPath (runtimeLibs ++ [ wayland pipewire ]);
-
-in stdenv.mkDerivation {
+rustPlatform.buildRustPackage {
   pname = "agility-shell";
-  version = "0.1.0";
+  version = "2.0.0";
+
   src = ./.;
 
-  # Native hooks: wrapGAppsHook3 will execute automatically at the end of the build
-  nativeBuildInputs = [ makeWrapper wrapGAppsHook3 pkg-config ];
-  
-  # Keeping these in buildInputs allows wrapGAppsHook3 to harvest and bundle their asset schemas
-  buildInputs = runtimeLibs ++ [ 
-    wayland 
-    gsettings-desktop-schemas
-    hicolor-icon-theme
-    adwaita-icon-theme
-    morewaita-icon-theme
+  cargoLock = {
+    lockFile = ./Cargo.lock;
+  };
+
+  nativeBuildInputs = [
+    pkg-config
+    makeWrapper
   ];
 
-  dontBuild = true;
+  buildInputs = [
+    wayland
+    pam
+    libpulseaudio
+    playerctl
+    brightnessctl
+    wf-recorder
+    upower
+    swayidle
+    networkmanager
+    bluez
+  ];
 
-  installPhase = ''
-    runHook preInstall
-
+  postInstall = ''
     mkdir -p $out/share/agility-shell
-    cp -r ./* $out/share/agility-shell/
+    mkdir -p $out/share/applications
+    mkdir -p $out/lib/systemd/user
 
-    # Patch dlopen paths to point to the Nix store .so locations
-    substituteInPlace $out/share/agility-shell/snippets/hacktk/hacktk.py \
-      --replace-fail \
-        'get_relative_path("./lib/libhacktk.so")' \
-        '"${libhacktk}/lib/libhacktk.so"'
+    install -m 755 agility-shell $out/bin/agility-shell
+    install -m 644 systemd/agility-shell.service $out/lib/systemd/user/
+    install -m 644 agility-shell.desktop $out/share/applications/
 
-    substituteInPlace $out/share/agility-shell/snippets/blur/blur.py \
-      --replace-fail \
-        'get_relative_path("./lib/libblur.so")' \
-        '"${libblur}/lib/libblur.so"'
+    cp -r config themes wallpapers svgs sounds quickshell scripts $out/share/agility-shell/
 
-    mkdir -p $out/bin
-    
-    # Python-scoped entry setup wrapper
-    makeWrapper ${pythonEnv}/bin/python $out/bin/agility-shell \
-      --prefix PYTHONPATH : "$out/share/agility-shell" \
-      --add-flags "$out/share/agility-shell/main.py" \
-      --chdir "$out/share/agility-shell"
-
-    runHook postInstall
+    wrapProgram $out/bin/agility-shell \
+      --prefix PATH : ${lib.makeBinPath [ quickshell matugen jq playerctl brightnessctl wf-recorder upower ]}
+    wrapProgram $out/bin/agl \
+      --prefix PATH : ${lib.makeBinPath [ quickshell matugen jq ]}
   '';
 
-  # We feed wrapGAppsHook3's automation array before it creates the final execution wrapper
-  preFixup = ''
-    gappsWrapperArgs+=(--set GI_TYPELIB_PATH "${typelibPath}")
-    gappsWrapperArgs+=(--set LD_LIBRARY_PATH "${libraryPath}")
-    gappsWrapperArgs+=(--set GTK_THEME "Adwaita")
-    gappsWrapperArgs+=(--prefix PATH : "${lib.makeBinPath [ pipewire bluez brightnessctl swayidle wlsunset wf-recorder swww ]}")
-    
-    # Append host runtime schemas so your system-installed application assets resolve natively
-    gappsWrapperArgs+=(--suffix XDG_DATA_DIRS : "/run/current-system/sw/share")
-    gappsWrapperArgs+=(--suffix XDG_DATA_DIRS : "~/.local/share")
-  '';
-
-  meta = {
-    description = "A lightweight desktop shell powered by Fabric";
-    license = lib.licenses.mit;
-    platforms = lib.platforms.linux;
-    mainProgram = "agility-shell";
+  meta = with lib; {
+    description = "Next-generation Wayland desktop shell powered by Rust daemon and Quickshell";
+    homepage = "https://github.com/TattvaOrg/agility-shell";
+    license = licenses.gpl3Plus;
+    platforms = platforms.linux;
   };
 }

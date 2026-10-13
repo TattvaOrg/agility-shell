@@ -127,13 +127,9 @@ if command -v systemctl &>/dev/null; then
     systemctl --user disable agility-shell.service 2>/dev/null || true
 fi
 
-pids=$(pgrep -x "agility-shell" 2>/dev/null || true)
-pids+=" $(pgrep -f "python.*[m]ain\.py" 2>/dev/null || true)"
-if [[ -n "${pids// /}" ]]; then
-    kill -15 $pids 2>/dev/null || true
-    sleep 0.5
-    kill -9 $pids 2>/dev/null || true
-fi
+killall -q agility-shell 2>/dev/null || true
+killall -q quickshell 2>/dev/null || true
+killall -q agilityd 2>/dev/null || true
 
 if pacman -Q agility-shell-git &>/dev/null || pacman -Q agility-shell &>/dev/null; then
     info "Removing native pacman package..."
@@ -141,7 +137,7 @@ if pacman -Q agility-shell-git &>/dev/null || pacman -Q agility-shell &>/dev/nul
 fi
 
 info "Removing system-installed files..."
-sudo rm -f /usr/bin/agility-shell /usr/bin/agl
+sudo rm -f /usr/bin/agility-shell /usr/bin/agilityd /usr/bin/agl
 sudo rm -f /usr/lib/systemd/user/agility-shell.service
 sudo rm -f /usr/share/applications/agility-shell.desktop
 sudo rm -rf "$SYSTEM_DATA" "$SYSTEM_LIB"

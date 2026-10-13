@@ -5,15 +5,15 @@
 
 version: 2
 updates:
-  # Maintain Python dependencies defined in requirements.txt
-  - package-ecosystem: "pip"
+  # Maintain Rust dependencies defined in Cargo.toml
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "python"
+      - "rust"
     commit-message:
       prefix: "chore(deps)"
 

@@ -596,35 +596,47 @@ download_and_extract_prebuilt() {
     local download_url=""
     local checksum_url=""
 
+    local download_success=false
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    # Strategy 1: Specific tag URL if tag provided
     if [[ -n "$tag" && "$tag" != "latest" ]]; then
         local tag_ref="$tag"
         download_url="${base_url}/download/${tag_ref}/${tarball_name}"
         checksum_url="${base_url}/download/${tag_ref}/${tarball_name}.sha256"
-        # Verify if asset exists under literal tag; if not, test alternate tag prefix (v1.x vs 1.x)
-        if ! curl -f -sI -L "$download_url" &>/dev/null; then
+        info "Fetching prebuilt release binaries for ${arch} (tag: ${tag_ref})..."
+        info "URL: $download_url"
+        if curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name" 2>/dev/null; then
+            download_success=true
+        else
             local alt_ref="$tag_ref"
             if [[ "$alt_ref" =~ ^[0-9] ]]; then
                 alt_ref="v$alt_ref"
             elif [[ "$alt_ref" =~ ^v[0-9] ]]; then
                 alt_ref="${alt_ref#v}"
             fi
-            if curl -f -sI -L "${base_url}/download/${alt_ref}/${tarball_name}" &>/dev/null; then
-                download_url="${base_url}/download/${alt_ref}/${tarball_name}"
-                checksum_url="${base_url}/download/${alt_ref}/${tarball_name}.sha256"
+            download_url="${base_url}/download/${alt_ref}/${tarball_name}"
+            checksum_url="${base_url}/download/${alt_ref}/${tarball_name}.sha256"
+            info "Retrying with alternate tag reference: ${alt_ref}..."
+            if curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name" 2>/dev/null; then
+                download_success=true
             fi
         fi
-    else
-        download_url="${base_url}/latest/download/${tarball_name}"
-        checksum_url="${base_url}/latest/download/${tarball_name}.sha256"
     fi
 
-    info "Fetching prebuilt release binaries for ${arch}..."
-    info "URL: $download_url"
+    # Strategy 2: Latest release URL if tag was latest or specific tag failed
+    if [[ "$download_success" == "false" ]]; then
+        download_url="${base_url}/latest/download/${tarball_name}"
+        checksum_url="${base_url}/latest/download/${tarball_name}.sha256"
+        info "Fetching prebuilt release binaries for ${arch} (latest release)..."
+        info "URL: $download_url"
+        if curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name"; then
+            download_success=true
+        fi
+    fi
 
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-
-    if ! curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name"; then
+    if [[ "$download_success" == "false" ]]; then
         warn "Could not download prebuilt release binaries from GitHub Releases."
         rm -rf "$tmp_dir"
         return 1
@@ -670,22 +682,22 @@ install_system_files() {
 
     local used_prebuilt=false
     if [[ "$from_source" == "false" ]]; then
-        if [[ -x "$src_dir/target/release/agilityd" && -x "$src_dir/target/release/agl" ]]; then
+        if download_and_extract_prebuilt "$src_dir" "$tag"; then
+            used_prebuilt=true
+        elif [[ -x "$src_dir/target/release/agilityd" && -x "$src_dir/target/release/agl" ]]; then
             info "Using prebuilt release binaries already present in target/release..."
             used_prebuilt=true
-        elif download_and_extract_prebuilt "$src_dir" "$tag"; then
-            used_prebuilt=true
         else
-            warn "Prebuilt release binaries not found or download failed."
+            warn "Prebuilt release binaries could not be downloaded."
             echo ""
-            prompt_user "  Would you like to compile Agility Shell from source using cargo? [Y/n]: " compile_choice "y"
+            prompt_user "  Would you like to compile Agility Shell from source using cargo? [y/N]: " compile_choice "n"
             case "$compile_choice" in
-                [nN]|[nN][oO])
-                    die "Installation aborted: prebuilt binaries unavailable and source build declined."
-                    ;;
-                *)
+                [yY]|[yY][eE][sS])
                     info "Proceeding with source compilation..."
                     check_and_install_source_deps
+                    ;;
+                *)
+                    die "Installation stopped: prebuilt binaries unavailable and source compilation declined."
                     ;;
             esac
         fi
@@ -1018,6 +1030,13 @@ do_install() {
             cp -r "$LOCAL_SRC_DIR"/* "$work_dir/"
         else
             work_dir="$LOCAL_SRC_DIR"
+        fi
+        if [[ -z "$selected_tag" || "$selected_tag" == "latest" ]]; then
+            if [[ -d "$work_dir/.git" ]]; then
+                local git_tag
+                git_tag=$(git -C "$work_dir" tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+                [[ -n "$git_tag" ]] && selected_tag="$git_tag"
+            fi
         fi
     else
         work_dir="$(mktemp -d)"

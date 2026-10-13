@@ -36,11 +36,13 @@ curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/instal
 ```
 
 ### 2. Install Agility Shell (System-Wide)
-Once dependencies are satisfied, install Agility Shell into the distributed system directories (`/usr/share` and `/usr/lib`):
+Once dependencies are satisfied, install Agility Shell into the distributed system directories (`/usr/bin` and `/usr/share`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash
 ```
+
+> **Fast Prebuilt Install (Default)**: Selecting **Latest Release** (Option 1) directly downloads and installs the official prebuilt binary tarball from GitHub Releases—no local Rust/cargo compilation required. If you prefer compiling from source, select **Compile by yourself** (Option 2) or pass `--from-source`.
 
 >[!NOTE]
 >The installer automatically scans `~/.config/agility-shell` for any old monolithic shell installations, removes old source files and venvs, and safely migrates your custom configs, themes, wallpapers, and styles to the new clean config directory.
@@ -58,6 +60,17 @@ curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/update
 > - Update to Latest Release: `curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/update.sh | bash -s -- --release`
 > - Update to Bleeding-Edge Main: `curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/update.sh | bash -s -- --main`
 > - Or directly from terminal: `agl update`
+
+### 4. Uninstall Agility Shell (One-Liner Complete Removal)
+To completely remove Agility Shell from your system in one command:
+
+```bash
+# Total system removal (interactive prompts):
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/uninstall.sh | bash
+
+# Total removal + purge user configuration (~/.config/agility-shell) and caches:
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/uninstall.sh | bash -s -- --purge
+```
 
 ---
 
@@ -137,18 +150,24 @@ Root backup scripts (`install.sh`, `update.sh`, `uninstall.sh`, `start.sh`, `res
 
 To completely remove Agility Shell from your system (including running services, system binaries, desktop entries, sudoers charge limit rules, compositor includes, and matugen templates):
 
+### One-Liner Removal (Remote)
+```bash
+# Standard interactive uninstallation:
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/uninstall.sh | bash
+
+# Complete purge (removes ~/.config/agility-shell, state, and caches without confirmation):
+curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/uninstall.sh | bash -s -- --purge
+```
+
+### CLI or Local Repository
 ```bash
 # Using CLI
 agl uninstall
-
-# To also purge all user configuration (~/.config/agility-shell) and caches:
 agl uninstall --purge
 
-# Using local script
+# Using in-tree / local script
 ./uninstall.sh
-
-# Using curl oneliner
-curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/uninstall.sh | bash
+./uninstall.sh --purge
 ```
 
 ---

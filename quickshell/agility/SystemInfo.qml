@@ -50,9 +50,12 @@ Item {
     }
 
     function saveSettings() {
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"sysinfo\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"isVertical\":" + (root.isVertical ? "True" : "False") + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("sysinfo", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "isVertical": root.isVertical
+        })
     }
 
     Component.onCompleted: {

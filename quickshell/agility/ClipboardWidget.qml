@@ -56,10 +56,12 @@ Item {
     }
 
     function saveSettings() {
-        var jsonStr = JSON.stringify(root.historyList).replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"clipboard\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"list\":" + jsonStr + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("clipboard", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "list": root.clipboardList
+        })
     }
 
     // Process to check wl-paste for new clipboard item

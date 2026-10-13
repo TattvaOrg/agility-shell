@@ -50,16 +50,19 @@ Item {
     }
 
     function saveSettings() {
-        var safePath = root.imagePath.replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"poster\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"imagePath\":\"" + safePath + "\",\"shapeIndex\":" + root.shapeIndex + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("poster", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "imagePath": safePath,
+            "shapeIndex": root.shapeIndex
+        })
     }
 
     // ─── GTK3 File Chooser Process ───
     Process {
         id: pickerProc
-        command: ["python3", "-c", "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; dialog=Gtk.FileChooserDialog(title='Select Image / GIF for Poster', action=Gtk.FileChooserAction.OPEN); dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK); f=Gtk.FileFilter(); f.set_name('Images & GIFs (*.gif, *.png, *.jpg, *.jpeg, *.webp)'); f.add_mime_type('image/gif'); f.add_mime_type('image/png'); f.add_mime_type('image/jpeg'); f.add_mime_type('image/webp'); dialog.add_filter(f); res=dialog.run(); path=dialog.get_filename() if res==Gtk.ResponseType.OK else ''; dialog.destroy(); print(path if path else '')"]
+        command: ["sh", "-c", "zenity --file-selection --title='Select Image / GIF for Poster' --file-filter='Images & GIFs (*.gif, *.png, *.jpg, *.jpeg, *.webp) | *.gif *.png *.jpg *.jpeg *.webp' 2>/dev/null || kdialog --getopenfilename ~ 'image/gif image/png image/jpeg image/webp' 2>/dev/null || true"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {

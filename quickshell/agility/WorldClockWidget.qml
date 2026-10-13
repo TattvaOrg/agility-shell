@@ -78,16 +78,19 @@ Item {
     }
 
     function saveSettings() {
-        var jsonCities = JSON.stringify(root.cities).replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"worldclock\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"shapeStyle\":" + root.shapeStyleIndex + ",\"cities\":" + jsonCities + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("worldclock", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "shapeStyle": root.shapeStyleIndex,
+            "cities": root.citiesList
+        })
     }
 
     // ─── GTK3 Custom Timezone Prompt ───
     Process {
         id: addTzProc
-        command: ["python3", "-c", "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; dialog=Gtk.Dialog(title='Add Timezone / City', buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)); vbox=dialog.get_content_area(); c_entry=Gtk.Entry(); c_entry.set_placeholder_text('City Name (e.g. Dubai, Paris, Mumbai)'); o_entry=Gtk.Entry(); o_entry.set_placeholder_text('UTC Offset in Hours (e.g. 4, -5, 5.5)'); vbox.pack_start(c_entry, False, False, 6); vbox.pack_start(o_entry, False, False, 6); dialog.show_all(); res=dialog.run(); city=c_entry.get_text().strip(); off=o_entry.get_text().strip(); dialog.destroy(); print((city + ';;' + off) if res==Gtk.ResponseType.OK else '')"]
+        command: ["sh", "-c", "zenity --entry --title='Add Timezone / City' --text='City Name;;UTC Offset in Hours (e.g. Dubai;;4):' 2>/dev/null || kdialog --inputbox 'City Name;;UTC Offset in Hours (e.g. Dubai;;4):' '' 2>/dev/null || true"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {

@@ -11,21 +11,36 @@ SYSTEMDDIR = $(PREFIX)/lib/systemd/user
 APPLICATIONSDIR = $(PREFIX)/share/applications
 PYTHON ?= python3
 
-.PHONY: all clean install install-venv uninstall
+CARGO ?= cargo
 
-all:
-	@echo "==> Compiling native snippet libraries..."
+.PHONY: all build build-rust check clean install install-legacy install-venv uninstall
+
+all: build
+
+build: build-rust
+
+build-rust:
+	@echo "==> Compiling Agility Shell Next-Gen Rust workspace (release)..."
+	$(CARGO) build --release
+
+check:
+	@echo "==> Checking Agility Shell Rust workspace..."
+	$(CARGO) check
+
+build-legacy:
+	@echo "==> Compiling native snippet libraries (legacy)..."
 	$(MAKE) -C snippets/blur/lib
 	$(MAKE) -C snippets/hacktk/lib
-	@echo "==> Build complete."
+	@echo "==> Legacy build complete."
 
 clean:
-	@echo "==> Cleaning snippet build artifacts..."
+	@echo "==> Cleaning build artifacts..."
+	-$(CARGO) clean
 	-$(MAKE) -C snippets/blur/lib clean
 	-$(MAKE) -C snippets/hacktk/lib clean
 	rm -rf __pycache__ */__pycache__ */*/__pycache__
 
-install: all
+install: build
 	@echo "==> Installing Agility Shell system-wide (PREFIX=$(PREFIX))..."
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(DATADIR)
@@ -33,9 +48,10 @@ install: all
 	mkdir -p $(DESTDIR)$(SYSTEMDDIR)
 	mkdir -p $(DESTDIR)$(APPLICATIONSDIR)
 
-	# Install CLI and launcher binaries
+	# Install Next-Gen Rust binaries
+	install -m 755 target/release/agilityd $(DESTDIR)$(BINDIR)/agilityd
+	install -m 755 target/release/agl $(DESTDIR)$(BINDIR)/agl
 	install -m 755 agility-shell $(DESTDIR)$(BINDIR)/agility-shell
-	install -m 755 bin/agl $(DESTDIR)$(BINDIR)/agl
 
 	# Install compiled shared native libraries
 	install -m 755 snippets/blur/lib/libblur.so $(DESTDIR)$(LIBDIR)/libblur.so

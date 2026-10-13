@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "components" as Components
 
 Item {
     id: root
@@ -98,9 +99,13 @@ Item {
     }
 
     function saveSettings() {
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"timer\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"mode\":\"" + root.timerMode + "\",\"totalSec\":" + root.totalSec + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("timer", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "mode": root.timerMode,
+            "totalSec": root.totalSec
+        })
     }
 
     Timer {
@@ -115,6 +120,7 @@ Item {
                     root.remainingSec--
                 } else {
                     root.isRunning = false
+                    Components.SoundService.play("alarm")
                 }
             }
             ringCanvas.requestPaint()

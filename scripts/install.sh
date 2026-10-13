@@ -417,9 +417,6 @@ test_and_install_deps_step_by_step() {
 }
 
 check_and_install_deps() {
-    info "Synchronizing Arch package databases to inspect updates..."
-    sudo pacman -Sy --noconfirm 2>/dev/null || sudo pacman -Sy || true
-
     info "Auditing system dependencies (checking missing or outdated packages)..."
     local missing_pacman=()
     local outdated_pacman=()
@@ -451,6 +448,9 @@ check_and_install_deps() {
         success "All required dependencies are already installed and up to date."
         return 0
     fi
+
+    info "Synchronizing Arch package databases to inspect updates..."
+    sudo pacman -Sy --noconfirm 2>/dev/null || sudo pacman -Sy || true
 
     echo
     if [[ ${#missing_pacman[@]} -gt 0 || ${#missing_aur[@]} -gt 0 ]]; then

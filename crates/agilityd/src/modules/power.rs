@@ -607,6 +607,20 @@ impl PowerInterface {
     }
 
     /// Set power profile ("power-saver", "balanced", "performance").
+    /// Retrieve current active power profile name.
+    async fn get_profile(&self) -> String {
+        self.service.get_power_profile()
+    }
+
+    /// Set power profile alias.
+    async fn set_profile(
+        &self,
+        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
+        profile: &str,
+    ) -> bool {
+        self.set_power_profile(emitter, profile).await
+    }
+
     async fn set_power_profile(
         &self,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,

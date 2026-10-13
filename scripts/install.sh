@@ -535,6 +535,15 @@ scan_and_remove_old_shell() {
     if [[ -f "$SYSTEM_DATA/main.py" || -f "$SYSTEM_DATA/bar.py" ]]; then
         has_old_shell=true
     fi
+    if [[ -f "$HOME/.local/bin/agility-shell" || -f "$HOME/.local/bin/agl" || -L "$HOME/.local/bin/agility-shell" || -L "$HOME/.local/bin/agl" ]]; then
+        has_old_shell=true
+    fi
+    if [[ -f "/usr/local/bin/agility-shell" || -f "/usr/local/bin/agl" || -L "/usr/local/bin/agility-shell" || -L "/usr/local/bin/agl" ]]; then
+        has_old_shell=true
+    fi
+    if [[ -f "$HOME/.config/systemd/user/agility-shell.service" ]]; then
+        has_old_shell=true
+    fi
 
     if [[ "$has_old_shell" == "true" ]]; then
         echo
@@ -558,6 +567,27 @@ scan_and_remove_old_shell() {
                    "$USER_CONFIG/quickshell" "$USER_CONFIG/scripts" "$USER_CONFIG/agility-shell" \
                    "$USER_CONFIG/requirements.txt" "$USER_CONFIG/Makefile" "$USER_CONFIG/PKGBUILD" 2>/dev/null || true
             success "Preserved user configs. ~/.config/agility-shell now cleanly holds configurations only."
+        fi
+
+        # Purge obsolete / shadowing binaries in ~/.local/bin and /usr/local/bin
+        if [[ -f "$HOME/.local/bin/agility-shell" || -f "$HOME/.local/bin/agl" || -L "$HOME/.local/bin/agility-shell" || -L "$HOME/.local/bin/agl" ]]; then
+            info "Removing obsolete/shadowed binaries from ~/.local/bin..."
+            rm -f "$HOME/.local/bin/agility-shell" "$HOME/.local/bin/agl" "$HOME/.local/bin/agilityd" 2>/dev/null || true
+        fi
+        if [[ -f "/usr/local/bin/agility-shell" || -f "/usr/local/bin/agl" || -L "/usr/local/bin/agility-shell" || -L "/usr/local/bin/agl" ]]; then
+            info "Removing obsolete/shadowed binaries from /usr/local/bin..."
+            sudo rm -f "/usr/local/bin/agility-shell" "/usr/local/bin/agl" "/usr/local/bin/agilityd" 2>/dev/null || true
+        fi
+
+        # Remove obsolete user-level systemd unit that shadows /usr/lib/systemd/user/agility-shell.service
+        if [[ -f "$HOME/.config/systemd/user/agility-shell.service" ]]; then
+            info "Removing obsolete ~/.config/systemd/user/agility-shell.service override..."
+            rm -f "$HOME/.config/systemd/user/agility-shell.service" \
+                  "$HOME/.config/systemd/user/default.target.wants/agility-shell.service" \
+                  "$HOME/.config/systemd/user/graphical-session.target.wants/agility-shell.service" 2>/dev/null || true
+            if command -v systemctl &>/dev/null; then
+                systemctl --user daemon-reload 2>/dev/null || true
+            fi
         fi
 
         if [[ -f "/usr/bin/agl" ]]; then

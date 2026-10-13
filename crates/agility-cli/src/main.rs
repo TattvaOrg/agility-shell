@@ -231,10 +231,14 @@ async fn handle_start(legacy: bool) -> Result<()> {
             .status();
         if let Ok(s) = out {
             if s.success() {
-                println!("✓ Started agility-shell.service successfully.");
-                return Ok(());
+                tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+                if is_systemd_service_active("agility-shell.service") {
+                    println!("✓ Started agility-shell.service successfully.");
+                    return Ok(());
+                }
             }
         }
+        println!("ℹ systemd service unavailable or inactive, falling back to direct background launch...");
     }
 
     // Direct background spawn
@@ -243,7 +247,24 @@ async fn handle_start(legacy: bool) -> Result<()> {
     if let Some(pid) = daemon_pid {
         println!("ℹ agilityd is already running (PID: {pid}).");
     } else {
+        #[cfg(unix)]
+        let spawn_daemon = {
+            use std::os::unix::process::CommandExt;
+            let mut cmd = Command::new("agilityd");
+            cmd.stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null());
+            unsafe {
+                cmd.pre_exec(|| {
+                    libc::setsid();
+                    Ok(())
+                });
+            }
+            cmd.spawn()
+        };
+        #[cfg(not(unix))]
         let spawn_daemon = Command::new("agilityd").spawn();
+
         match spawn_daemon {
             Ok(_) => println!("✓ Spawned agilityd daemon."),
             Err(e) => eprintln!("⚠ Failed to spawn agilityd: {e}"),
@@ -256,9 +277,27 @@ async fn handle_start(legacy: bool) -> Result<()> {
     } else {
         let shell_qml = locate_shell_qml();
         if let Some(path) = shell_qml {
+            #[cfg(unix)]
+            let spawn_qs = {
+                use std::os::unix::process::CommandExt;
+                let mut cmd = Command::new("quickshell");
+                cmd.args(["-p", path.to_str().unwrap_or("")])
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null());
+                unsafe {
+                    cmd.pre_exec(|| {
+                        libc::setsid();
+                        Ok(())
+                    });
+                }
+                cmd.spawn()
+            };
+            #[cfg(not(unix))]
             let spawn_qs = Command::new("quickshell")
                 .args(["-p", path.to_str().unwrap_or("")])
                 .spawn();
+
             match spawn_qs {
                 Ok(_) => println!("✓ Spawned Quickshell frontend with config: {:?}", path),
                 Err(e) => eprintln!("⚠ Failed to spawn quickshell: {e}"),
@@ -466,16 +505,13 @@ async fn handle_lock() -> Result<()> {
             .await;
     }
 
-    // 2. Immediate Quickshell IPC trigger
-    let _ = Command::new("qs")
-        .args(["ipc", "call", "lock", "lock"])
-        .status()
-        .or_else(|_| {
-            Command::new("quickshell")
-                .args(["ipc", "call", "lock", "lock"])
-                .status()
-        });
+    // 2. Immediate Quickshell socket or IPC trigger
+    if try_unix_socket_connect("/tmp/quickshell_lockScreen") {
+        println!("✓ Lock request dispatched via socket.");
+        return Ok(());
+    }
 
+    let _ = dispatch_qs_ipc("lockScreen", "toggle", &[]);
     println!("✓ Lock request dispatched.");
     Ok(())
 }
@@ -485,17 +521,26 @@ async fn handle_toggle(target: &str) -> Result<()> {
     println!("🔘 Toggling surface: {normalized}");
 
     let res = match normalized.as_str() {
-        "launcher" | "dash" | "dashboard" => dispatch_qs_ipc("launcher", "toggle", &[]),
-        "notifications" => dispatch_qs_ipc("notifications", "toggle", &[]),
-        "canvas" | "applets-edit" => dispatch_qs_ipc("canvas", "toggleEdit", &[]),
-        "suits" => {
-            // Cycle suite or reload
-            dispatch_qs_ipc("suits", "reload", &[])
-        }
+        "launcher" | "app-launcher" | "apps" => toggle_widget("launcher"),
+        "dash" | "dashboard" => toggle_widget("dashboard"),
+        "cc" | "control-center" | "controlcenter" => toggle_widget("controlCenter"),
+        "notifications" | "notification" | "notif" => toggle_widget("notificationsCenter"),
+        "clipboard" | "clip" => toggle_widget("clipboard"),
+        "wallpaper" | "wallpaperpicker" | "wallpaperdrawer" => toggle_widget("wallpaper"),
+        "music" | "media" | "player" => toggle_widget("music"),
+        "power" | "powermenu" => toggle_widget("powerMenu"),
+        "screenshot" | "screen-capture" => toggle_widget("screenshot"),
+        "settings" | "minflair_settings" => toggle_widget("minflair_settings"),
+        "keybinds" | "minflair_keybinds" => toggle_widget("minflair_keybinds"),
+        "packages" | "packagemanager" => toggle_widget("packagemanager"),
+        "suits" => dispatch_qs_ipc("suits", "reload", &[]),
         "osd" => dispatch_qs_ipc("osd", "volume", &["50"]),
         other => {
-            // Forward to qs ipc directly
-            dispatch_qs_ipc(other, "toggle", &[])
+            if !toggle_widget(other) {
+                dispatch_qs_ipc(other, "toggle", &[])
+            } else {
+                true
+            }
         }
     };
 
@@ -514,7 +559,7 @@ async fn handle_profile(action: &str) -> Result<()> {
         .context("Failed to connect to D-Bus session bus")?;
 
     if action == "get" || action.is_empty() {
-        let reply = conn
+        let current = match conn
             .call_method(
                 Some(DAEMON_BUS),
                 "/org/agility/Daemon/Power",
@@ -523,20 +568,48 @@ async fn handle_profile(action: &str) -> Result<()> {
                 &(),
             )
             .await
-            .context("D-Bus GetProfile call failed")?;
-        let current: String = reply.body().deserialize()?;
+        {
+            Ok(reply) => reply.body().deserialize::<String>().unwrap_or_else(|_| "balanced".to_string()),
+            Err(_) => {
+                let reply = conn
+                    .call_method(
+                        Some(DAEMON_BUS),
+                        "/org/agility/Daemon/Power",
+                        Some("org.agility.Daemon.Power"),
+                        "GetPowerState",
+                        &(),
+                    )
+                    .await
+                    .context("D-Bus GetPowerState call failed")?;
+                let json_str: String = reply.body().deserialize()?;
+                let val: serde_json::Value = serde_json::from_str(&json_str).unwrap_or_default();
+                val["power_profile"].as_str().unwrap_or("balanced").to_string()
+            }
+        };
         println!("Current Power Profile: {current}");
     } else {
-        let reply = conn
+        let res = conn
             .call_method(
                 Some(DAEMON_BUS),
                 "/org/agility/Daemon/Power",
                 Some("org.agility.Daemon.Power"),
-                "SetProfile",
+                "SetPowerProfile",
                 &(action,),
             )
-            .await
-            .context("D-Bus SetProfile call failed")?;
+            .await;
+        let reply = match res {
+            Ok(r) => r,
+            Err(_) => conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    "/org/agility/Daemon/Power",
+                    Some("org.agility.Daemon.Power"),
+                    "SetProfile",
+                    &(action,),
+                )
+                .await
+                .context("D-Bus SetPowerProfile call failed")?,
+        };
         let ok: bool = reply.body().deserialize()?;
         if ok {
             println!("✓ Set power profile to: {action}");
@@ -1369,8 +1442,53 @@ async fn check_dbus_name(conn: &Connection, name: &str) -> Result<bool> {
     Ok(has)
 }
 
+fn try_unix_socket_connect(path: &str) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::net::UnixStream;
+        if std::path::Path::new(path).exists() {
+            if UnixStream::connect(path).is_ok() {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn locate_shell_qml() -> Option<std::path::PathBuf> {
+    if let Ok(home) = std::env::var("HOME") {
+        let user_cand = Path::new(&home).join(".config/agility-shell/quickshell/agility/shell.qml");
+        if user_cand.exists() {
+            return Some(user_cand);
+        }
+    }
+
+    let candidates = [
+        "/usr/share/agility-shell/quickshell/agility/shell.qml",
+        "/usr/local/share/agility-shell/quickshell/agility/shell.qml",
+        "quickshell/agility/shell.qml",
+    ];
+
+    for c in candidates {
+        let p = Path::new(c);
+        if p.exists() {
+            if let Ok(canon) = p.canonicalize() {
+                return Some(canon);
+            }
+            return Some(p.to_path_buf());
+        }
+    }
+
+    None
+}
+
 fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
-    let mut cmd = Command::new("qs");
+    let qml_path = locate_shell_qml();
+
+    let mut cmd = Command::new("quickshell");
+    if let Some(ref p) = qml_path {
+        cmd.args(["-p", p.to_str().unwrap_or("")]);
+    }
     cmd.args(["ipc", "call", target, func]);
     for a in args {
         cmd.arg(*a);
@@ -1381,7 +1499,10 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
         }
     }
 
-    let mut fallback = Command::new("quickshell");
+    let mut fallback = Command::new("qs");
+    if let Some(ref p) = qml_path {
+        fallback.args(["-p", p.to_str().unwrap_or("")]);
+    }
     fallback.args(["ipc", "call", target, func]);
     for a in args {
         fallback.arg(*a);
@@ -1389,28 +1510,15 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     fallback.status().map(|s| s.success()).unwrap_or(false)
 }
 
-fn locate_shell_qml() -> Option<std::path::PathBuf> {
-    let candidates = [
-        "quickshell/agility/shell.qml",
-        "/usr/share/agility-shell/quickshell/agility/shell.qml",
-        "/usr/local/share/agility-shell/quickshell/agility/shell.qml",
-    ];
-
-    for c in candidates {
-        let p = Path::new(c);
-        if p.exists() {
-            return Some(p.to_path_buf());
-        }
+fn toggle_widget(widget_id: &str) -> bool {
+    // 1. Fast path: Connect to Quickshell UNIX domain socket
+    let sock = format!("/tmp/quickshell_{widget_id}");
+    if try_unix_socket_connect(&sock) {
+        return true;
     }
 
-    if let Ok(home) = std::env::var("HOME") {
-        let user_cand = Path::new(&home).join(".config/agility-shell/quickshell/agility/shell.qml");
-        if user_cand.exists() {
-            return Some(user_cand);
-        }
-    }
-
-    None
+    // 2. Fallback: Dispatch via Quickshell IpcHandler (target: "widgets", func: "toggle")
+    dispatch_qs_ipc("widgets", "toggle", &[widget_id])
 }
 
 fn is_systemd_service_available(unit: &str) -> bool {

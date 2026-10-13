@@ -83,8 +83,13 @@ fi
 if systemctl --user list-unit-files agility-shell.service &>/dev/null; then
     echo "[agility-shell] Starting Agility Shell via systemd user unit..."
     systemctl --user reset-failed agility-shell.service 2>/dev/null || true
-    systemctl --user start agility-shell.service
-    exit 0
+    if systemctl --user start agility-shell.service 2>/dev/null; then
+        sleep 0.15
+        if systemctl --user is-active --quiet agility-shell.service 2>/dev/null; then
+            exit 0
+        fi
+    fi
+    echo "[agility-shell] Notice: systemd unit inactive, falling back to standalone launch..."
 fi
 
 # Standalone launch via agl or direct

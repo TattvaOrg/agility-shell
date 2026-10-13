@@ -96,17 +96,13 @@ check_arch() {
 }
 
 # -- Dependencies definitions --------------------------------------------------
+# Core runtime dependencies for Agility Shell (Rust daemon + Quickshell)
 PACMAN_DEPS=(
-    gtk3
-    cairo
-    libgirepository
-    gobject-introspection
-    gtk-layer-shell
-    libdbusmenu-gtk3
-    cinnamon-desktop
-    gnome-bluetooth-3.0
-    gtk-session-lock
-    matugen
+    wayland
+    niri
+    quickshell
+    pam
+    libpulse
     playerctl
     brightnessctl
     wf-recorder
@@ -114,23 +110,44 @@ PACMAN_DEPS=(
     swayidle
     networkmanager
     bluez
-    wayland
-    pkgconf
+    matugen
+    jq
+    curl
+    tar
+    gzip
+)
+
+# Build dependencies required ONLY when compiling from source
+SOURCE_BUILD_DEPS=(
     base-devel
     git
     make
     gcc
-    niri
+    pkgconf
     rust
     cargo
-    quickshell
-    pam
-    libpulse
-    jq
 )
 
 AUR_DEPS=(
 )
+
+check_and_install_source_deps() {
+    info "Verifying build dependencies required for compiling from source..."
+    local missing_src=()
+    for pkg in "${SOURCE_BUILD_DEPS[@]}"; do
+        if ! is_pkg_installed "$pkg"; then
+            missing_src+=("$pkg")
+        fi
+    done
+    if [[ ${#missing_src[@]} -gt 0 ]]; then
+        info "Installing required build dependencies: ${missing_src[*]}..."
+        sudo pacman -S --needed --noconfirm "${missing_src[@]}"
+        success "Build dependencies installed."
+    else
+        success "All build dependencies are present."
+    fi
+}
+
 
 is_pkg_installed() {
     local pkg="$1"
@@ -250,8 +267,82 @@ seed_user_configuration() {
     success "User configuration verified."
 }
 
+# -- Prebuilt Binary Fetcher ---------------------------------------------------
+download_and_extract_prebuilt() {
+    local target_dir="$1"
+    local tag="${2:-}"
+    local arch
+    arch="$(uname -m)"
+
+    case "$arch" in
+        x86_64|amd64) arch="x86_64" ;;
+        aarch64|arm64) arch="aarch64" ;;
+        *)
+            warn "Architecture '$arch' does not have official prebuilt binaries."
+            return 1
+            ;;
+    esac
+
+    local tarball_name="agility-shell-${arch}-linux.tar.gz"
+    local base_url="https://github.com/TattvaOrg/agility-shell/releases"
+    local download_url=""
+    local checksum_url=""
+
+    if [[ -n "$tag" && "$tag" != "latest" ]]; then
+        local tag_ref="$tag"
+        [[ "$tag_ref" =~ ^[0-9] ]] && tag_ref="v$tag_ref"
+        download_url="${base_url}/download/${tag_ref}/${tarball_name}"
+        checksum_url="${base_url}/download/${tag_ref}/${tarball_name}.sha256"
+    else
+        download_url="${base_url}/latest/download/${tarball_name}"
+        checksum_url="${base_url}/latest/download/${tarball_name}.sha256"
+    fi
+
+    info "Fetching prebuilt release binaries for ${arch}..."
+    info "URL: $download_url"
+
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    if ! curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name"; then
+        warn "Could not download prebuilt release binaries from GitHub Releases."
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    # Optional SHA256 checksum verification
+    if curl -f -sSL -L "$checksum_url" -o "$tmp_dir/${tarball_name}.sha256" 2>/dev/null; then
+        info "Verifying SHA256 checksum..."
+        local expected_sha actual_sha
+        expected_sha="$(awk '{print $1}' "$tmp_dir/${tarball_name}.sha256" | head -n 1)"
+        actual_sha="$(sha256sum "$tmp_dir/$tarball_name" | awk '{print $1}')"
+        if [[ -n "$expected_sha" && "$expected_sha" != "$actual_sha" ]]; then
+            warn "SHA256 checksum mismatch! Expected: $expected_sha, got: $actual_sha"
+            rm -rf "$tmp_dir"
+            return 1
+        fi
+        success "SHA256 checksum verified."
+    fi
+
+    mkdir -p "$target_dir/target/release"
+    info "Extracting prebuilt binaries to $target_dir/target/release..."
+    tar -xzf "$tmp_dir/$tarball_name" -C "$target_dir/target/release"
+    chmod +x "$target_dir/target/release/agilityd" "$target_dir/target/release/agl" 2>/dev/null || true
+    rm -rf "$tmp_dir"
+
+    if [[ -x "$target_dir/target/release/agilityd" && -x "$target_dir/target/release/agl" ]]; then
+        success "Prebuilt release binaries (agilityd, agl) ready."
+        return 0
+    else
+        warn "Extracted binaries not found or not executable."
+        return 1
+    fi
+}
+
 do_update() {
     local target_channel=""
+    local from_source=false
+    local custom_tag=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -264,11 +355,26 @@ do_update() {
                 target_channel="release"
                 shift
                 ;;
+            --from-source|--source|--build|-b|build)
+                from_source=true
+                shift
+                ;;
+            --prebuilt)
+                from_source=false
+                shift
+                ;;
+            --version|--tag|-v)
+                custom_tag="${2:-}"
+                shift 2 || shift
+                ;;
             --help|-h)
                 echo -e "${BOLD}Usage:${RESET} update.sh [options]"
-                echo -e "  ${CYAN}--release, -r${RESET}  Update to latest stable release tag"
-                echo -e "  ${CYAN}--main, -m${RESET}     Update to bleeding-edge main branch"
-                echo -e "  ${CYAN}--help, -h${RESET}     Show this help message"
+                echo -e "  ${CYAN}--prebuilt${RESET}             Update using prebuilt release binaries (default)"
+                echo -e "  ${CYAN}--from-source, --build${RESET} Compile Rust workspace from source using cargo"
+                echo -e "  ${CYAN}--release, -r${RESET}          Update to latest stable release tag"
+                echo -e "  ${CYAN}--main, -m${RESET}             Update to bleeding-edge main branch"
+                echo -e "  ${CYAN}--version, -v <TAG>${RESET}    Update to specific tag"
+                echo -e "  ${CYAN}--help, -h${RESET}             Show this help message"
                 exit 0
                 ;;
             *)
@@ -305,7 +411,7 @@ do_update() {
     if [[ -z "$latest_tag" ]]; then
         latest_tag=$(git tag -l --sort=-v:refname | head -n 1 || true)
     fi
-    latest_tag="${latest_tag:-1.0.2}"
+    latest_tag="${latest_tag:-1.0.3}"
 
     local current_desc
     current_desc=$(git describe --tags --always 2>/dev/null || echo "unknown")
@@ -368,6 +474,22 @@ do_update() {
         is_pacman=true
     fi
 
+    local used_prebuilt=false
+    if [[ "$from_source" == "false" ]]; then
+        local dl_tag="$target_ref"
+        [[ "$target_channel" == "main" ]] && dl_tag="latest"
+        [[ -n "$custom_tag" ]] && dl_tag="$custom_tag"
+
+        if download_and_extract_prebuilt "$repo_dir" "$dl_tag"; then
+            used_prebuilt=true
+        else
+            warn "Prebuilt binaries not found for this update; will compile from source."
+            check_and_install_source_deps
+        fi
+    else
+        check_and_install_source_deps
+    fi
+
     if [[ "$is_pacman" == "true" ]]; then
         info "Updating native Arch pacman package via makepkg..."
         makepkg -sf --noconfirm
@@ -378,14 +500,24 @@ do_update() {
             success "Pacman package updated successfully."
         else
             warn "Built package file not found; falling back to direct system installation..."
-            make
-            sudo make PREFIX="/usr" install
+            if [[ "$used_prebuilt" == "true" ]]; then
+                sudo make PREFIX="/usr" PREBUILT_DIR=target/release install-prebuilt
+            else
+                make
+                sudo make PREFIX="/usr" install
+            fi
         fi
     else
-        info "Compiling Next-Gen Rust workspace..."
-        make
-        info "Updating system files and Next-Gen binaries via make install..."
-        sudo make PREFIX="/usr" install
+        if [[ "$used_prebuilt" == "true" ]]; then
+            info "Installing prebuilt release binaries and system files via Makefile..."
+            sudo make PREFIX="/usr" PREBUILT_DIR=target/release install-prebuilt
+            success "System files and prebuilt binaries updated in /usr/bin and /usr/share."
+        else
+            info "Compiling Next-Gen Rust workspace..."
+            make
+            info "Updating system files and Next-Gen binaries via make install..."
+            sudo make PREFIX="/usr" install
+        fi
     fi
 
     seed_user_configuration

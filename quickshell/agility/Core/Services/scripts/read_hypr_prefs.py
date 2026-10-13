@@ -1,67 +1,31 @@
 #!/usr/bin/env python3
+import os
+import shutil
 import sys
 
-sys.dont_write_bytecode = True
+def _exec_agl(subcmd, args):
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.abspath(os.path.join(here, "../../../../target/release/agl")),
+        os.path.abspath(os.path.join(here, "../../../../target/debug/agl")),
+        os.path.abspath(os.path.join(here, "../../../../../target/release/agl")),
+        os.path.abspath(os.path.join(here, "../../../../../target/debug/agl")),
+        "/usr/bin/agl",
+        os.path.expanduser("~/.local/bin/agl"),
+    ]
+    which = shutil.which("agl")
+    if which:
+        candidates.append(which)
 
-import json
-import subprocess
-
-OPTIONS = [
-    "decoration:blur:enabled",
-    "decoration:rounding",
-    "decoration:active_opacity",
-    "decoration:inactive_opacity",
-    "decoration:blur:size",
-    "decoration:blur:passes",
-    "general:gaps_in",
-    "general:gaps_out",
-    "general:border_size",
-    "decoration:shadow:enabled",
-    "decoration:shadow:range",
-    "decoration:shadow:render_power",
-    "animations:enabled",
-    "input:sensitivity",
-    "input:accel_profile",
-    "input:natural_scroll",
-    "input:scroll_factor",
-    "input:left_handed",
-    "input:follow_mouse",
-    "cursor:inactive_timeout",
-    "cursor:no_warps",
-    "input:touchpad:natural_scroll",
-    "input:touchpad:tap-to-click",
-    "input:touchpad:disable_while_typing",
-]
-
-
-def main():
-    res = {}
-    for opt in OPTIONS:
-        try:
-            out = subprocess.check_output(
-                ["hyprctl", "getoption", opt, "-j"],
-                stderr=subprocess.DEVNULL,
-            ).decode("utf-8")
-            data = json.loads(out)
-            if "int" in data:
-                res[opt] = data["int"]
-            elif "float" in data:
-                res[opt] = data["float"]
-            elif "bool" in data:
-                res[opt] = data["bool"]
-            elif "str" in data:
-                res[opt] = data["str"]
-            elif "custom" in data:
-                res[opt] = data["custom"]
-            elif "css" in data:
-                parts = str(data["css"]).split()
-                if parts:
-                    res[opt] = int(parts[0])
-        except Exception:
-            continue
-
-    print(json.dumps(res))
-
+    for c in candidates:
+        if os.path.isfile(c) and os.access(c, os.X_OK):
+            try:
+                with open(c, "rb") as f:
+                    if f.read(4) == b"\x7fELF":
+                        os.execv(c, [c, subcmd] + args)
+            except Exception:
+                pass
+    sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    _exec_agl("hypr-prefs", ["read"] + sys.argv[1:])

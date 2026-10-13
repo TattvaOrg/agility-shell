@@ -8,6 +8,8 @@ use std::path::Path;
 use std::process::Command;
 use zbus::Connection;
 
+mod tools;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "agl",
@@ -90,6 +92,49 @@ enum Commands {
     Deps,
     /// Perform self-update check and upgrade
     Update,
+    /// PAM Authentication verification
+    Auth {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Scan and output installed desktop applications JSON
+    GetApps,
+    /// Output system specifications and hardware info JSON
+    GetSysinfo,
+    /// Output running processes JSON
+    GetProcesses,
+    /// Scan and output music player candidates JSON
+    GetMusicPlayers,
+    /// GameMode & power-profile status/management ('status', 'apply', 'revert')
+    Gamemode {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Bluetooth manager ('status', 'toggle-power', 'toggle-connect <mac>', 'scan')
+    Bluetooth {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// WiFi manager ('status', 'toggle-radio', 'scan', 'connect <ssid>', 'disconnect <ssid>', 'forget <ssid>')
+    Wifi {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Package manager search ('search <q>', 'installed')
+    Packages {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Hyprland preferences ('read', 'update <json>')
+    HyprPrefs {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Parse Hyprland keybinds into JSON
+    Keybinds {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
 }
 
 const DAEMON_BUS: &str = "org.agility.Daemon";
@@ -117,6 +162,44 @@ async fn main() -> Result<()> {
         Commands::BarData => handle_bar_data().await?,
         Commands::Deps => handle_deps().await?,
         Commands::Update => handle_update().await?,
+        Commands::Auth { args } => {
+            std::process::exit(tools::auth::run(&args));
+        }
+        Commands::GetApps => {
+            std::process::exit(tools::apps::run());
+        }
+        Commands::GetSysinfo => {
+            std::process::exit(tools::sysinfo::run_specs());
+        }
+        Commands::GetProcesses => {
+            std::process::exit(tools::sysinfo::run_processes());
+        }
+        Commands::GetMusicPlayers => {
+            std::process::exit(tools::mpris::run());
+        }
+        Commands::Gamemode { args } => {
+            std::process::exit(tools::gamemode::run(&args));
+        }
+        Commands::Bluetooth { args } => {
+            std::process::exit(tools::connectivity::run_bluetooth(&args));
+        }
+        Commands::Wifi { args } => {
+            std::process::exit(tools::connectivity::run_wifi(&args));
+        }
+        Commands::Packages { args } => {
+            std::process::exit(tools::packages::run(&args));
+        }
+        Commands::HyprPrefs { args } => {
+            std::process::exit(tools::hypr_prefs::run(&args));
+        }
+        Commands::Keybinds { args } => {
+            let path = args.first().map(std::path::PathBuf::from);
+            if let Err(e) = tools::keybinds::parse_keybinds(path) {
+                eprintln!("Error parsing keybinds: {}", e);
+                std::process::exit(1);
+            }
+            std::process::exit(0);
+        }
     }
 
     Ok(())

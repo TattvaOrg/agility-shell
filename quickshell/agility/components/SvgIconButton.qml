@@ -10,7 +10,8 @@ Rectangle {
     property bool flat: true
     property bool isActive: false
     property color bgColor: isActive ? Theme.colAccent : (flat ? "transparent" : Theme.colPillBg)
-    property color iconColor: isActive ? "#FFFFFF" : (hovered ? Theme.colAccent : Theme.colText)
+    property color hoverColor: Theme.colAccent
+    property color iconColor: isActive ? "#FFFFFF" : (hovered ? hoverColor : Theme.colText)
     property color hoverBgColor: Theme.colCardBg
     property alias hovered: mouseArea.containsMouse
     property bool disabled: false

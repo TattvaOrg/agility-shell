@@ -51,6 +51,19 @@ Item {
     property string mediaPositionFormatted: "00:00"
     property string mediaLengthFormatted: "00:00"
 
+    // Clock
+    property string clockFormatted: "00:00"
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            root.clockFormatted = Qt.formatDateTime(new Date(), "hh:mm")
+        }
+    }
+
     // Power & Toggles
     property bool caffeineActive: false
     property string powerProfile: "balanced"

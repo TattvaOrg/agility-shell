@@ -196,7 +196,7 @@ Item {
                     color: Theme.colText
                     font.family: Theme.fontMain
                     font.pixelSize: 12
-                    font.weight: Font.SemiBold
+                    font.weight: Font.DemiBold
                 }
             }
 
@@ -302,23 +302,30 @@ Item {
                 spacing: 8
 
                 // Volume Indicator
-                Row {
+                Item {
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 4
+                    width: volRow.implicitWidth
+                    height: volRow.implicitHeight
 
-                    SvgIcon {
+                    Row {
+                        id: volRow
                         anchors.verticalCenter: parent.verticalCenter
-                        icon: Bar.BarDataService.volumeMuted ? "volume-off" : "volume"
-                        iconSize: 14
-                        iconColor: Bar.BarDataService.volumeMuted ? Theme.colTextSec : Theme.colText
-                    }
+                        spacing: 4
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: Bar.BarDataService.volumeMuted ? "Mute" : (Math.round(Bar.BarDataService.volumeLevel * 100) + "%")
-                        color: Theme.colTextSec
-                        font.family: Theme.fontMain
-                        font.pixelSize: 11
+                        SvgIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            icon: Bar.BarDataService.volumeMuted ? "volume-off" : "volume"
+                            iconSize: 14
+                            iconColor: Bar.BarDataService.volumeMuted ? Theme.colTextSec : Theme.colText
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Bar.BarDataService.volumeMuted ? "Mute" : (Math.round(Bar.BarDataService.volumeLevel * 100) + "%")
+                            color: Theme.colTextSec
+                            font.family: Theme.fontMain
+                            font.pixelSize: 11
+                        }
                     }
 
                     MouseArea {

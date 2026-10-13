@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
-import "../.."
-import "../../components"
-import "../../bar" as Bar
+import ".."
+import "../components"
+import "../bar" as Bar
 
 Item {
     id: root
@@ -172,7 +172,7 @@ Item {
                 width: parent.width
                 height: 20
                 value: Bar.BarDataService.mediaPositionRatio || 0.0
-                onSliderMoved: function(newVal) {
+                onValueChangedByUser: function(newVal) {
                     Bar.BarDataService.seekMediaRatio(newVal)
                 }
             }

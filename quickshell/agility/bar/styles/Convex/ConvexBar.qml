@@ -105,24 +105,31 @@ Item {
         z: 1
 
         // Clock
-        Row {
+        Item {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 6
+            width: clockRow.implicitWidth
+            height: clockRow.implicitHeight
 
-            SvgIcon {
+            Row {
+                id: clockRow
                 anchors.verticalCenter: parent.verticalCenter
-                icon: "clock"
-                iconSize: 14
-                iconColor: Theme.colAccent
-            }
+                spacing: 6
 
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Bar.BarDataService.clockFormatted
-                color: Theme.colText
-                font.family: Theme.fontMain
-                font.pixelSize: 12
-                font.weight: Font.SemiBold
+                SvgIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "clock"
+                    iconSize: 14
+                    iconColor: Theme.colAccent
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Bar.BarDataService.clockFormatted
+                    color: Theme.colText
+                    font.family: Theme.fontMain
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                }
             }
 
             MouseArea {
@@ -177,23 +184,30 @@ Item {
         z: 1
 
         // Volume
-        Row {
+        Item {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
+            width: volRow.implicitWidth
+            height: volRow.implicitHeight
 
-            SvgIcon {
+            Row {
+                id: volRow
                 anchors.verticalCenter: parent.verticalCenter
-                icon: Bar.BarDataService.volumeMuted ? "volume-off" : "volume"
-                iconSize: 14
-                iconColor: Theme.colText
-            }
+                spacing: 4
 
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Math.round(Bar.BarDataService.volumeLevel * 100) + "%"
-                color: Theme.colTextSec
-                font.family: Theme.fontMain
-                font.pixelSize: 11
+                SvgIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: Bar.BarDataService.volumeMuted ? "volume-off" : "volume"
+                    iconSize: 14
+                    iconColor: Theme.colText
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Math.round(Bar.BarDataService.volumeLevel * 100) + "%"
+                    color: Theme.colTextSec
+                    font.family: Theme.fontMain
+                    font.pixelSize: 11
+                }
             }
 
             MouseArea {

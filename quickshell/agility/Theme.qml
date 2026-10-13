@@ -225,9 +225,12 @@ Item {
         }
     }
 
-    // Aliases for unified text references
+    // Aliases for unified text and surface references
     readonly property color colText: colTextPrimary
     readonly property color colTextSec: colTextSecondary
+    readonly property color colBorder: borderColor
+    readonly property color colCardBg: colBgTile
+    readonly property color colSurface: colBgTile
 
     // Border Color (Ultra-subtle, non-harsh)
     readonly property color borderColor: {

@@ -11,8 +11,9 @@ SYSTEMDDIR = $(PREFIX)/lib/systemd/user
 APPLICATIONSDIR = $(PREFIX)/share/applications
 
 CARGO ?= cargo
+PREBUILT_DIR ?= target/release
 
-.PHONY: all build build-rust check clean install uninstall
+.PHONY: all build build-rust check clean install install-prebuilt uninstall
 
 all: build
 
@@ -30,16 +31,16 @@ clean:
 	@echo "==> Cleaning build artifacts..."
 	-$(CARGO) clean
 
-install: build
-	@echo "==> Installing Agility Shell Next-Gen system-wide (PREFIX=$(PREFIX))..."
+install-prebuilt:
+	@echo "==> Installing Agility Shell from prebuilt binaries (PREBUILT_DIR=$(PREBUILT_DIR), PREFIX=$(PREFIX))..."
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(DATADIR)
 	mkdir -p $(DESTDIR)$(SYSTEMDDIR)
 	mkdir -p $(DESTDIR)$(APPLICATIONSDIR)
 
 	# Install Next-Gen Rust binaries
-	install -m 755 target/release/agilityd $(DESTDIR)$(BINDIR)/agilityd
-	install -m 755 target/release/agl $(DESTDIR)$(BINDIR)/agl
+	install -m 755 $(PREBUILT_DIR)/agilityd $(DESTDIR)$(BINDIR)/agilityd
+	install -m 755 $(PREBUILT_DIR)/agl $(DESTDIR)$(BINDIR)/agl
 	install -m 755 agility-shell $(DESTDIR)$(BINDIR)/agility-shell
 
 	# Install systemd user service unit
@@ -52,6 +53,15 @@ install: build
 	cp -r config themes wallpapers svgs sounds quickshell scripts $(DESTDIR)$(DATADIR)/
 
 	@echo "==> Installation to $(DESTDIR)$(PREFIX) complete."
+
+install:
+	@if [ -f "$(PREBUILT_DIR)/agilityd" ] && [ -f "$(PREBUILT_DIR)/agl" ]; then \
+		echo "==> Found prebuilt binaries in $(PREBUILT_DIR), installing directly..."; \
+		$(MAKE) install-prebuilt PREBUILT_DIR="$(PREBUILT_DIR)"; \
+	else \
+		echo "==> Prebuilt binaries not found in $(PREBUILT_DIR), compiling from source..."; \
+		$(MAKE) build && $(MAKE) install-prebuilt PREBUILT_DIR="target/release"; \
+	fi
 
 uninstall:
 	@echo "==> Uninstalling Agility Shell from $(DESTDIR)$(PREFIX)..."

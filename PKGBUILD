@@ -22,8 +22,9 @@ depends=(
     'matugen'
     'jq'
 )
-makedepends=('git' 'gcc' 'make' 'pkgconf' 'cargo')
+makedepends=('git' 'gcc' 'make' 'pkgconf')
 optdepends=(
+    'cargo: to compile binaries from source'
     'pipewire: for audio playback support'
     'wireplumber: for audio device and volume management'
     'grim: for screenshot region capture'
@@ -61,7 +62,17 @@ build() {
     else
         cd "${srcdir}/${pkgname}"
     fi
-    make build
+
+    if [[ -f "target/release/agilityd" && -f "target/release/agl" ]]; then
+        echo "==> Using prebuilt release binaries in target/release..."
+    elif [[ -f "target/x86_64-unknown-linux-gnu/release/agilityd" && -f "target/x86_64-unknown-linux-gnu/release/agl" ]]; then
+        mkdir -p target/release
+        cp target/x86_64-unknown-linux-gnu/release/agilityd target/release/
+        cp target/x86_64-unknown-linux-gnu/release/agl target/release/
+        echo "==> Using prebuilt release binaries in target/release..."
+    else
+        make build
+    fi
 }
 
 package() {

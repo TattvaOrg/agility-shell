@@ -116,17 +116,13 @@ check_not_root() {
 }
 
 # -- Dependencies definitions --------------------------------------------------
+# Core runtime dependencies for Agility Shell (Rust daemon + Quickshell)
 PACMAN_DEPS=(
-    gtk3
-    cairo
-    libgirepository
-    gobject-introspection
-    gtk-layer-shell
-    libdbusmenu-gtk3
-    cinnamon-desktop
-    gnome-bluetooth-3.0
-    gtk-session-lock
-    matugen
+    wayland
+    niri
+    quickshell
+    pam
+    libpulse
     playerctl
     brightnessctl
     wf-recorder
@@ -134,23 +130,44 @@ PACMAN_DEPS=(
     swayidle
     networkmanager
     bluez
-    wayland
-    pkgconf
+    matugen
+    jq
+    curl
+    tar
+    gzip
+)
+
+# Build dependencies required ONLY when compiling from source
+SOURCE_BUILD_DEPS=(
     base-devel
     git
     make
     gcc
-    niri
+    pkgconf
     rust
     cargo
-    quickshell
-    pam
-    libpulse
-    jq
 )
 
 AUR_DEPS=(
 )
+
+check_and_install_source_deps() {
+    info "Verifying build dependencies required for compiling from source..."
+    local missing_src=()
+    for pkg in "${SOURCE_BUILD_DEPS[@]}"; do
+        if ! is_pkg_installed "$pkg"; then
+            missing_src+=("$pkg")
+        fi
+    done
+    if [[ ${#missing_src[@]} -gt 0 ]]; then
+        info "Installing required build dependencies: ${missing_src[*]}..."
+        sudo pacman -S --needed --noconfirm "${missing_src[@]}"
+        success "Build dependencies installed."
+    else
+        success "All build dependencies are present."
+    fi
+}
+
 
 is_pkg_installed() {
     local pkg="$1"
@@ -526,12 +543,112 @@ scan_and_remove_old_shell() {
 }
 
 
+# -- Prebuilt Binary Fetcher ---------------------------------------------------
+download_and_extract_prebuilt() {
+    local target_dir="$1"
+    local tag="${2:-}"
+    local arch
+    arch="$(uname -m)"
+
+    case "$arch" in
+        x86_64|amd64) arch="x86_64" ;;
+        aarch64|arm64) arch="aarch64" ;;
+        *)
+            warn "Architecture '$arch' does not have official prebuilt binaries."
+            return 1
+            ;;
+    esac
+
+    local tarball_name="agility-shell-${arch}-linux.tar.gz"
+    local base_url="https://github.com/TattvaOrg/agility-shell/releases"
+    local download_url=""
+    local checksum_url=""
+
+    if [[ -n "$tag" && "$tag" != "latest" ]]; then
+        local tag_ref="$tag"
+        [[ "$tag_ref" =~ ^[0-9] ]] && tag_ref="v$tag_ref"
+        download_url="${base_url}/download/${tag_ref}/${tarball_name}"
+        checksum_url="${base_url}/download/${tag_ref}/${tarball_name}.sha256"
+    else
+        download_url="${base_url}/latest/download/${tarball_name}"
+        checksum_url="${base_url}/latest/download/${tarball_name}.sha256"
+    fi
+
+    info "Fetching prebuilt release binaries for ${arch}..."
+    info "URL: $download_url"
+
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+
+    if ! curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name"; then
+        warn "Could not download prebuilt release binaries from GitHub Releases."
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    # Optional SHA256 checksum verification
+    if curl -f -sSL -L "$checksum_url" -o "$tmp_dir/${tarball_name}.sha256" 2>/dev/null; then
+        info "Verifying SHA256 checksum..."
+        local expected_sha actual_sha
+        expected_sha="$(awk '{print $1}' "$tmp_dir/${tarball_name}.sha256" | head -n 1)"
+        actual_sha="$(sha256sum "$tmp_dir/$tarball_name" | awk '{print $1}')"
+        if [[ -n "$expected_sha" && "$expected_sha" != "$actual_sha" ]]; then
+            warn "SHA256 checksum mismatch! Expected: $expected_sha, got: $actual_sha"
+            rm -rf "$tmp_dir"
+            return 1
+        fi
+        success "SHA256 checksum verified."
+    fi
+
+    mkdir -p "$target_dir/target/release"
+    info "Extracting prebuilt binaries to $target_dir/target/release..."
+    tar -xzf "$tmp_dir/$tarball_name" -C "$target_dir/target/release"
+    chmod +x "$target_dir/target/release/agilityd" "$target_dir/target/release/agl" 2>/dev/null || true
+    rm -rf "$tmp_dir"
+
+    if [[ -x "$target_dir/target/release/agilityd" && -x "$target_dir/target/release/agl" ]]; then
+        success "Prebuilt release binaries (agilityd, agl) ready."
+        return 0
+    else
+        warn "Extracted binaries not found or not executable."
+        return 1
+    fi
+}
+
 # -- Build and Install System Files --------------------------------------------
 install_system_files() {
     local src_dir="$1"
     local method="${2:-make}"
+    local from_source="${3:-false}"
+    local tag="${4:-}"
 
     cd "$src_dir"
+
+    local used_prebuilt=false
+    if [[ "$from_source" == "false" ]]; then
+        if [[ -x "$src_dir/target/release/agilityd" && -x "$src_dir/target/release/agl" ]]; then
+            info "Using prebuilt release binaries already present in target/release..."
+            used_prebuilt=true
+        elif download_and_extract_prebuilt "$src_dir" "$tag"; then
+            used_prebuilt=true
+        else
+            warn "Prebuilt release binaries not found or download failed."
+            echo ""
+            prompt_user "  Would you like to compile Agility Shell from source using cargo? [Y/n]: " compile_choice "y"
+            case "$compile_choice" in
+                [nN]|[nN][oO])
+                    die "Installation aborted: prebuilt binaries unavailable and source build declined."
+                    ;;
+                *)
+                    info "Proceeding with source compilation..."
+                    check_and_install_source_deps
+                    ;;
+            esac
+        fi
+    else
+        info "Compiling Agility Shell from source as requested..."
+        check_and_install_source_deps
+    fi
 
     if [[ "$method" == "pacman" ]]; then
         info "Building native Arch pacman package (makepkg)..."
@@ -544,16 +661,27 @@ install_system_files() {
             success "Pacman package installed successfully."
         else
             warn "Built package file not found; falling back to direct system installation..."
-            make
-            sudo make PREFIX="/usr" install
+            if [[ "$used_prebuilt" == "true" ]]; then
+                sudo make PREFIX="/usr" PREBUILT_DIR=target/release install-prebuilt
+            else
+                make
+                sudo make PREFIX="/usr" install
+            fi
         fi
     else
-        info "Compiling Next-Gen Rust binaries and installing via root Makefile..."
-        make
-        sudo make PREFIX="/usr" install
-        success "System files and Next-Gen binaries installed to /usr/bin and /usr/share."
+        if [[ "$used_prebuilt" == "true" ]]; then
+            info "Installing prebuilt binaries and system files via Makefile..."
+            sudo make PREFIX="/usr" PREBUILT_DIR=target/release install-prebuilt
+            success "System files and prebuilt release binaries installed to /usr/bin and /usr/share."
+        else
+            info "Compiling Next-Gen Rust binaries and installing via root Makefile..."
+            make
+            sudo make PREFIX="/usr" install
+            success "System files and compiled binaries installed to /usr/bin and /usr/share."
+        fi
     fi
 }
+
 
 # -- Seed User Config ----------------------------------------------------------
 seed_user_configuration() {
@@ -743,12 +871,16 @@ setup_systemd_service() {
 
 do_install() {
     local method="${1:-make}"
-    info "Starting installation of Agility Shell (Method: $method)..."
+    local from_source="${2:-false}"
+    local tag="${3:-}"
+    info "Starting installation of Agility Shell (Method: $method, Prebuilt: $([[ "$from_source" == "true" ]] && echo "no (from source)" || echo "yes"))..."
 
     check_and_install_deps
 
     local work_dir=""
     local cleanup_work_dir=false
+    local selected_tag="$tag"
+
     if [[ "$IS_LOCAL_REPO" == "true" ]]; then
         # If running from inside ~/.config/agility-shell, stage sources to tmp before deleting old shell
         if [[ "$(realpath "$LOCAL_SRC_DIR" 2>/dev/null)" == "$(realpath "$USER_CONFIG" 2>/dev/null)"* ]]; then
@@ -769,33 +901,40 @@ do_install() {
         cd "$work_dir"
         git fetch --prune --tags origin
 
-        local latest_tag
-        latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
-        latest_tag="${latest_tag:-1.0.2}"
+        if [[ -z "$selected_tag" ]]; then
+            local latest_tag
+            latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+            latest_tag="${latest_tag:-1.0.3}"
 
-        echo ""
-        echo -e "${BOLD}Select installation version / channel:${RESET}"
-        echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM:-}Tested, stable version${RESET}"
-        echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM:-}Newest features & bug fixes (Recommended)${RESET}"
-        echo ""
-        prompt_user "  Enter choice [1/2] (default: 2): " inst_channel "2"
-        case "$inst_channel" in
-            1|[rR]|[rR][eE][lL]*)
-                info "Checking out release v$latest_tag..."
-                git checkout -f "$latest_tag" 2>/dev/null || git checkout -f "tags/$latest_tag"
-                ;;
-            *)
-                info "Checking out latest main branch..."
-                git checkout -f main 2>/dev/null || git checkout -b main origin/main
-                git reset --hard origin/main
-                ;;
-        esac
+            echo ""
+            echo -e "${BOLD}Select installation version / channel:${RESET}"
+            echo -e "  ${GREEN}[1]${RESET} Latest Release (${GREEN}v$latest_tag${RESET}) - ${DIM:-}Tested, prebuilt release binary${RESET}"
+            echo -e "  ${CYAN}[2]${RESET} Main branch (${CYAN}latest development${RESET}) - ${DIM:-}Newest features & bug fixes (Recommended)${RESET}"
+            echo ""
+            prompt_user "  Enter choice [1/2] (default: 2): " inst_channel "2"
+            case "$inst_channel" in
+                1|[rR]|[rR][eE][lL]*)
+                    info "Checking out release v$latest_tag..."
+                    git checkout -f "$latest_tag" 2>/dev/null || git checkout -f "tags/$latest_tag"
+                    selected_tag="$latest_tag"
+                    ;;
+                *)
+                    info "Checking out latest main branch..."
+                    git checkout -f main 2>/dev/null || git checkout -b main origin/main
+                    git reset --hard origin/main
+                    selected_tag="latest"
+                    ;;
+            esac
+        else
+            info "Checking out requested tag: $selected_tag..."
+            git checkout -f "$selected_tag" 2>/dev/null || git checkout -f "tags/$selected_tag" 2>/dev/null || true
+        fi
     fi
 
     # Scan and delete old shell from ~/.config/agility-shell
     scan_and_remove_old_shell
 
-    install_system_files "$work_dir" "$method"
+    install_system_files "$work_dir" "$method" "$from_source" "$selected_tag"
     seed_user_configuration
     inject_niri_include
     setup_matugen
@@ -804,7 +943,6 @@ do_install() {
     if [[ "$cleanup_work_dir" == "true" ]]; then
         rm -rf "$work_dir"
     fi
-
 
     echo
     success "Agility Shell installed successfully!"
@@ -815,7 +953,7 @@ do_install() {
     echo -e "  ${BOLD}CLI Commands:${RESET}"
     echo -e "    ${CYAN}agl restart${RESET}     - Restart running shell"
     echo -e "    ${CYAN}agl status${RESET}      - Inspect shell runtime status and logs"
-    echo -e "    ${CYAN}agl update${RESET}      - Rebuild and update in place"
+    echo -e "    ${CYAN}agl update${RESET}      - Update shell in place"
     echo -e "    ${CYAN}agl uninstall${RESET}   - Cleanly remove"
     echo
     echo -e "  ${BOLD}User Configuration:${RESET}"
@@ -831,16 +969,19 @@ USAGE:
     install.sh [OPTIONS]
 
 OPTIONS:
-    --deps, --check-deps, -d    Test and install dependencies step-by-step
+    --prebuilt                  Install prebuilt release binaries from GitHub Releases (Default)
+    --from-source, --build, -b  Compile Rust workspace from source using cargo
     --pacman, -p                Install using native Arch pacman package (makepkg -si)
-    --make, -m                  Install using Makefile directly (/usr/share & /usr/lib)
+    --make, -m                  Install using Makefile directly (/usr/bin & /usr/share)
+    --version, --tag <TAG>      Specify release tag to install (default: latest)
+    --deps, --check-deps, -d    Test and install dependencies step-by-step
     --help, -h                  Show this help message
 
 TWO-STEP WORKFLOW:
-    1. Check and install dependencies:
+    1. Check and install runtime dependencies:
        curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash -s -- --deps
 
-    2. Install Agility Shell:
+    2. Install Agility Shell (direct prebuilt binaries):
        curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/install.sh | bash
 
 EOF
@@ -848,23 +989,27 @@ EOF
 
 main_menu_choice() {
     echo -e "  Please choose an option:"
-    echo -e "  ${BOLD}1)${RESET} ${CYAN}Native Arch Package (makepkg -si)${RESET}   (Recommended - tracked by pacman)"
-    echo -e "  ${BOLD}2)${RESET} ${GREEN}Direct System Install (make install)${RESET}  (Installed into /usr/share & /usr/lib)"
-    echo -e "  ${BOLD}3)${RESET} ${YELLOW}Test & Install Dependencies Step-by-Step${RESET}"
-    echo -e "  ${BOLD}4)${RESET} Cancel"
+    echo -e "  ${BOLD}1)${RESET} ${CYAN}Native Arch Package (makepkg -si)${RESET}   (Recommended - tracked by pacman, prebuilt binary)"
+    echo -e "  ${BOLD}2)${RESET} ${GREEN}Direct System Install (make install)${RESET}  (Fast prebuilt binary install to /usr/bin)"
+    echo -e "  ${BOLD}3)${RESET} ${YELLOW}Compile From Source (cargo build)${RESET}     (Build rust binaries locally)"
+    echo -e "  ${BOLD}4)${RESET} ${BLUE}Test & Install Dependencies Step-by-Step${RESET}"
+    echo -e "  ${BOLD}5)${RESET} Cancel"
     echo
-    prompt_user "  Choice [1/2/3/4]: " choice "1"
+    prompt_user "  Choice [1/2/3/4/5]: " choice "1"
     case "$choice" in
         1)
-            do_install "pacman"
+            do_install "pacman" false ""
             ;;
         2)
-            do_install "make"
+            do_install "make" false ""
             ;;
         3)
+            do_install "make" true ""
+            ;;
+        4)
             test_and_install_deps_step_by_step true
             ;;
-        4|[qQ]|[eE][xX][iI][tT])
+        5|[qQ]|[eE][xX][iI][tT])
             info "Installation cancelled."
             exit 0
             ;;
@@ -878,37 +1023,66 @@ main() {
     check_arch
     check_not_root
 
-    local arg="${1:-}"
-    case "$arg" in
-        --deps|--check-deps|-d|deps)
-            shift || true
-            test_and_install_deps_step_by_step true
-            ;;
-        --pacman|-p|pacman)
-            shift || true
-            do_install "pacman"
-            ;;
-        --make|-m|make)
-            shift || true
-            do_install "make"
-            ;;
-        --help|-h|help)
-            show_help
-            ;;
-        "")
-            echo
-            echo -e "${BOLD}${CYAN}+==================================+${RESET}"
-            echo -e "${BOLD}${CYAN}|       Agility Shell Setup        |${RESET}"
-            echo -e "${BOLD}${CYAN}+==================================+${RESET}"
-            echo
-            main_menu_choice
-            ;;
-        *)
-            error "Unknown option: '$arg'"
-            show_help
-            exit 1
-            ;;
-    esac
+    local method="make"
+    local from_source=false
+    local tag=""
+    local check_deps_only=false
+    local interactive=true
+
+    while [[ $# -gt 0 ]]; do
+        interactive=false
+        case "$1" in
+            --deps|--check-deps|-d|deps)
+                check_deps_only=true
+                shift
+                ;;
+            --pacman|-p|pacman)
+                method="pacman"
+                shift
+                ;;
+            --make|-m|make)
+                method="make"
+                shift
+                ;;
+            --from-source|--source|--build|-b|build)
+                from_source=true
+                shift
+                ;;
+            --prebuilt)
+                from_source=false
+                shift
+                ;;
+            --version|--tag|-v)
+                tag="${2:-}"
+                shift 2 || shift
+                ;;
+            --help|-h|help)
+                show_help
+                exit 0
+                ;;
+            *)
+                error "Unknown option: '$1'"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
+    if [[ "$check_deps_only" == "true" ]]; then
+        test_and_install_deps_step_by_step true
+        exit 0
+    fi
+
+    if [[ "$interactive" == "true" ]]; then
+        echo
+        echo -e "${BOLD}${CYAN}+==================================+${RESET}"
+        echo -e "${BOLD}${CYAN}|       Agility Shell Setup        |${RESET}"
+        echo -e "${BOLD}${CYAN}+==================================+${RESET}"
+        echo
+        main_menu_choice
+    else
+        do_install "$method" "$from_source" "$tag"
+    fi
 }
 
 main "$@"

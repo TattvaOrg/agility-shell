@@ -1,0 +1,150 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag or release version to build (e.g. v2.0.0)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build Release Binaries (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            arch: x86_64
+            use_cross: false
+          - target: aarch64-unknown-linux-gnu
+            arch: aarch64
+            use_cross: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Native Dependencies (x86_64)
+        if: ${{ !matrix.use_cross }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpam0g-dev libpulse-dev pkg-config
+
+      - name: Install Cross Dependencies (aarch64)
+        if: ${{ matrix.use_cross }}
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+                                  libpam0g-dev:arm64 libpulse-dev:arm64 pkg-config
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}-release
+
+      - name: Build Release Workspace
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          PKG_CONFIG_ALLOW_CROSS: "1"
+          PKG_CONFIG_PATH_aarch64_unknown_linux_gnu: /usr/lib/aarch64-linux-gnu/pkgconfig
+          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Package Release Archives
+        run: |
+          TARGET_DIR="target/${{ matrix.target }}/release"
+          ARCH="${{ matrix.arch }}"
+          BIN_TAR="agility-shell-${ARCH}-linux.tar.gz"
+          BUNDLE_TAR="agility-shell-bundle-${ARCH}-linux.tar.gz"
+
+          # 1. Binary tarball containing compiled executables (agilityd, agl)
+          tar -czvf "$BIN_TAR" -C "$TARGET_DIR" agilityd agl
+
+          # 2. Standalone bundle tarball containing executables + complete shell assets
+          BUNDLE_DIR="agility-shell-${ARCH}"
+          mkdir -p "$BUNDLE_DIR/bin"
+          cp "$TARGET_DIR/agilityd" "$BUNDLE_DIR/bin/"
+          cp "$TARGET_DIR/agl" "$BUNDLE_DIR/bin/"
+          cp agility-shell "$BUNDLE_DIR/bin/"
+          chmod +x "$BUNDLE_DIR/bin/"*
+
+          mkdir -p "$BUNDLE_DIR/systemd"
+          cp systemd/agility-shell.service "$BUNDLE_DIR/systemd/"
+          cp agility-shell.desktop "$BUNDLE_DIR/"
+          cp Makefile install.sh LICENSE README.md "$BUNDLE_DIR/"
+
+          cp -r config themes wallpapers svgs sounds quickshell scripts "$BUNDLE_DIR/"
+
+          tar -czvf "$BUNDLE_TAR" "$BUNDLE_DIR"
+          rm -rf "$BUNDLE_DIR"
+
+          # Compute SHA256 checksums
+          sha256sum "$BIN_TAR" > "${BIN_TAR}.sha256"
+          sha256sum "$BUNDLE_TAR" > "${BUNDLE_TAR}.sha256"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.arch }}
+          path: |
+            agility-shell-*.tar.gz
+            agility-shell-*.tar.gz.sha256
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-dist
+          merge-multiple: true
+
+      - name: Generate Consolidated SHA256SUMS
+        run: |
+          cd release-dist
+          cat *.sha256 > SHA256SUMS.txt
+          echo "Release Assets Generated:"
+          ls -la
+
+      - name: Determine Release Tag
+        id: tag_info
+        run: |
+          TAG="${{ github.event.inputs.tag_name }}"
+          if [ -z "$TAG" ]; then
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag_info.outputs.tag }}
+          files: |
+            release-dist/agility-shell-*.tar.gz
+            release-dist/agility-shell-*.tar.gz.sha256
+            release-dist/SHA256SUMS.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false

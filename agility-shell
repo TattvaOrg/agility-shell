@@ -1,24 +1,22 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  Agility Shell -- Main Executable Launcher
-#  Supports Next-Gen Rust/Quickshell stack (default) & Python fallback (--legacy)
+#  Next-Gen Rust (`agilityd`, `agl`) & Quickshell Architecture
 # =============================================================================
 
 set -euo pipefail
 
 SYSTEM_DATA="/usr/share/agility-shell"
-SYSTEM_VENV="/usr/lib/agility-shell/venv"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
 LOG_FILE="$STATE_DIR/shell.log"
 
-# Parse arguments
-LEGACY=false
 FOREGROUND=false
 PASS_ARGS=()
 for arg in "$@"; do
     if [[ "$arg" == "--legacy" ]]; then
-        LEGACY=true
+        echo "[agility-shell] Notice: Legacy Python stack has been deprecated and completely removed." >&2
+        echo "[agility-shell] Running Next-Gen Rust/QML Agility Shell." >&2
     elif [[ "$arg" == "--foreground" || "$arg" == "-f" ]]; then
         FOREGROUND=true
     else
@@ -28,135 +26,86 @@ done
 
 SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" 2>/dev/null && pwd || echo "")"
 
-# ─── 1. Next-Gen Agility Shell (Default) ───
-if [[ "$LEGACY" == false ]]; then
-    # Check if Quickshell and agilityd are available
-    SHELL_QML=""
-    for cand in \
-        "$SELF_DIR/quickshell/agility/shell.qml" \
-        "$SYSTEM_DATA/quickshell/agility/shell.qml" \
-        "$USER_CONFIG/quickshell/agility/shell.qml"; do
-        if [[ -f "$cand" ]]; then
-            SHELL_QML="$cand"
-            break
-        fi
-    done
-
-    # If Next-Gen components exist, launch Next-Gen
-    if command -v quickshell >/dev/null 2>&1 && [[ -n "$SHELL_QML" ]]; then
-        # Already running: toggle launcher/dashboard
-        if pgrep -x "quickshell" >/dev/null 2>&1; then
-            if command -v qs >/dev/null 2>&1; then
-                qs ipc call launcher toggle >/dev/null 2>&1 || true
-            elif command -v agl >/dev/null 2>&1; then
-                agl toggle launcher >/dev/null 2>&1 || true
-            fi
-            echo "[agility-shell] Agility Shell Next-Gen is already running. Toggling Launcher."
-            exit 0
-        fi
-
-        # Foreground / Systemd mode
-        if [[ -n "${INVOCATION_ID:-}" || "$FOREGROUND" == true ]]; then
-            mkdir -p "$STATE_DIR"
-            DAEMON_PID=""
-            if ! pgrep -x "agilityd" >/dev/null 2>&1; then
-                if command -v agilityd >/dev/null 2>&1; then
-                    agilityd >> "$LOG_FILE" 2>&1 &
-                    DAEMON_PID=$!
-                elif [[ -x "$SELF_DIR/target/release/agilityd" ]]; then
-                    "$SELF_DIR/target/release/agilityd" >> "$LOG_FILE" 2>&1 &
-                    DAEMON_PID=$!
-                fi
-            fi
-
-            cleanup() {
-                if [[ -n "$DAEMON_PID" ]]; then
-                    kill -TERM "$DAEMON_PID" 2>/dev/null || true
-                fi
-            }
-            trap cleanup EXIT INT TERM
-
-            exec quickshell -p "$SHELL_QML"
-        fi
-
-        # Prefer systemd user unit when available outside systemd
-        if systemctl --user list-unit-files agility-shell.service &>/dev/null; then
-            echo "[agility-shell] Starting Agility Shell via systemd user unit..."
-            systemctl --user reset-failed agility-shell.service 2>/dev/null || true
-            systemctl --user start agility-shell.service
-            exit 0
-        fi
-
-        # Standalone background launch via agl or direct
-        if command -v agl >/dev/null 2>&1; then
-            exec agl start
-        elif [[ -x "$SELF_DIR/target/release/agl" ]]; then
-            exec "$SELF_DIR/target/release/agl" start
-        fi
+# Discover Quickshell entrypoint
+SHELL_QML=""
+for cand in \
+    "$SELF_DIR/quickshell/agility/shell.qml" \
+    "$SYSTEM_DATA/quickshell/agility/shell.qml" \
+    "$USER_CONFIG/quickshell/agility/shell.qml"; do
+    if [[ -f "$cand" ]]; then
+        SHELL_QML="$cand"
+        break
     fi
-fi
+done
 
-# ─── 2. Legacy Python Shell Fallback (--legacy) ───
-is_legacy_running() {
-    pgrep -x "agility-shell" >/dev/null 2>&1 || \
-    pgrep -f "python.*agility-shell/main\.py" >/dev/null 2>&1 || \
-    (command -v fabric-cli >/dev/null 2>&1 && fabric-cli list-all 2>/dev/null | grep -q "agility-shell:")
-}
-
-if is_legacy_running; then
-    if command -v fabric-cli >/dev/null 2>&1; then
-        fabric-cli exec agility-shell "bar_manager.open_settings()" >/dev/null 2>&1 || \
-        fabric-cli exec agility-shell "bar_manager.toggle('Dash')" >/dev/null 2>&1 || true
+# If already running: toggle launcher/dashboard
+if pgrep -x "quickshell" >/dev/null 2>&1; then
+    if command -v agl >/dev/null 2>&1; then
+        agl toggle launcher >/dev/null 2>&1 || true
+    elif command -v qs >/dev/null 2>&1; then
+        qs ipc call launcher toggle >/dev/null 2>&1 || true
+    elif [[ -x "$SELF_DIR/target/release/agl" ]]; then
+        "$SELF_DIR/target/release/agl" toggle launcher >/dev/null 2>&1 || true
     fi
-    echo "[agility-shell] Agility Shell (Legacy) is already running. Toggling Dash / Settings."
+    echo "[agility-shell] Agility Shell is already running. Toggled launcher."
     exit 0
 fi
 
-# Determine source and python binary for legacy stack
-if [[ -f "$SELF_DIR/main.py" && -f "$SELF_DIR/bar.py" ]]; then
-    SOURCE_DIR="$SELF_DIR"
-    if [[ -x "$SELF_DIR/venv/bin/python3" ]]; then
-        PYTHON_EXEC="$SELF_DIR/venv/bin/python3"
-    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
-        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
-    else
-        PYTHON_EXEC="python3"
+# Foreground / Systemd mode
+if [[ -n "${INVOCATION_ID:-}" || "$FOREGROUND" == true ]]; then
+    mkdir -p "$STATE_DIR"
+    DAEMON_PID=""
+    if ! pgrep -x "agilityd" >/dev/null 2>&1; then
+        if command -v agilityd >/dev/null 2>&1; then
+            agilityd >> "$LOG_FILE" 2>&1 &
+            DAEMON_PID=$!
+        elif [[ -x "$SELF_DIR/target/release/agilityd" ]]; then
+            "$SELF_DIR/target/release/agilityd" >> "$LOG_FILE" 2>&1 &
+            DAEMON_PID=$!
+        fi
     fi
-elif [[ -d "$SYSTEM_DATA" && -f "$SYSTEM_DATA/main.py" ]]; then
-    SOURCE_DIR="$SYSTEM_DATA"
-    if [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
-        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
+
+    cleanup() {
+        if [[ -n "$DAEMON_PID" ]]; then
+            kill -TERM "$DAEMON_PID" 2>/dev/null || true
+        fi
+    }
+    trap cleanup EXIT INT TERM
+
+    if [[ -n "$SHELL_QML" ]]; then
+        exec quickshell -p "$SHELL_QML"
     else
-        PYTHON_EXEC="python3"
+        exec quickshell
     fi
-elif [[ -f "$USER_CONFIG/main.py" ]]; then
-    SOURCE_DIR="$USER_CONFIG"
-    if [[ -x "$USER_CONFIG/venv/bin/python3" ]]; then
-        PYTHON_EXEC="$USER_CONFIG/venv/bin/python3"
-    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
-        PYTHON_EXEC="$SYSTEM_VENV/bin/python3"
-    else
-        PYTHON_EXEC="python3"
+fi
+
+# Prefer systemd user unit when available outside systemd
+if systemctl --user list-unit-files agility-shell.service &>/dev/null; then
+    echo "[agility-shell] Starting Agility Shell via systemd user unit..."
+    systemctl --user reset-failed agility-shell.service 2>/dev/null || true
+    systemctl --user start agility-shell.service
+    exit 0
+fi
+
+# Standalone launch via agl or direct
+if command -v agl >/dev/null 2>&1; then
+    exec agl start
+elif [[ -x "$SELF_DIR/target/release/agl" ]]; then
+    exec "$SELF_DIR/target/release/agl" start
+elif [[ -n "$SHELL_QML" ]]; then
+    mkdir -p "$STATE_DIR"
+    if ! pgrep -x "agilityd" >/dev/null 2>&1; then
+        if command -v agilityd >/dev/null 2>&1; then
+            agilityd >> "$LOG_FILE" 2>&1 &
+        elif [[ -x "$SELF_DIR/target/release/agilityd" ]]; then
+            "$SELF_DIR/target/release/agilityd" >> "$LOG_FILE" 2>&1 &
+        fi
     fi
+    setsid quickshell -p "$SHELL_QML" </dev/null >> "$LOG_FILE" 2>&1 &
+    disown
+    echo "[agility-shell] Agility Shell Next-Gen started in background."
+    exit 0
 else
-    echo "[agility-shell] Error: Installation not found in /usr/share/agility-shell or $USER_CONFIG" >&2
+    echo "[agility-shell] Error: Could not locate shell.qml or agl binary." >&2
     exit 1
 fi
-
-export PYTHONPATH="$SOURCE_DIR${PYTHONPATH:+:$PYTHONPATH}"
-export AGILITY_DIR="$SOURCE_DIR"
-cd "$SOURCE_DIR"
-
-if [[ -n "${INVOCATION_ID:-}" || "$FOREGROUND" == true ]]; then
-    exec "$PYTHON_EXEC" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}
-fi
-
-mkdir -p "$STATE_DIR"
-if command -v setsid >/dev/null 2>&1; then
-    setsid "$PYTHON_EXEC" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
-else
-    nohup "$PYTHON_EXEC" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
-fi
-disown
-echo "[agility-shell] Started Agility Shell (Legacy) in background."
-exit 0

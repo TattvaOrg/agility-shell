@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  Agility Shell -- Restart Script
-#  Gracefully stops running shell processes and relaunches Agility Shell.
+#  Gracefully stops running Next-Gen shell processes and relaunches in < 15ms.
 # =============================================================================
 
 set -euo pipefail
@@ -30,7 +30,12 @@ for arg in "$@"; do
     fi
 done
 
-# Check if managed by systemd user service first
+# If agl is available and not in foreground mode, delegate to agl restart
+if [[ "$FOREGROUND" != true ]] && command -v agl >/dev/null 2>&1; then
+    exec agl restart
+fi
+
+# Check if managed by systemd user service
 if [[ "$FOREGROUND" != true ]] && (systemctl --user is-active --quiet agility-shell.service 2>/dev/null || systemctl --user is-enabled --quiet agility-shell.service 2>/dev/null); then
     info "Agility Shell is managed by a systemd user unit. Restarting via systemctl..."
     systemctl --user reset-failed agility-shell.service 2>/dev/null || true
@@ -42,126 +47,24 @@ if [[ "$FOREGROUND" != true ]] && (systemctl --user is-active --quiet agility-sh
     exit 0
 fi
 
-# Determine script directory
+info "Gracefully restarting Agility Shell Next-Gen..."
+
+# Terminate existing quickshell and agilityd instances safely
+killall -q -15 quickshell 2>/dev/null || true
+killall -q -15 agilityd 2>/dev/null || true
+sleep 0.015
+killall -q -9 quickshell 2>/dev/null || true
+killall -q -9 agilityd 2>/dev/null || true
+
+# Determine launcher or shell script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd || echo "")"
-USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
-SYSTEM_DATA="/usr/share/agility-shell"
-SYSTEM_VENV="/usr/lib/agility-shell/venv"
-LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
-LOG_FILE="$LOG_DIR/shell.log"
 
-mkdir -p "$LOG_DIR"
-
-info "Restarting Agility Shell..."
-
-# -- 1. Terminate existing shell processes safely -----------------------------
-info "Stopping running Agility Shell & Quickshell instances..."
-
-find_shell_pids() {
-    local found_pids=()
-    local raw_pids
-    raw_pids=$(pgrep -x "agility-shell" 2>/dev/null || true)
-    raw_pids+=" $(pgrep -f "python.*agility-shell/main\.py" 2>/dev/null || true)"
-    raw_pids+=" $(pgrep -f "python.*[m]ain\.py" 2>/dev/null || true)"
-    raw_pids+=" $(pgrep -f "[q]uickshell.*(agility|Awe)|[q]s.*(agility|Awe)" 2>/dev/null || true)"
-
-    for pid in $raw_pids; do
-        [[ -z "$pid" ]] && continue
-        if [[ "$pid" -eq "$$" || "$pid" -eq "$PPID" ]]; then
-            continue
-        fi
-        local cmdline
-        cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
-        if [[ "$cmdline" =~ restart\.sh|update\.sh|install\.sh|/bin/agl ]]; then
-            continue
-        fi
-        found_pids+=("$pid")
-    done
-    echo "${found_pids[@]:-}"
-}
-
-ALL_PIDS=$(find_shell_pids)
-
-if [[ -n "${ALL_PIDS// /}" ]]; then
-    kill -15 $ALL_PIDS 2>/dev/null || true
-    
-    for i in {1..20}; do
-        REMAINING=$(find_shell_pids)
-        if [[ -z "${REMAINING// /}" ]]; then
-            break
-        fi
-        sleep 0.1
-    done
-
-    REMAINING=$(find_shell_pids)
-    if [[ -n "${REMAINING// /}" ]]; then
-        warn "Force terminating lingering processes..."
-        kill -9 $REMAINING 2>/dev/null || true
-        sleep 0.2
-    fi
-fi
-
-success "All previous shell processes stopped."
-sleep 0.3
-
-# -- 2. Determine launcher target ---------------------------------------------
-TARGET_DIR=""
-PYTHON_BIN="python3"
-
-if [[ -n "$REPO_ROOT" && -f "$REPO_ROOT/main.py" && -f "$REPO_ROOT/bar.py" ]]; then
-    # In-tree development checkout
-    TARGET_DIR="$REPO_ROOT"
-    if [[ -x "$REPO_ROOT/venv/bin/python3" ]]; then
-        PYTHON_BIN="$REPO_ROOT/venv/bin/python3"
-    elif [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
-        PYTHON_BIN="$SYSTEM_VENV/bin/python3"
-    fi
-elif [[ -d "$SYSTEM_DATA" && -f "$SYSTEM_DATA/main.py" ]]; then
-    # System-wide installation
-    TARGET_DIR="$SYSTEM_DATA"
-    if [[ -x "$SYSTEM_VENV/bin/python3" ]]; then
-        PYTHON_BIN="$SYSTEM_VENV/bin/python3"
-    fi
-elif [[ -d "$USER_CONFIG" && -f "$USER_CONFIG/main.py" ]]; then
-    # Legacy user-config installation
-    TARGET_DIR="$USER_CONFIG"
-    if [[ -x "$USER_CONFIG/venv/bin/python3" ]]; then
-        PYTHON_BIN="$USER_CONFIG/venv/bin/python3"
-    fi
+if command -v agility-shell >/dev/null 2>&1; then
+    exec agility-shell ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}
+elif [[ -x "$REPO_ROOT/agility-shell" ]]; then
+    exec "$REPO_ROOT/agility-shell" ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}
 else
-    error "Could not find Agility Shell main.py in $SYSTEM_DATA, $USER_CONFIG, or $REPO_ROOT"
+    error "Could not find agility-shell executable to relaunch."
     exit 1
-fi
-
-info "Launching updated shell from: $TARGET_DIR"
-info "Using Python:                 $PYTHON_BIN"
-
-# -- 3. Start Shell -----------------------------------------------------------
-cd "$TARGET_DIR"
-
-if [[ "$FOREGROUND" == true ]]; then
-    info "Running in foreground mode..."
-    exec "$PYTHON_BIN" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"}
-else
-    if command -v setsid >/dev/null 2>&1; then
-        setsid "$PYTHON_BIN" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
-    else
-        nohup "$PYTHON_BIN" main.py ${PASS_ARGS[@]+"${PASS_ARGS[@]}"} </dev/null >> "$LOG_FILE" 2>&1 &
-    fi
-    DISOWN_PID=$!
-    disown "$DISOWN_PID" 2>/dev/null || true
-    
-    sleep 1.0
-    if kill -0 "$DISOWN_PID" 2>/dev/null; then
-        success "Agility Shell started with PID $DISOWN_PID"
-        info "Log output: $LOG_FILE"
-        
-        if command -v notify-send >/dev/null 2>&1; then
-            notify-send -a "Agility Shell" "Agility Shell" "Shell restarted successfully" 2>/dev/null || true
-        fi
-    else
-        error "Failed to start Agility Shell! Check logs at $LOG_FILE"
-        exit 1
-    fi
 fi

@@ -9,7 +9,6 @@ set -euo pipefail
 REPO_URL="https://github.com/TattvaOrg/agility-shell.git"
 SYSTEM_DATA="/usr/share/agility-shell"
 SYSTEM_LIB="/usr/lib/agility-shell"
-SYSTEM_VENV="$SYSTEM_LIB/venv"
 USER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agility-shell"
 USER_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/agility-shell"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
@@ -115,30 +114,22 @@ PACMAN_DEPS=(
     swayidle
     networkmanager
     bluez
-    python
-    python-pip
-    python-gobject
-    python-cairo
-    python-pillow
-    python-psutil
-    python-cffi
-    python-click
-    python-loguru
-    python-setproctitle
-    python-rapidfuzz
-    python-pam
     wayland
     pkgconf
-    awww
     base-devel
     git
     make
     gcc
     niri
+    rust
+    cargo
+    quickshell
+    pam
+    libpulse
+    jq
 )
 
 AUR_DEPS=(
-    fabric-cli-git
 )
 
 is_pkg_installed() {
@@ -390,25 +381,11 @@ do_update() {
             make
             sudo make PREFIX="/usr" install
         fi
-        sudo make PREFIX="/usr" install-venv
     else
-        info "Compiling native snippet libraries..."
+        info "Compiling Next-Gen Rust workspace..."
         make
-        info "Updating system files via make install..."
+        info "Updating system files and Next-Gen binaries via make install..."
         sudo make PREFIX="/usr" install
-
-        local venv_python="/usr/lib/agility-shell/venv/bin/python3"
-        local venv_pip="/usr/lib/agility-shell/venv/bin/pip"
-        if [[ -x "$venv_pip" ]] && "$venv_python" -c "import sys" &>/dev/null; then
-            info "Synchronizing runtime Python dependencies and Fabric..."
-            sudo "$venv_pip" install --upgrade pip -q
-            sudo "$venv_pip" install --upgrade --no-deps "fabric @ git+https://github.com/Fabric-Development/fabric.git" -q
-            sudo "$venv_pip" install --upgrade -r requirements.txt -q
-        else
-            info "Re-provisioning dedicated virtual environment..."
-            sudo rm -rf "/usr/lib/agility-shell/venv"
-            sudo make PREFIX="/usr" install-venv
-        fi
     fi
 
     seed_user_configuration

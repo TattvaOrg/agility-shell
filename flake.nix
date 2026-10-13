@@ -1,124 +1,42 @@
 {
-  description = "agility-shell — a lightweight desktop shell powered by Fabric";
+  description = "agility-shell — Next-generation Wayland desktop shell powered by Rust daemon and Quickshell";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
-    fabric = {
-      url = "github:Fabric-Development/fabric";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { self, nixpkgs, utils, fabric, ... }:
+  outputs = { self, nixpkgs, utils, ... }:
     utils.lib.eachDefaultSystem (system:
       let
-        fabricOverlay = final: prev: {
-          pythonPackagesExtensions =
-            prev.pythonPackagesExtensions
-            ++ [
-              (python-final: python-prev: {
-                python-fabric = prev.callPackage
-                  "${fabric}/default.nix" {};
-              })
-            ];
-        };
-
-        pkgs = nixpkgs.legacyPackages.${system}.extend fabricOverlay;
-
-        nativeLibs = with pkgs; [
-          gtk3
-          glib
-          pango
-          gtk-layer-shell
-          cairo
-          gtk-session-lock
-          harfbuzz
-          atk
-          playerctl
-          gobject-introspection
-          libdbusmenu-gtk3
-          gdk-pixbuf
-          gnome-bluetooth
-          gtk-session-lock
-          cinnamon-desktop
-          librsvg
-          linux-pam
-          networkmanager
-          pipewire
-          upower
-          bluez
-          brightnessctl
-          swayidle
-          wlsunset
-          wf-recorder
-          swww
-        ];
-
-        pythonEnv = pkgs.python3.withPackages (ps: with pkgs.python3Packages; [
-          python-fabric
-          cffi
-          click
-          loguru
-          pillow
-          psutil
-          pycairo
-          pycparser
-          pygobject3
-          python-pam
-          rapidfuzz
-          setproctitle
-          six
-          thefuzz
-          setuptools
-        ]);
-
+        pkgs = nixpkgs.legacyPackages.${system};
       in {
         formatter = pkgs.nixfmt-rfc-style;
 
-        packages.default = pkgs.callPackage ./package.nix {
-          inherit pythonEnv;
-          inherit (pkgs)
-            gtk3
-            gtk-layer-shell
-            gobject-introspection
-            libdbusmenu-gtk3
-            gdk-pixbuf
-            librsvg
-            wayland
-            pkg-config
-            cinnamon-desktop
-            glib
-            gnome-bluetooth
-            pango
-            harfbuzz
-            atk
-            playerctl
-            networkmanager
-            pipewire
-            upower
-            bluez
-            brightnessctl
-            swayidle
-            wlsunset
-            wf-recorder
-            swww
-            gsettings-desktop-schemas
-            hicolor-icon-theme
-            adwaita-icon-theme
-            morewaita-icon-theme
-            makeWrapper
-            wrapGAppsHook3;
-        };
+        packages.default = pkgs.callPackage ./package.nix {};
 
         devShells.default = pkgs.mkShell {
-          name = "agility-shell";
-          packages = [ pythonEnv pkgs.ruff ] ++ nativeLibs;
-          shellHook = ''
-            export GI_TYPELIB_PATH=${pkgs.lib.makeSearchPathOutput "lib" "lib/girepository-1.0" nativeLibs}
-            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath nativeLibs}
-          '';
+          nativeBuildInputs = with pkgs; [
+            cargo
+            rustc
+            pkg-config
+            makeWrapper
+          ];
+
+          buildInputs = with pkgs; [
+            wayland
+            pam
+            libpulseaudio
+            playerctl
+            brightnessctl
+            wf-recorder
+            upower
+            swayidle
+            networkmanager
+            bluez
+            matugen
+            jq
+          ];
         };
-      }
-    );
+      });
 }

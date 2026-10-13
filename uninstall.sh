@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  Agility Shell -- Root Uninstall Wrapper (Forwarder)
-#  Guarantees 100% backward compatibility for direct execution.
+#  Guarantees 100% backward compatibility for direct execution & curl piping.
 # =============================================================================
 
 set -euo pipefail
@@ -16,8 +16,19 @@ elif [[ -f "$HOME/.config/agility-shell/scripts/uninstall.sh" ]]; then
     exec "$HOME/.config/agility-shell/scripts/uninstall.sh" "$@"
 fi
 
+# Fallback when running piped via curl/stdin:
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/agility-shell"
+REPO_DIR="$CACHE_DIR/repo"
+
+if [[ -f "$REPO_DIR/scripts/uninstall.sh" ]]; then
+    exec "$REPO_DIR/scripts/uninstall.sh" "$@"
+fi
+
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+cleanup() { rm -rf "$TMP_DIR"; }
+trap cleanup EXIT
+
 curl -fsSL https://raw.githubusercontent.com/TattvaOrg/agility-shell/main/scripts/uninstall.sh -o "$TMP_DIR/uninstall.sh"
 chmod +x "$TMP_DIR/uninstall.sh"
-exec "$TMP_DIR/uninstall.sh" "$@"
+bash "$TMP_DIR/uninstall.sh" "$@"
+exit $?

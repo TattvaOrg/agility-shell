@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Minflair Settings
+Comment=Personalization, updates, and system settings
+Exec=sh -c 'if [ -f "$HOME/.config/quickshell/Modules/Settings/scripts/toggle_minflair_settings.sh" ]; then "$HOME/.config/quickshell/Modules/Settings/scripts/toggle_minflair_settings.sh"; elif [ -f /usr/share/agility-shell/quickshell/agility/Modules/Settings/scripts/toggle_minflair_settings.sh ]; then /usr/share/agility-shell/quickshell/agility/Modules/Settings/scripts/toggle_minflair_settings.sh; else echo "" | socat - UNIX-CONNECT:/tmp/quickshell_minflair_settings; fi'
+Icon=/usr/share/agility-shell/quickshell/agility/assets/settings-icon.svg
+Terminal=false
+Categories=Settings;

@@ -1,231 +1,108 @@
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import Quickshell.Io
-import "bar" as Bar
-import "dock" as Dock
-import "popouts" as Popouts
-import "launcher" as Launcher
-import "osd" as Osd
-import "notifications" as Notifications
-import "canvas" as Canvas
-import "lockscreen" as Lockscreen
-import "components" as Components
+import Quickshell.Wayland
+import qs.Core
+import qs.Core.Services
+import qs.Core.Windows
+import qs.Modules.Bar
+import qs.Modules.Bar.Styles.Convex
+import qs.Modules.Bar.Styles.Gaming
 
 ShellRoot {
-    IpcHandler {
-        target: "bar-style"
-        function set(name: string) {
-            Theme.setBarStyle(name)
-        }
-        function cycle() {
-            var styles = ["island", "convex", "gaming", "classic"]
-            var idx = styles.indexOf(Theme.barStyle)
-            var next = styles[(idx + 1) % styles.length]
-            Theme.setBarStyle(next)
-        }
-    }
+    id: root
+
+    readonly property bool isGaming: DisplayProfileService.gameModeActive
+    readonly property bool isConvex: SettingsService.barStyle === "convex"
 
     IpcHandler {
-        target: "suits"
-        function reload() {
-            Theme.reloadSettings()
+        function toggle(widgetId: string) {
+            AppState.toggleWidget(widgetId);
         }
+
+        function open(widgetId: string) {
+            AppState.openWidget(widgetId);
+        }
+
+        function close(widgetId: string) {
+            AppState.closeWidget(widgetId);
+        }
+
+        target: "widgets"
     }
 
-    IpcHandler {
-        target: "canvas"
-        function toggleEdit() {
-            Canvas.CanvasService.toggleEditMode()
-        }
-        function editMode() {
-            Canvas.CanvasService.toggleEditMode()
-        }
+    NotificationService {
+        id: globalNotificationService
     }
 
-    IpcHandler {
-        target: "applets-edit"
-        function toggle() {
-            Canvas.CanvasService.toggleEditMode()
+    PanelWindow {
+        id: barSurface
+
+        readonly property int barHeight: BarStyleConfig.barHeight(SettingsService.barStyle)
+        readonly property int barMarginTop: BarStyleConfig.barMarginTop(SettingsService.barStyle)
+        readonly property int barMarginSide: BarStyleConfig.barMarginSide(SettingsService.barStyle)
+
+        WlrLayershell.layer: WlrLayer.Top
+        color: "transparent"
+        focusable: false
+        implicitHeight: !SettingsService.settingsLoaded ? 0 : (barMarginTop + barHeight)
+        visible: SettingsService.settingsLoaded && !root.isGaming
+
+        anchors {
+            top: true
+            left: true
+            right: true
         }
+
+        mask: Region {
+        }
+
     }
 
-    IpcHandler {
-        target: "launcher"
-        function toggle() {
-            Launcher.LauncherService.toggle()
+    PanelWindow {
+        id: gamingBarSurface
+
+        WlrLayershell.layer: WlrLayer.Top
+        WlrLayershell.exclusiveZone: Constants.size3Xl + 2
+        color: Theme.bg
+        focusable: false
+        implicitHeight: Constants.size3Xl + 2
+        visible: SettingsService.settingsLoaded && root.isGaming
+
+        anchors {
+            top: true
+            left: true
+            right: true
         }
-        function open() {
-            Launcher.LauncherService.open()
+
+        GamingBar {
+            anchors.fill: parent
+            notificationService: globalNotificationService
         }
-        function close() {
-            Launcher.LauncherService.close()
-        }
+
     }
 
-    IpcHandler {
-        target: "dash"
-        function toggle() {
-            Launcher.LauncherService.toggle()
-        }
-        function open() {
-            Launcher.LauncherService.open()
-        }
-        function close() {
-            Launcher.LauncherService.close()
-        }
+    BarOverlayWindow {
+        notificationService: globalNotificationService
+        barSurface: barSurface
+        visible: SettingsService.settingsLoaded && !root.isConvex && !root.isGaming
     }
 
-    IpcHandler {
-        target: "osd"
-        function volume(val: real) {
-            Osd.OsdService.triggerVolume(val)
-        }
-        function brightness(val: real) {
-            Osd.OsdService.triggerBrightness(val)
-        }
-        function keyboard(layout: string) {
-            Osd.OsdService.triggerKeyboard(layout)
-        }
-        function power(profile: string) {
-            Osd.OsdService.triggerPower(profile)
-        }
+    ConvexDesktop {
+        id: convexDesktopSurface
+
+        notificationService: globalNotificationService
+        visible: SettingsService.settingsLoaded && root.isConvex && !root.isGaming
     }
 
-    IpcHandler {
-        target: "notifications"
-        function toggle() {
-            Notifications.NotificationService.toggleDrawer()
-        }
-        function open() {
-            Notifications.NotificationService.openDrawer()
-        }
-        function close() {
-            Notifications.NotificationService.closeDrawer()
-        }
-        function clear() {
-            Notifications.NotificationService.clearAllHistory()
-        }
+    GamingOverlay {
+        id: gamingOverlaySurface
+
+        notificationService: globalNotificationService
     }
 
-    IpcHandler {
-        target: "lock"
-        function lock() {
-            Lockscreen.LockService.lockSession()
-        }
-        function unlock() {
-            Lockscreen.LockService.unlockSession()
-        }
+    ShellModules {
+        id: shellModules
     }
 
-    IpcHandler {
-        target: "melt"
-        function trigger(duration: real, cols: int) {
-            Lockscreen.DoomMeltService.triggerMelt("", duration, cols, [])
-        }
-    }
-
-    IpcHandler {
-        target: "sounds"
-        function play(sound: string) {
-            Components.SoundService.play(sound)
-        }
-    }
-
-    Component.onCompleted: {
-        Components.SoundService.play("session-start")
-    }
-
-    // Top Multi-Monitor Status Bar
-    Variants {
-        model: Quickshell.screens
-        Bar.BarWindow {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Island Popout Applets & Control Center
-    Variants {
-        model: Quickshell.screens
-        Popouts.PopoutWindow {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Bottom Floating Application Dock
-    Variants {
-        model: Quickshell.screens
-        Dock.DockWindow {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Centered Modal Application Launcher Dash
-    Variants {
-        model: Quickshell.screens
-        Launcher.LauncherWindow {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Floating On-Screen Display (OSD) Overlays
-    Variants {
-        model: Quickshell.screens
-        Osd.OsdWindow {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Floating Notification Toasts Overlay
-    Variants {
-        model: Quickshell.screens
-        Notifications.NotificationToasts {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Slide-in Notification History Drawer
-    Variants {
-        model: Quickshell.screens
-        Notifications.NotificationDrawer {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Multi-Monitor Desktop Background Canvas (WlrLayer.Bottom)
-    Variants {
-        model: Quickshell.screens
-        Canvas.DesktopCanvas {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Interactive Desktop Applets Edit Mode (WlrLayer.Top)
-    Variants {
-        model: Quickshell.screens
-        Canvas.DesktopEditMode {
-            property var modelData
-            screenModel: modelData
-        }
-    }
-
-    // Exclusive Wayland Session Lock Screen (ext-session-lock-v1)
-    Lockscreen.LockWindow {}
-
-    // Multi-Monitor Doom Vertical Melt Screen Transition Overlay
-    Variants {
-        model: Quickshell.screens
-        Lockscreen.DoomMeltOverlay {
-            property var modelData
-            screenModel: modelData
-        }
-    }
 }

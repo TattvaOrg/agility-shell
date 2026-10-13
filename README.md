@@ -196,14 +196,13 @@ subgraph group_daemon["Rust Daemon Core (agilityd)"]
   node_sounds["Sound Engine<br/>org.agility.Daemon.Sounds"]
 end
 
-subgraph group_frontend["Quickshell QML Frontend"]
+subgraph group_frontend["Quickshell QML Frontend (Minflair-based)"]
   node_shell_qml["Quickshell runtime<br/>shell.qml"]
-  node_bar["Multi-monitor Status Bar<br/>25+ Glass Widgets"]
-  node_dock["Floating Dock<br/>Parabolic Zoom"]
-  node_popouts["Control Center & Popouts<br/>Audio, WiFi, BT, Session"]
-  node_canvas["Desktop Canvas<br/>23 Interactive Applets"]
-  node_lockscreen["Lockscreen Window<br/>Doom Melt Transition"]
-  node_launcher["Modal Launcher & OSD<br/>Sub-2ms Fuzzy Search"]
+  node_bar["Adaptive Status Bar<br/>Convex, Island & Gaming Styles"]
+  node_controlcenter["Control Center & Quick Settings<br/>Audio, WiFi, BT, Battery, System"]
+  node_launcher["App Launcher<br/>Fast Fuzzy Search & Filtering"]
+  node_lockscreen["Lockscreen & Auth<br/>PAM & Wallpaper Integration"]
+  node_settings["Personalization & Settings<br/>Themes, Fonts, Bar Style, Keybinds"]
 end
 
 node_installer -->|"registers"| node_systemd
@@ -214,23 +213,21 @@ node_startup -->|"executes"| node_shell_qml
 node_daemon -->|"D-Bus IPC"| node_shell_qml
 node_daemon -->|"D-Bus IPC"| node_agl
 node_shell_qml -->|"renders"| node_bar
-node_shell_qml -->|"renders"| node_dock
-node_shell_qml -->|"renders"| node_popouts
-node_shell_qml -->|"renders"| node_canvas
-node_shell_qml -->|"renders"| node_lockscreen
+node_shell_qml -->|"renders"| node_controlcenter
 node_shell_qml -->|"renders"| node_launcher
+node_shell_qml -->|"renders"| node_lockscreen
+node_shell_qml -->|"renders"| node_settings
 click node_agl "https://github.com/TattvaOrg/agility-shell/blob/main/crates/agility-cli"
 click node_daemon "https://github.com/TattvaOrg/agility-shell/blob/main/crates/agilityd"
 click node_startup "https://github.com/TattvaOrg/agility-shell/blob/main/agility-shell"
 click node_installer "https://github.com/TattvaOrg/agility-shell/blob/main/scripts/install.sh"
 click node_systemd "https://github.com/TattvaOrg/agility-shell/blob/main/systemd/agility-shell.service"
 click node_shell_qml "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/shell.qml"
-click node_bar "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/bar/BarWindow.qml"
-click node_dock "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/dock/DockWindow.qml"
-click node_popouts "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/popouts/ControlCenter.qml"
-click node_canvas "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/canvas/DesktopCanvas.qml"
-click node_lockscreen "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/lockscreen/LockWindow.qml"
-click node_launcher "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/launcher/LauncherWindow.qml"
+click node_bar "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/Modules/Bar"
+click node_controlcenter "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/Modules/ControlCenter"
+click node_launcher "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/Modules/Launcher"
+click node_lockscreen "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/Modules/LockScreen"
+click node_settings "https://github.com/TattvaOrg/agility-shell/blob/main/quickshell/agility/Modules/Settings"
 
 classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
 classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
@@ -240,11 +237,9 @@ classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
 classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
 classDef toneTeal fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a
 class node_agl,node_startup,node_installer,node_systemd toneBlue
-class node_main,node_bar,node_bar_widgets,node_dock_state,node_quick_settings,node_dash,node_notifications toneAmber
-class node_shell_services,node_player,node_network,node_notification_store toneMint
-class node_wm_base,node_wm_adapters toneRose
-class node_wallpaper_theme,node_styles,node_native_effects toneIndigo
-class node_quickshell toneNeutral
+class node_bar,node_controlcenter,node_launcher,node_lockscreen,node_settings toneAmber
+class node_daemon,node_compositor,node_telemetry,node_audio,node_lock_pam,node_notif_server,node_sounds toneMint
+class node_shell_qml toneNeutral
 ```
 
 ---
@@ -253,4 +248,10 @@ class node_quickshell toneNeutral
 
 Contributions are always welcome! Please check the issues tab, follow our descriptive branching workflow, and submit a pull request.
 
-Special thanks to [caffyne-shell](https://github.com/caffyne-org/caffyne-shell) , `@its-darsh` (Fabric framework), `@Axenide` (backend clients), `@linkfrg` (Ignis runtime inspiration), and `@amansxcalibur` (UI code snippets) for making this project possible.
+Special thanks and attributions to:
+- **[Minflair](https://github.com/t4lentles5/minflair)** by [@t4lentles5](https://github.com/t4lentles5): The modular Quickshell QML frontend architecture, UI modules (Convex, Island, and Gaming bars, Control Center, App Launcher, Screen Capture, Wallpaper Selector, Package Manager, Settings), and vector SVG assets are derived from Minflair under the **GNU General Public License v3.0 (GPL-3.0)**.
+- **[caffyne-shell](https://github.com/caffyne-org/caffyne-shell)**: For foundational ideas and inspiration.
+- **`@its-darsh`**: Fabric framework.
+- **`@Axenide`**: Backend client design.
+- **`@linkfrg`**: Ignis runtime inspiration.
+- **`@amansxcalibur`**: UI code snippets.

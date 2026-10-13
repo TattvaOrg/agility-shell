@@ -2,6 +2,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
+import "bar" as Bar
+import "dock" as Dock
+import "popouts" as Popouts
+import "launcher" as Launcher
+import "osd" as Osd
+import "notifications" as Notifications
+import "canvas" as Canvas
+import "lockscreen" as Lockscreen
+import "components" as Components
 
 ShellRoot {
     IpcHandler {
@@ -11,399 +20,199 @@ ShellRoot {
         }
     }
 
+    IpcHandler {
+        target: "canvas"
+        function toggleEdit() {
+            Canvas.CanvasService.toggleEditMode()
+        }
+        function editMode() {
+            Canvas.CanvasService.toggleEditMode()
+        }
+    }
+
+    IpcHandler {
+        target: "applets-edit"
+        function toggle() {
+            Canvas.CanvasService.toggleEditMode()
+        }
+    }
+
+    IpcHandler {
+        target: "launcher"
+        function toggle() {
+            Launcher.LauncherService.toggle()
+        }
+        function open() {
+            Launcher.LauncherService.open()
+        }
+        function close() {
+            Launcher.LauncherService.close()
+        }
+    }
+
+    IpcHandler {
+        target: "dash"
+        function toggle() {
+            Launcher.LauncherService.toggle()
+        }
+        function open() {
+            Launcher.LauncherService.open()
+        }
+        function close() {
+            Launcher.LauncherService.close()
+        }
+    }
+
+    IpcHandler {
+        target: "osd"
+        function volume(val: real) {
+            Osd.OsdService.triggerVolume(val)
+        }
+        function brightness(val: real) {
+            Osd.OsdService.triggerBrightness(val)
+        }
+        function keyboard(layout: string) {
+            Osd.OsdService.triggerKeyboard(layout)
+        }
+        function power(profile: string) {
+            Osd.OsdService.triggerPower(profile)
+        }
+    }
+
+    IpcHandler {
+        target: "notifications"
+        function toggle() {
+            Notifications.NotificationService.toggleDrawer()
+        }
+        function open() {
+            Notifications.NotificationService.openDrawer()
+        }
+        function close() {
+            Notifications.NotificationService.closeDrawer()
+        }
+        function clear() {
+            Notifications.NotificationService.clearAllHistory()
+        }
+    }
+
+    IpcHandler {
+        target: "lock"
+        function lock() {
+            Lockscreen.LockService.lockSession()
+        }
+        function unlock() {
+            Lockscreen.LockService.unlockSession()
+        }
+    }
+
+    IpcHandler {
+        target: "melt"
+        function trigger(duration: real, cols: int) {
+            Lockscreen.DoomMeltService.triggerMelt("", duration, cols, [])
+        }
+    }
+
+    IpcHandler {
+        target: "sounds"
+        function play(sound: string) {
+            Components.SoundService.play(sound)
+        }
+    }
+
+    Component.onCompleted: {
+        Components.SoundService.play("session-start")
+    }
+
+    // Top Multi-Monitor Status Bar
     Variants {
         model: Quickshell.screens
-        PanelWindow {
-            id: desktopWindow
+        Bar.BarWindow {
             property var modelData
-            screen: modelData
+            screenModel: modelData
+        }
+    }
 
-            WlrLayershell.layer: WlrLayer.Bottom
-            WlrLayershell.namespace: "quickshell:agility-desktop-widgets"
-            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    // Island Popout Applets & Control Center
+    Variants {
+        model: Quickshell.screens
+        Popouts.PopoutWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-            anchors {
-                top: true
-                bottom: true
-                left: true
-                right: true
-            }
-            color: "transparent"
+    // Bottom Floating Application Dock
+    Variants {
+        model: Quickshell.screens
+        Dock.DockWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-            mask: Region {
-                Region { item: clockWidget }
-                Region { item: sysinfoWidget }
-                Region { item: calendarWidget }
-                Region { item: mediaWidget }
-                Region { item: weatherWidget }
-                Region { item: posterWidget }
-                Region { item: batteryWidget }
-                Region { item: volumeWidget }
-                Region { item: networkWidget }
-                Region { item: notesWidget }
-                Region { item: todoWidget }
-                Region { item: timerWidget }
-                Region { item: thermalWidget }
-                Region { item: quoteWidget }
-                Region { item: clipboardWidget }
-                Region { item: cryptoWidget }
-                Region { item: worldclockWidget }
-                Region { item: gitWidget }
-                Region { item: resourcewheelWidget }
-                Region { item: visualizerWidget }
-                Region { item: habitsWidget }
-                Region { item: pingWidget }
-                Region { item: storagemapWidget }
-                Region { item: calcWidget }
-            }
+    // Centered Modal Application Launcher Dash
+    Variants {
+        model: Quickshell.screens
+        Launcher.LauncherWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-            Connections {
-                target: Theme
-                function onSettingsUpdated() {
-                    if (!Theme.isSwitching) return
-                    Theme.applyWidgetConfig(clockWidget, "clock")
-                    Theme.applyWidgetConfig(sysinfoWidget, "sysinfo")
-                    Theme.applyWidgetConfig(calendarWidget, "calendar")
-                    Theme.applyWidgetConfig(mediaWidget, "media")
-                    Theme.applyWidgetConfig(weatherWidget, "weather")
-                    Theme.applyWidgetConfig(posterWidget, "poster")
-                    Theme.applyWidgetConfig(batteryWidget, "battery")
-                    Theme.applyWidgetConfig(volumeWidget, "quickcontrols")
-                    Theme.applyWidgetConfig(networkWidget, "network")
-                    Theme.applyWidgetConfig(notesWidget, "notes")
-                    Theme.applyWidgetConfig(todoWidget, "todo")
-                    Theme.applyWidgetConfig(timerWidget, "timer")
-                    Theme.applyWidgetConfig(thermalWidget, "thermal")
-                    Theme.applyWidgetConfig(quoteWidget, "quote")
-                    Theme.applyWidgetConfig(clipboardWidget, "clipboard")
-                    Theme.applyWidgetConfig(cryptoWidget, "crypto")
-                    Theme.applyWidgetConfig(worldclockWidget, "worldclock")
-                    Theme.applyWidgetConfig(gitWidget, "git")
-                    Theme.applyWidgetConfig(resourcewheelWidget, "resourcewheel")
-                    Theme.applyWidgetConfig(visualizerWidget, "visualizer")
-                    Theme.applyWidgetConfig(habitsWidget, "habits")
-                    Theme.applyWidgetConfig(pingWidget, "ping")
-                    Theme.applyWidgetConfig(storagemapWidget, "storagemap")
-                    Theme.applyWidgetConfig(calcWidget, "calc")
-                }
-            }
+    // Floating On-Screen Display (OSD) Overlays
+    Variants {
+        model: Quickshell.screens
+        Osd.OsdWindow {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-            Item {
-                id: widgetsLayer
-                anchors.fill: parent
+    // Floating Notification Toasts Overlay
+    Variants {
+        model: Quickshell.screens
+        Notifications.NotificationToasts {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-                Clock {
-                    id: clockWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("clock") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("clock") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
+    // Slide-in Notification History Drawer
+    Variants {
+        model: Quickshell.screens
+        Notifications.NotificationDrawer {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-                SystemInfo {
-                    id: sysinfoWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("sysinfo") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("sysinfo") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
+    // Multi-Monitor Desktop Background Canvas (WlrLayer.Bottom)
+    Variants {
+        model: Quickshell.screens
+        Canvas.DesktopCanvas {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-                CalendarWidget {
-                    id: calendarWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("calendar") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("calendar") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
+    // Interactive Desktop Applets Edit Mode (WlrLayer.Top)
+    Variants {
+        model: Quickshell.screens
+        Canvas.DesktopEditMode {
+            property var modelData
+            screenModel: modelData
+        }
+    }
 
-                MediaWidget {
-                    id: mediaWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("media") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("media") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
+    // Exclusive Wayland Session Lock Screen (ext-session-lock-v1)
+    Lockscreen.LockWindow {}
 
-                WeatherWidget {
-                    id: weatherWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("weather") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("weather") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                PosterWidget {
-                    id: posterWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("poster") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("poster") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                BatteryWidget {
-                    id: batteryWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("battery") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("battery") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                VolumeBrightnessWidget {
-                    id: volumeWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("quickcontrols") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("quickcontrols") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                NetworkWidget {
-                    id: networkWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("network") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("network") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                NotesWidget {
-                    id: notesWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("notes") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("notes") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                TodoWidget {
-                    id: todoWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("todo") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("todo") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                TimerWidget {
-                    id: timerWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("timer") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("timer") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                ThermalWidget {
-                    id: thermalWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("thermal") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("thermal") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                QuoteWidget {
-                    id: quoteWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("quote") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("quote") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                ClipboardWidget {
-                    id: clipboardWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("clipboard") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("clipboard") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                CryptoWidget {
-                    id: cryptoWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("crypto") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("crypto") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                WorldClockWidget {
-                    id: worldclockWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("worldclock") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("worldclock") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                GitDashboardWidget {
-                    id: gitWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("git") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("git") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                ResourceWheelWidget {
-                    id: resourcewheelWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("resourcewheel") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("resourcewheel") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                VisualizerWidget {
-                    id: visualizerWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("visualizer") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("visualizer") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                HabitsWidget {
-                    id: habitsWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("habits") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("habits") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                PingWidget {
-                    id: pingWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("ping") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("ping") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                StorageMapWidget {
-                    id: storagemapWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("storagemap") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("storagemap") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-
-                CalcWidget {
-                    id: calcWidget
-                    visible: opacity > 0.001
-                    opacity: Theme.isWidgetVisible("calc") ? 1.0 : 0.0
-                    scale: Theme.isWidgetVisible("calc") ? 1.0 : 0.88
-                    Behavior on x { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on y { enabled: Theme.isSwitching; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-                    screenWidth: desktopWindow.width
-                    screenHeight: desktopWindow.height
-                }
-            }
+    // Multi-Monitor Doom Vertical Melt Screen Transition Overlay
+    Variants {
+        model: Quickshell.screens
+        Lockscreen.DoomMeltOverlay {
+            property var modelData
+            screenModel: modelData
         }
     }
 }

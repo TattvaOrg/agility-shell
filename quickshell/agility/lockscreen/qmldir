@@ -1,0 +1,4 @@
+singleton LockService 1.0 LockService.qml
+singleton DoomMeltService 1.0 DoomMeltService.qml
+LockWindow 1.0 LockWindow.qml
+DoomMeltOverlay 1.0 DoomMeltOverlay.qml

@@ -1,0 +1,3 @@
+singleton NotificationService 1.0 NotificationService.qml
+NotificationToasts 1.0 NotificationToasts.qml
+NotificationDrawer 1.0 NotificationDrawer.qml

@@ -65,16 +65,18 @@ Item {
     }
 
     function saveSettings() {
-        var jsonStr = JSON.stringify(root.taskList).replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"todo\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"list\":" + jsonStr + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("todo", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "list": root.tasksList
+        })
     }
 
     // ─── GTK3 Add Task Prompt Process ───
     Process {
         id: addTaskProc
-        command: ["python3", "-c", "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; dialog=Gtk.MessageDialog(message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.OK_CANCEL, text='Add New Task:'); entry=Gtk.Entry(); entry.set_placeholder_text('Enter task description...'); entry.show(); dialog.vbox.pack_end(entry, True, True, 8); res=dialog.run(); txt=entry.get_text().strip() if res==Gtk.ResponseType.OK else ''; dialog.destroy(); print(txt)"]
+        command: ["sh", "-c", "zenity --entry --title='Add New Task' --text='Enter task description:' 2>/dev/null || kdialog --inputbox 'Enter task description:' '' 2>/dev/null || true"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {

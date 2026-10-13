@@ -18,48 +18,26 @@ permissions:
 jobs:
   build-release:
     name: Build Release Binaries (${{ matrix.target }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
             arch: x86_64
-            use_cross: false
+            os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             arch: aarch64
-            use_cross: true
+            os: ubuntu-24.04-arm
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Native Dependencies (x86_64)
-        if: ${{ !matrix.use_cross }}
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libpam0g-dev libpulse-dev pkg-config
-
-      - name: Install Cross Dependencies (aarch64)
-        if: ${{ matrix.use_cross }}
-        run: |
-          UBUNTU_CODENAME=$(lsb_release -cs)
-          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            if grep -q "^Architectures:" /etc/apt/sources.list.d/ubuntu.sources; then
-              sudo sed -i 's/^Architectures:.*/Architectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
-            else
-              sudo sed -i 's/^Suites:/Architectures: amd64\nSuites:/g' /etc/apt/sources.list.d/ubuntu.sources
-            fi
-            printf "Types: deb\nURIs: http://ports.ubuntu.com/ubuntu-ports/\nSuites: %s %s-updates %s-backports %s-security\nComponents: main restricted universe multiverse\nArchitectures: arm64\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" | sudo tee /etc/apt/sources.list.d/arm64.sources
-          elif [ -f /etc/apt/sources.list ]; then
-            sudo sed -i -e 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
-            sudo sed -i -e 's/deb mirror/deb [arch=amd64] mirror/g' /etc/apt/sources.list
-            printf "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ %s main restricted universe multiverse\ndeb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ %s-updates main restricted universe multiverse\ndeb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ %s-security main restricted universe multiverse\ndeb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ %s-backports main restricted universe multiverse\n" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" | sudo tee /etc/apt/sources.list.d/arm64.list
-          fi
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-                                  libpam0g-dev:arm64 libpulse-dev:arm64 pkg-config
 
       - name: Setup Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -72,14 +50,7 @@ jobs:
           key: ${{ matrix.target }}-release
 
       - name: Build Release Workspace
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-          PKG_CONFIG_ALLOW_CROSS: "1"
-          PKG_CONFIG_PATH_aarch64_unknown_linux_gnu: /usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
         run: |
-          if [ "${{ matrix.use_cross }}" = "true" ]; then
-            export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
-          fi
           cargo build --release --target ${{ matrix.target }}
 
       - name: Package Release Archives

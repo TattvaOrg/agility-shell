@@ -81,6 +81,33 @@ impl DaemonState {
                 .with_context(|| format!("Failed to create configuration directory: {dir:?}"))?;
         }
 
+        // Seed bundled wallpapers into user config wallpapers dir if empty
+        let user_wallpapers_dir = self.config_dir.join("wallpapers");
+        let is_empty = fs::read_dir(&user_wallpapers_dir)
+            .map(|mut entries| entries.next().is_none())
+            .unwrap_or(true);
+        if is_empty {
+            let candidate_sources = [
+                PathBuf::from("/usr/share/agility-shell/wallpapers"),
+                PathBuf::from("wallpapers"),
+            ];
+            for src_dir in candidate_sources {
+                if src_dir.is_dir() {
+                    if let Ok(entries) = fs::read_dir(&src_dir) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.is_file() {
+                                if let Some(name) = path.file_name() {
+                                    let _ = fs::copy(&path, user_wallpapers_dir.join(name));
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         let cache_subdirs = [
             self.cache_dir.clone(),
             self.cache_dir.join("weather"),

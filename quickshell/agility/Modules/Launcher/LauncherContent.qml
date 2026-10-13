@@ -137,14 +137,10 @@ Item {
         if (!exec)
             return ;
 
-        let command = exec.split(' ').filter(function(arg) {
-            return !arg.startsWith('%');
-        });
-        command = command.map(function(arg) {
-            return arg.replace(/^"|"$/g, '');
-        });
+        let cleaned = exec.replace(/%[a-zA-Z]/g, '').trim();
+        let command = ["agl", "launch-exec", cleaned];
         if (terminal)
-            command = ["kitty", "-e"].concat(command);
+            command.push("--terminal");
 
         appLauncher.running = false;
         appLauncher.command = command;
@@ -181,7 +177,7 @@ Item {
     Process {
         id: loadAppsProc
 
-        command: ["python3", Quickshell.shellDir + "/Modules/Launcher/scripts/get_apps.py"]
+        command: ["agl", "get-apps"]
         onExited: function(exitCode) {
             if (exitCode === 0) {
                 try {

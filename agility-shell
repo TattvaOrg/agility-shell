@@ -29,9 +29,9 @@ SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" 2>/dev/null && 
 # Discover Quickshell entrypoint
 SHELL_QML=""
 for cand in \
+    "$USER_CONFIG/quickshell/agility/shell.qml" \
     "$SELF_DIR/quickshell/agility/shell.qml" \
-    "$SYSTEM_DATA/quickshell/agility/shell.qml" \
-    "$USER_CONFIG/quickshell/agility/shell.qml"; do
+    "$SYSTEM_DATA/quickshell/agility/shell.qml"; do
     if [[ -f "$cand" ]]; then
         SHELL_QML="$cand"
         break
@@ -54,6 +54,9 @@ fi
 # Foreground / Systemd mode
 if [[ -n "${INVOCATION_ID:-}" || "$FOREGROUND" == true ]]; then
     mkdir -p "$STATE_DIR"
+    if ! pgrep -x "awww-daemon" >/dev/null 2>&1 && command -v awww-daemon >/dev/null 2>&1; then
+        awww-daemon &
+    fi
     DAEMON_PID=""
     if ! pgrep -x "agilityd" >/dev/null 2>&1; then
         if command -v agilityd >/dev/null 2>&1; then

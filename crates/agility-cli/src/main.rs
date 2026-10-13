@@ -144,6 +144,34 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Launch an application by desktop ID or name
+    Launch {
+        /// Target application ID or name (e.g. 'thunar', 'firefox.desktop')
+        target: String,
+    },
+    /// Launch arbitrary command line string
+    LaunchExec {
+        /// Command to execute
+        exec: String,
+        /// Run inside terminal emulator
+        #[arg(short, long)]
+        terminal: bool,
+    },
+    /// Manage wallpaper ('<path>', 'get', 'list', 'random')
+    Wallpaper {
+        /// Action or target path ('<path>', 'get', 'list', 'random')
+        #[arg(default_value = "get")]
+        action: String,
+        /// Optional transition type ('grow', 'wave', 'wipe', 'none')
+        #[arg(long)]
+        transition: Option<String>,
+        /// Optional transition duration in seconds
+        #[arg(long)]
+        duration: Option<f64>,
+        /// Output list in JSON format
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 const DAEMON_BUS: &str = "org.agility.Daemon";
@@ -172,6 +200,14 @@ async fn main() -> Result<()> {
         Commands::Deps => handle_deps().await?,
         Commands::Update => handle_update().await?,
         Commands::Uninstall { purge, yes } => handle_uninstall(purge, yes).await?,
+        Commands::Launch { target } => handle_launch(&target).await?,
+        Commands::LaunchExec { exec, terminal } => handle_launch_exec(&exec, terminal).await?,
+        Commands::Wallpaper {
+            action,
+            transition,
+            duration,
+            json,
+        } => handle_wallpaper(&action, transition.as_deref(), duration, json).await?,
         Commands::Auth { args } => {
             std::process::exit(tools::auth::run(&args));
         }
@@ -269,6 +305,11 @@ async fn handle_start(legacy: bool) -> Result<()> {
             Ok(_) => println!("✓ Spawned agilityd daemon."),
             Err(e) => eprintln!("⚠ Failed to spawn agilityd: {e}"),
         }
+    }
+
+    if is_command_available("awww-daemon") && get_process_pid("awww-daemon").is_none() {
+        let _ = Command::new("awww-daemon").spawn();
+        println!("✓ Spawned awww-daemon.");
     }
 
     let quickshell_pid = get_process_pid("quickshell");
@@ -1558,4 +1599,409 @@ fn update_config_key(key: &str, val: serde_json::Value) {
             }
         }
     }
+}
+
+// ─── Launcher & Wallpaper Handlers ───
+
+async fn handle_launch(target: &str) -> Result<()> {
+    if let Ok(conn) = Connection::session().await {
+        if let Ok(reply) = conn
+            .call_method(
+                Some(DAEMON_BUS),
+                "/org/agility/Daemon/Launcher",
+                Some("org.agility.Daemon.Launcher"),
+                "Launch",
+                &(target,),
+            )
+            .await
+        {
+            if let Ok(ok) = reply.body().deserialize::<bool>() {
+                if ok {
+                    println!("✓ Launched: {target}");
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    // Direct fallback
+    let apps = tools::apps::get_apps();
+    let target_lower = target.trim().to_lowercase();
+    let found = apps.into_iter().find(|a| {
+        a.name.to_lowercase() == target_lower
+            || a.exec.to_lowercase() == target_lower
+            || a.exec.split_whitespace().next().unwrap_or("").to_lowercase() == target_lower
+    });
+
+    let (exec, term) = if let Some(app) = found {
+        (app.exec, app.terminal)
+    } else {
+        (target.to_string(), false)
+    };
+
+    if spawn_detached_exec(&exec, term) {
+        println!("✓ Launched: {target}");
+    } else {
+        eprintln!("⚠ Failed to launch: {target}");
+    }
+
+    Ok(())
+}
+
+async fn handle_launch_exec(exec: &str, in_terminal: bool) -> Result<()> {
+    if let Ok(conn) = Connection::session().await {
+        if let Ok(reply) = conn
+            .call_method(
+                Some(DAEMON_BUS),
+                "/org/agility/Daemon/Launcher",
+                Some("org.agility.Daemon.Launcher"),
+                "LaunchExec",
+                &(exec, in_terminal),
+            )
+            .await
+        {
+            if let Ok(ok) = reply.body().deserialize::<bool>() {
+                if ok {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    // Direct fallback
+    if !spawn_detached_exec(exec, in_terminal) {
+        eprintln!("⚠ Failed to execute: {exec}");
+    }
+
+    Ok(())
+}
+
+fn spawn_detached_exec(exec_cmd: &str, in_terminal: bool) -> bool {
+    let mut parts = Vec::new();
+    for part in exec_cmd.split_whitespace() {
+        if part.starts_with('%') && part.len() == 2 {
+            continue;
+        }
+        parts.push(part);
+    }
+    let cleaned = parts.join(" ");
+    if cleaned.is_empty() {
+        return false;
+    }
+
+    let mut cmd = Command::new("sh");
+    if in_terminal {
+        let term = if is_command_available("alacritty") {
+            "alacritty -e"
+        } else if is_command_available("kitty") {
+            "kitty -e"
+        } else if is_command_available("foot") {
+            "foot -e"
+        } else if is_command_available("xfce4-terminal") {
+            "xfce4-terminal -e"
+        } else {
+            "xterm -e"
+        };
+        cmd.args(["-c", &format!("{term} {cleaned} &")]);
+    } else {
+        cmd.args(["-c", &format!("{cleaned} &")]);
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        unsafe {
+            cmd.pre_exec(|| {
+                libc::setsid();
+                Ok(())
+            });
+        }
+    }
+
+    cmd.spawn().map(|_| true).unwrap_or(false)
+}
+
+fn expand_user_path(p: &str) -> std::path::PathBuf {
+    let trimmed = p.trim();
+    if let Some(rest) = trimmed.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return Path::new(&home).join(rest);
+        }
+    } else if trimmed == "~" {
+        if let Ok(home) = std::env::var("HOME") {
+            return Path::new(&home).to_path_buf();
+        }
+    }
+    Path::new(trimmed).to_path_buf()
+}
+
+fn resolve_cli_wallpaper(path_str: &str) -> Option<std::path::PathBuf> {
+    let trimmed = path_str.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let direct = expand_user_path(trimmed);
+    if direct.is_file() {
+        return Some(direct.canonicalize().unwrap_or(direct));
+    }
+
+    let file_name = direct.file_name()?.to_str()?;
+    let mut search_dirs = Vec::new();
+
+    if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(Path::new(&home).join(".config/agility-shell/wallpapers"));
+        search_dirs.push(Path::new(&home).join("Pictures/Wallpapers"));
+        search_dirs.push(Path::new(&home).join("Pictures"));
+    }
+    search_dirs.push(Path::new("/usr/share/agility-shell/wallpapers").to_path_buf());
+    search_dirs.push(Path::new("wallpapers").to_path_buf());
+
+    for dir in search_dirs {
+        let cand = dir.join(file_name);
+        if cand.is_file() {
+            return Some(cand.canonicalize().unwrap_or(cand));
+        }
+    }
+
+    None
+}
+
+fn list_cli_wallpapers() -> Vec<std::path::PathBuf> {
+    let mut search_dirs = Vec::new();
+    if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(Path::new(&home).join(".config/agility-shell/wallpapers"));
+        search_dirs.push(Path::new(&home).join("Pictures/Wallpapers"));
+        search_dirs.push(Path::new(&home).join("Pictures"));
+    }
+    search_dirs.push(Path::new("/usr/share/agility-shell/wallpapers").to_path_buf());
+    search_dirs.push(Path::new("wallpapers").to_path_buf());
+
+    let mut found = Vec::new();
+    let mut seen_names = std::collections::HashSet::new();
+
+    for dir in search_dirs {
+        if !dir.is_dir() {
+            continue;
+        }
+        if let Ok(entries) = fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_file() {
+                    if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                        let ext_lower = ext.to_lowercase();
+                        if matches!(ext_lower.as_str(), "jpg" | "jpeg" | "png" | "webp" | "gif") {
+                            let name = p
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            if seen_names.insert(name) {
+                                let canon = p.canonicalize().unwrap_or(p);
+                                found.push(canon);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    found.sort_by(|a, b| {
+        a.file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase()
+            .cmp(&b.file_name().unwrap_or_default().to_string_lossy().to_lowercase())
+    });
+
+    found
+}
+
+async fn handle_wallpaper(
+    action: &str,
+    transition: Option<&str>,
+    duration: Option<f64>,
+    json: bool,
+) -> Result<()> {
+    let action_lower = action.trim().to_lowercase();
+    match action_lower.as_str() {
+        "get" => {
+            // 1. Try D-Bus
+            if let Ok(conn) = Connection::session().await {
+                if let Ok(reply) = conn
+                    .call_method(
+                        Some(DAEMON_BUS),
+                        "/org/agility/Daemon/Theme",
+                        Some("org.agility.Daemon.Theme"),
+                        "GetActiveWallpaper",
+                        &(),
+                    )
+                    .await
+                {
+                    if let Ok(wall) = reply.body().deserialize::<String>() {
+                        if !wall.is_empty() {
+                            println!("{wall}");
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+
+            // Fallback: Read cache file
+            if let Ok(home) = std::env::var("HOME") {
+                let cache_path = Path::new(&home).join(".cache/quickshell/current_wallpaper");
+                if let Ok(s) = fs::read_to_string(&cache_path) {
+                    let trimmed = s.trim();
+                    if !trimmed.is_empty() {
+                        println!("{trimmed}");
+                        return Ok(());
+                    }
+                }
+            }
+            println!("none");
+        }
+        "list" => {
+            let walls = list_cli_wallpapers();
+            if json {
+                let list: Vec<serde_json::Value> = walls
+                    .iter()
+                    .map(|p| {
+                        let path_str = p.to_string_lossy().to_string();
+                        let name_str = p
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_string();
+                        serde_json::json!({
+                            "name": name_str,
+                            "path": path_str,
+                            "file_url": format!("file://{path_str}"),
+                        })
+                    })
+                    .collect();
+                println!("{}", serde_json::to_string(&list).unwrap_or_default());
+            } else {
+                for p in walls {
+                    println!("{}", p.to_string_lossy());
+                }
+            }
+        }
+        "random" => {
+            // 1. Try D-Bus RandomWallpaper
+            if let Ok(conn) = Connection::session().await {
+                if let Ok(reply) = conn
+                    .call_method(
+                        Some(DAEMON_BUS),
+                        "/org/agility/Daemon/Theme",
+                        Some("org.agility.Daemon.Theme"),
+                        "RandomWallpaper",
+                        &(),
+                    )
+                    .await
+                {
+                    if let Ok(path) = reply.body().deserialize::<String>() {
+                        if !path.is_empty() {
+                            println!("{path}");
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+
+            // Direct fallback: pick from discovered wallpapers
+            let walls = list_cli_wallpapers();
+            if walls.is_empty() {
+                eprintln!("⚠ No wallpapers found to pick randomly.");
+                return Ok(());
+            }
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
+            let idx = (nanos as usize) % walls.len();
+            let picked = &walls[idx];
+            let path_str = picked.to_string_lossy().to_string();
+            // Apply this chosen wallpaper
+            apply_cli_wallpaper(&path_str, transition, duration).await?;
+            println!("{path_str}");
+        }
+        _ => {
+            // Target is a path or filename
+            apply_cli_wallpaper(action, transition, duration).await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn apply_cli_wallpaper(
+    path_str: &str,
+    transition: Option<&str>,
+    duration: Option<f64>,
+) -> Result<()> {
+    // 1. Try D-Bus SetWallpaper
+    if let Ok(conn) = Connection::session().await {
+        let t_type = transition.unwrap_or("");
+        let dur = duration.unwrap_or(0.0);
+        if let Ok(reply) = conn
+            .call_method(
+                Some(DAEMON_BUS),
+                "/org/agility/Daemon/Theme",
+                Some("org.agility.Daemon.Theme"),
+                "SetWallpaper",
+                &(path_str, t_type, dur),
+            )
+            .await
+        {
+            if let Ok(ok) = reply.body().deserialize::<bool>() {
+                if ok {
+                    println!("✓ Wallpaper applied: {path_str}");
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    // Direct fallback:
+    let resolved = resolve_cli_wallpaper(path_str)
+        .context(format!("Wallpaper file not found: {path_str}"))?;
+    let abs_str = resolved.to_string_lossy().to_string();
+
+    // Ensure awww-daemon is running
+    if is_command_available("awww-daemon") && get_process_pid("awww-daemon").is_none() {
+        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+            if let Ok(entries) = fs::read_dir(runtime) {
+                for entry in entries.flatten() {
+                    if entry.file_name().to_string_lossy().contains("awww-daemon") {
+                        let _ = fs::remove_file(entry.path());
+                    }
+                }
+            }
+        }
+        let _ = Command::new("sh")
+            .args([
+                "-c",
+                "systemctl --user start awww-daemon.service 2>/dev/null || nohup awww-daemon >/dev/null 2>&1 &",
+            ])
+            .spawn();
+        tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
+    }
+
+    // Dispatch awww img
+    if is_command_available("awww") {
+        let mut cmd = Command::new("awww");
+        cmd.args(["img", &abs_str, "--resize", "crop"]);
+        let _ = cmd.status();
+    }
+
+    // Write caches
+    if let Ok(home) = std::env::var("HOME") {
+        let qs_cache = Path::new(&home).join(".cache/quickshell");
+        let _ = fs::create_dir_all(&qs_cache);
+        let _ = fs::write(qs_cache.join("current_wallpaper"), &abs_str);
+    }
+
+    println!("✓ Wallpaper applied (fallback): {abs_str}");
+    Ok(())
 }

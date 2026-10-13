@@ -344,9 +344,11 @@ impl LauncherService {
             let term = if which("alacritty") {
                 "alacritty -e"
             } else if which("kitty") {
-                "kitty"
+                "kitty -e"
             } else if which("foot") {
-                "foot"
+                "foot -e"
+            } else if which("xfce4-terminal") {
+                "xfce4-terminal -e"
             } else {
                 "xterm -e"
             };

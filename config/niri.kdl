@@ -22,8 +22,8 @@ binds {
     Mod+D       hotkey-overlay-title="Open Dash" { spawn "agl" "toggle" "dash"; }
     Mod+Shift+W hotkey-overlay-title="Wallpaper Gallery" { spawn "agl" "toggle" "WallpaperPicker"; }
     Alt+C       hotkey-overlay-title="Wallpaper Switcher" { spawn "agl" "toggle" "WallpaperDrawer"; }
-    Mod+Alt+X   hotkey-overlay-title="Random Wallpaper" { spawn "fabric-cli" "exec" "agility-shell" "wallpaper_service.random_wallpaper()"; }
-    Alt+X       hotkey-overlay-title="Random Wallpaper" { spawn "fabric-cli" "exec" "agility-shell" "wallpaper_service.random_wallpaper()"; }
+    Mod+Alt+X   hotkey-overlay-title="Random Wallpaper" { spawn "agl" "wallpaper" "random"; }
+    Alt+X       hotkey-overlay-title="Random Wallpaper" { spawn "agl" "wallpaper" "random"; }
 
     XF86AudioRaiseVolume allow-when-locked=true { spawn "agl" "volume" "up"; }
     XF86AudioLowerVolume allow-when-locked=true { spawn "agl" "volume" "down"; }

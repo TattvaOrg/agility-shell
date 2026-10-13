@@ -19,3 +19,6 @@ tracing-subscriber.workspace = true
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sysinfo.workspace = true
+pam-sys.workspace = true
+libc.workspace = true

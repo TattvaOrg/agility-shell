@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "agilityd"
+path = "src/main.rs"
+
 [dependencies]
 agility-common = { path = "../agility-common" }
 tokio.workspace = true

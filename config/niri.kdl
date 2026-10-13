@@ -17,6 +17,7 @@ layer-rule {
 
 binds {
     Mod+Space   hotkey-overlay-title="Open Launcher" { spawn "agl" "toggle" "launcher"; }
+    Mod+S       hotkey-overlay-title="Open Settings" { spawn "agl" "toggle" "settings"; }
     Mod+C       hotkey-overlay-title="Control Center" { spawn "agl" "toggle" "cc"; }
     Mod+D       hotkey-overlay-title="Open Dash" { spawn "agl" "toggle" "dash"; }
     Mod+Shift+W hotkey-overlay-title="Wallpaper Gallery" { spawn "agl" "toggle" "WallpaperPicker"; }

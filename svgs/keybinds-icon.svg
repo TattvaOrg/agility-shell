@@ -1,0 +1,38 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  height="24"
+  viewBox="0 0 24 24"
+  width="24"
+>
+  <defs>
+    <linearGradient id="minflair-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ccb565" />
+      <stop offset="100%" stop-color="#95cc64" />
+    </linearGradient>
+    <mask id="keyboard-cutout">
+      <rect width="24" height="24" fill="white" />
+      <!-- Row 1 -->
+      <rect x="3.75" y="7" width="3" height="3" rx="0.8" fill="black" />
+      <rect x="8.25" y="7" width="3" height="3" rx="0.8" fill="black" />
+      <rect x="12.75" y="7" width="3" height="3" rx="0.8" fill="black" />
+      <rect x="17.25" y="7" width="3" height="3" rx="0.8" fill="black" />
+      <!-- Row 2 -->
+      <rect x="3.75" y="11" width="3" height="3" rx="0.8" fill="black" />
+      <rect x="8.25" y="11" width="3" height="3" rx="0.8" fill="black" />
+      <rect x="12.75" y="11" width="3" height="3" rx="0.8" fill="black" />
+      <rect x="17.25" y="11" width="3" height="3" rx="0.8" fill="black" />
+      <!-- Row 3 (Spacebar) -->
+      <rect x="6" y="15" width="12" height="3" rx="1.2" fill="black" />
+    </mask>
+  </defs>
+
+  <rect
+    x="2"
+    y="5"
+    width="20"
+    height="15"
+    rx="2.5"
+    fill="url(#minflair-grad)"
+    mask="url(#keyboard-cutout)"
+  />
+</svg>

@@ -29,11 +29,11 @@ Item {
                 radius: 11
                 color: Theme.colPillBg
 
-                Text {
+                SvgIcon {
                     anchors.centerIn: parent
-                    text: BarDataService.mediaPlaying ? "⏸" : "▶"
-                    font.pixelSize: 10
-                    color: Theme.colAccent
+                    icon: BarDataService.mediaPlaying ? "player-pause" : "player-play"
+                    iconSize: 10
+                    iconColor: Theme.colAccent
                 }
 
                 MouseArea {

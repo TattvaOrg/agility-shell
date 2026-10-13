@@ -33,18 +33,25 @@ Item {
         return root.isLoaded && (root.widgetVisibility[key] === true)
     }
 
+    // Bar style setting: "island" (Minflair dynamic island), "convex" (curved bezel), "gaming", "classic" (agility bar)
+    property string barStyle: "island"
+    readonly property bool isIslandBar: barStyle === "island"
+    readonly property bool isConvexBar: barStyle === "convex"
+    readonly property bool isGamingBar: barStyle === "gaming"
+    readonly property bool isClassicBar: barStyle === "classic"
+
     // Theme metadata list for UI pickers
     readonly property var themes: [
-        { id: "liquid_glass",    name: "Liquid Glass", icon: "🫧", desc: "Translucent water droplet glass with curved meniscus sheen" },
-        { id: "aurora_prism",    name: "Aurora Prism", icon: "💎", desc: "Crystal glass with iridescent aurora reflections" },
-        { id: "evergreen_moss",  name: "Evergreen",    icon: "🌲", desc: "Translucent forest green with phosphor telemetry" },
-        { id: "nordic",          name: "Nordic Frost", icon: "❄️", desc: "Arctic cold blue & snow storm palette" },
-        { id: "tokyo_night",     name: "Tokyo Night",  icon: "🌸", desc: "Midnight indigo-violet with lavender & cyan" },
-        { id: "oled",            name: "OLED Black",   icon: "🖤", desc: "100% pitch-black with crisp white typography" },
-        { id: "material",        name: "Material 3",   icon: "🎨", desc: "Adaptive dynamic color scheme from wallpaper" },
-        { id: "transparent",     name: "Transparent",  icon: "🪟", desc: "Minimal see-through floating aesthetic" },
-        { id: "cyberpunk",       name: "Cyberpunk",    icon: "⚡", desc: "High-contrast neon glow on obsidian" },
-        { id: "warm_latte",      name: "Warm Latte",   icon: "☕", desc: "Cozy espresso & caramel with warm amber" }
+        { id: "liquid_glass",    name: "Liquid Glass", icon: "drop-duotone.svg", desc: "Translucent water droplet glass with curved meniscus sheen" },
+        { id: "aurora_prism",    name: "Aurora Prism", icon: "sparkles.svg", desc: "Crystal glass with iridescent aurora reflections" },
+        { id: "evergreen_moss",  name: "Evergreen",    icon: "tree-duotone.svg", desc: "Translucent forest green with phosphor telemetry" },
+        { id: "nordic",          name: "Nordic Frost", icon: "snowflake-duotone.svg", desc: "Arctic cold blue & snow storm palette" },
+        { id: "tokyo_night",     name: "Tokyo Night",  icon: "moon-stars-duotone.svg", desc: "Midnight indigo-violet with lavender & cyan" },
+        { id: "oled",            name: "OLED Black",   icon: "circle-duotone.svg", desc: "100% pitch-black with crisp white typography" },
+        { id: "material",        name: "Material 3",   icon: "color-palette.svg", desc: "Adaptive dynamic color scheme from wallpaper" },
+        { id: "transparent",     name: "Transparent",  icon: "window.svg", desc: "Minimal see-through floating aesthetic" },
+        { id: "cyberpunk",       name: "Cyberpunk",    icon: "lightning-duotone.svg", desc: "High-contrast neon glow on obsidian" },
+        { id: "warm_latte",      name: "Warm Latte",   icon: "coffee.svg", desc: "Cozy espresso & caramel with warm amber" }
     ]
 
     // Convenience booleans
@@ -343,6 +350,9 @@ Item {
                         if (data.manager.theme) {
                             root.currentTheme = data.manager.theme
                         }
+                        if (data.manager.bar_style) {
+                            root.barStyle = data.manager.bar_style
+                        }
                         if (data.manager.visibility !== undefined && typeof data.manager.visibility === "object") {
                             root.widgetVisibility = Object.assign({}, data.manager.visibility)
                         }
@@ -368,6 +378,20 @@ Item {
             "mv ~/.config/agility-shell/widget_settings.json.tmp ~/.config/agility-shell/widget_settings.json"
         saveSettingsProc.command = ["sh", "-c", shCmd]
         saveSettingsProc.running = true
+    }
+
+    function setBarStyle(newStyle) {
+        root.barStyle = newStyle
+        var shCmd = "mkdir -p ~/.config/agility-shell && " +
+            "if [ -f ~/.config/agility-shell/widget_settings.json ]; then " +
+            "  jq '.manager.bar_style = \"" + newStyle + "\"' ~/.config/agility-shell/widget_settings.json > ~/.config/agility-shell/widget_settings.json.tmp && " +
+            "  mv ~/.config/agility-shell/widget_settings.json.tmp ~/.config/agility-shell/widget_settings.json; " +
+            "else " +
+            "  echo '{\"manager\":{\"bar_style\":\"" + newStyle + "\"}}' > ~/.config/agility-shell/widget_settings.json; " +
+            "fi"
+        saveSettingsProc.command = ["sh", "-c", shCmd]
+        saveSettingsProc.running = true
+        root.settingsUpdated()
     }
 
     function setTheme(newTheme) {

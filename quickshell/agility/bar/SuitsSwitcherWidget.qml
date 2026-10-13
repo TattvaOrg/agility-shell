@@ -18,11 +18,11 @@ Item {
             anchors.centerIn: parent
             spacing: 6
 
-            Text {
+            SvgIcon {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "✦"
-                color: Theme.colAccent
-                font.pixelSize: 13
+                icon: "sparkles"
+                iconSize: 13
+                iconColor: Theme.colAccent
             }
 
             Text {

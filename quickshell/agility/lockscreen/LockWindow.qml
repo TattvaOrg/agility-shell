@@ -120,10 +120,11 @@ WlSessionLock {
                         anchors.centerIn: parent
                         spacing: 8
 
-                        Text {
+                        SvgIcon {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "🔒"
-                            font.pixelSize: 13
+                            icon: "lock"
+                            iconSize: 14
+                            iconColor: Theme.colTextSecondary
                         }
 
                         Text {
@@ -186,13 +187,24 @@ WlSessionLock {
                             }
                         }
 
-                        Text {
+                        Row {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: Math.round(Bar.BarDataService.batteryPercent) + "%" + (Bar.BarDataService.batteryCharging ? " ⚡" : "")
-                            color: Bar.BarDataService.batteryPercent <= 20.0 ? Theme.colAccentWarm : Theme.colTextPrimary
-                            font.family: Theme.fontMain
-                            font.pixelSize: 12
-                            font.bold: true
+                            spacing: 4
+
+                            Text {
+                                text: Math.round(Bar.BarDataService.batteryPercent) + "%"
+                                color: Bar.BarDataService.batteryPercent <= 20.0 ? Theme.colAccentWarm : Theme.colTextPrimary
+                                font.family: Theme.fontMain
+                                font.pixelSize: 12
+                                font.bold: true
+                            }
+
+                            SvgIcon {
+                                visible: Bar.BarDataService.batteryCharging
+                                icon: "charger"
+                                iconSize: 12
+                                iconColor: Theme.colAccent
+                            }
                         }
                     }
                 }
@@ -345,14 +357,15 @@ WlSessionLock {
                         }
 
                         // Lock glyph on left
-                        Text {
+                        SvgIcon {
                             id: lockGlyph
                             anchors.left: parent.left
                             anchors.leftMargin: 16
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "🔑"
-                            font.pixelSize: 15
-                            opacity: 0.7
+                            icon: "key-duotone.svg"
+                            iconSize: 16
+                            iconColor: Theme.colTextSecondary
+                            opacityLevel: 0.7
                         }
 
                         // Actual Password Input
@@ -418,11 +431,11 @@ WlSessionLock {
                             color: submitArea.containsMouse ? Qt.lighter(Theme.colAccent, 1.1) : Theme.colAccent
                             opacity: passwordInput.text.length > 0 ? 1.0 : 0.45
 
-                            Text {
+                            SvgIcon {
                                 anchors.centerIn: parent
-                                text: LockService.authenticating ? "⏳" : "➔"
-                                font.pixelSize: 13
-                                color: "#000000"
+                                icon: LockService.authenticating ? "clock" : "chevron-right"
+                                iconSize: 14
+                                iconColor: "#000000"
                             }
 
                             MouseArea {

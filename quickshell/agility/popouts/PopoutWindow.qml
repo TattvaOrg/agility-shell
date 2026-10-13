@@ -68,11 +68,12 @@ PanelWindow {
             id: loader
             anchors.fill: parent
             sourceComponent: {
-                if (PopoutService.activePopout === "control_center") return controlCenterComp
+                if (PopoutService.activePopout === "control_center" || PopoutService.activePopout === "control-center") return controlCenterComp
                 if (PopoutService.activePopout === "wifi") return wifiPopoutComp
                 if (PopoutService.activePopout === "bluetooth") return bluetoothPopoutComp
                 if (PopoutService.activePopout === "audio_mixer") return audioMixerPopoutComp
                 if (PopoutService.activePopout === "session") return sessionMenuComp
+                if (PopoutService.activePopout === "media" || PopoutService.activePopout === "music") return musicPlayerComp
                 return null
             }
         }
@@ -101,5 +102,10 @@ PanelWindow {
     Component {
         id: sessionMenuComp
         SessionMenu {}
+    }
+
+    Component {
+        id: musicPlayerComp
+        MusicPlayerPopout {}
     }
 }

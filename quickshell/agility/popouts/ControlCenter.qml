@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import ".."
 import "../components"
 import "../bar" as Bar
@@ -8,6 +10,27 @@ Item {
 
     implicitWidth: 360
     implicitHeight: mainCol.implicitHeight + 32
+
+    property bool batteryLimitActive: false
+
+    Process {
+        id: batLimitCheckProc
+        command: ["sh", "-c", "exec ~/.local/bin/toggle_battery_limit.sh status 2>/dev/null || exec /usr/share/agility-shell/scripts/toggle_battery_limit.sh status 2>/dev/null || true"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var res = text.trim()
+                root.batteryLimitActive = (res === "1")
+            }
+        }
+    }
+
+    Process {
+        id: batLimitToggleProc
+        command: ["sh", "-c", "exec ~/.local/bin/toggle_battery_limit.sh toggle 2>/dev/null || exec /usr/share/agility-shell/scripts/toggle_battery_limit.sh toggle 2>/dev/null || true"]
+        running: false
+        onExited: batLimitCheckProc.running = true
+    }
 
     Column {
         id: mainCol
@@ -89,8 +112,70 @@ Item {
             }
         }
 
+        // ─── Shell Style Switcher (Island, Convex, Gaming, Classic) ───
+        GlassCard {
+            width: parent.width
+            height: 48
+            radius: 14
+            isTile: true
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 6
+
+                Repeater {
+                    model: [
+                        { id: "island", name: "Island", icon: "widgets" },
+                        { id: "convex", name: "Convex", icon: "layout-filled" },
+                        { id: "gaming", name: "Gaming", icon: "gamepad-filled" },
+                        { id: "classic", name: "Classic", icon: "bar" }
+                    ]
+
+                    Rectangle {
+                        width: 76
+                        height: 34
+                        radius: 10
+                        color: Theme.barStyle === modelData.id ? Theme.colAccent : (btnHover.containsMouse ? (Theme.isGlass ? "#33FFFFFF" : Theme.colPillBg) : "transparent")
+                        border.color: Theme.barStyle === modelData.id ? Qt.lighter(Theme.colAccent, 1.2) : "transparent"
+                        border.width: 1
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        MouseArea {
+                            id: btnHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Theme.setBarStyle(modelData.id)
+                        }
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 4
+
+                            SvgIcon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                icon: modelData.icon
+                                iconSize: 13
+                                iconColor: Theme.barStyle === modelData.id ? "#FFFFFF" : Theme.colText
+                            }
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.name
+                                font.family: Theme.fontMain
+                                font.pixelSize: 11
+                                font.weight: Theme.barStyle === modelData.id ? Font.Bold : Font.Normal
+                                color: Theme.barStyle === modelData.id ? "#FFFFFF" : Theme.colText
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // ─── Quick Toggle Tiles Grid (20.3) ───
-        // 8 tiles: WiFi, Bluetooth, Caffeine, Night Light, Power Profile, Do Not Disturb, Screenshot, Screen Record
+        // 10 tiles: WiFi, Bluetooth, Caffeine, Night Light, Power Profile, Do Not Disturb, Screenshot, Screen Record, Battery Health, Gaming Mode
         Grid {
             id: tilesGrid
             width: parent.width
@@ -498,6 +583,105 @@ Item {
                         Text {
                             text: PopoutService.isRecording ? "Recording..." : "Idle"
                             color: PopoutService.isRecording ? "#EF4444" : Theme.colTextSec
+                            font.family: Theme.fontMain
+                            font.pixelSize: 10
+                        }
+                    }
+                }
+            }
+
+            // 9. Battery Health (80% Limit) Tile
+            GlassCard {
+                width: (tilesGrid.width - 10) / 2
+                height: 56
+                radius: 14
+                isTile: true
+                color: root.batteryLimitActive ? Qt.rgba(Theme.colAccent.r, Theme.colAccent.g, Theme.colAccent.b, 0.28) : (Theme.isGlass ? "#281D2938" : Theme.colPillBg)
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.batteryLimitActive = !root.batteryLimitActive
+                        batLimitToggleProc.running = true
+                    }
+                }
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    GlassIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        source: root.batteryLimitActive ? "charger-filled" : "charger"
+                        size: 20
+                        color: root.batteryLimitActive ? Theme.colAccent : Theme.colTextSec
+                    }
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Text {
+                            text: "Battery Health"
+                            color: Theme.colText
+                            font.family: Theme.fontMain
+                            font.pixelSize: 12
+                            font.weight: Font.SemiBold
+                        }
+                        Text {
+                            text: root.batteryLimitActive ? "80% Cap (On)" : "Normal (100%)"
+                            color: Theme.colTextSec
+                            font.family: Theme.fontMain
+                            font.pixelSize: 10
+                        }
+                    }
+                }
+            }
+
+            // 10. Gaming Mode Tile
+            GlassCard {
+                width: (tilesGrid.width - 10) / 2
+                height: 56
+                radius: 14
+                isTile: true
+                color: Theme.isGamingBar ? Qt.rgba(Theme.colAccent.r, Theme.colAccent.g, Theme.colAccent.b, 0.28) : (Theme.isGlass ? "#281D2938" : Theme.colPillBg)
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        Theme.setBarStyle(Theme.isGamingBar ? "island" : "gaming")
+                    }
+                }
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    GlassIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        source: Theme.isGamingBar ? "gamepad-filled" : "gamepad"
+                        size: 20
+                        color: Theme.isGamingBar ? Theme.colAccent : Theme.colTextSec
+                    }
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Text {
+                            text: "Gaming Mode"
+                            color: Theme.colText
+                            font.family: Theme.fontMain
+                            font.pixelSize: 12
+                            font.weight: Font.SemiBold
+                        }
+                        Text {
+                            text: Theme.isGamingBar ? "Active (VRR)" : "Off"
+                            color: Theme.colTextSec
                             font.family: Theme.fontMain
                             font.pixelSize: 10
                         }

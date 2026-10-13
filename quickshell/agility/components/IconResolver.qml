@@ -88,7 +88,33 @@ Item {
         "trash": "trash-duotone.svg",
         "search": "magnifying-glass-duotone.svg",
         "calculator": "calculator-duotone.svg",
-        "clipboard": "clipboard-text-duotone.svg"
+        "clipboard": "clipboard-text-duotone.svg",
+
+        // Minflair & Media Controls
+        "player-play": "player-play.svg",
+        "player-pause": "player-pause.svg",
+        "player-previous": "player-previous.svg",
+        "player-next": "player-next.svg",
+        "player-shuffle": "player-shuffle.svg",
+        "player-loop": "player-loop.svg",
+        "player-loop-once": "player-loop-once.svg",
+        "player-stop": "player-stop.svg",
+
+        // Navigation & Status
+        "chevron-right": "chevron-right.svg",
+        "chevron-left": "chevron-left.svg",
+        "chevron-up": "chevron-up.svg",
+        "chevron-down": "chevron-down.svg",
+        "check": "check.svg",
+        "sparkles": "sparkles.svg",
+        "sparkle": "sparkles.svg",
+        "star": "star.svg",
+        "gamepad": "gamepad.svg",
+        "keybinds": "keybinds-icon.svg",
+        "packages": "packagemanager-icon.svg",
+        "refresh": "refresh.svg",
+        "hourglass": "clock.svg",
+        "arrow-right": "chevron-right.svg"
     })
 
     /// Resolves an app ID, icon name, or filename into a valid image URL.
@@ -124,8 +150,10 @@ Item {
             }
         }
 
-        // Try duotone suffix
+        // Try direct svg match if file exists in minflair icon set
+        var directSvg = normalized + ".svg"
+        // Also support duotone suffix
         var duotoneFile = normalized + "-duotone.svg"
-        return root.svgsDir + "/" + duotoneFile
+        return root.svgsDir + "/" + directSvg
     }
 }

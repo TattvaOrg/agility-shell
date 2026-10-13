@@ -280,7 +280,7 @@ Item {
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.isClean ? "Working tree clean ✓" : (root.modifiedCount + " uncommitted changes")
+                        text: root.isClean ? "Working tree clean" : (root.modifiedCount + " uncommitted changes")
                         color: root.isClean ? root.colCleanGreen : root.colDirtyAmber
                         font.pixelSize: 10
                         font.bold: true

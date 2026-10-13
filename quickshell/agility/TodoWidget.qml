@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "components"
 
 Item {
     id: root
@@ -270,13 +271,12 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 antialiasing: true
 
-                                Text {
+                                SvgIcon {
                                     anchors.centerIn: parent
                                     visible: modelData.done
-                                    text: "✓"
-                                    color: "#1E2A30"
-                                    font.pixelSize: 11
-                                    font.bold: true
+                                    icon: "check"
+                                    iconSize: 10
+                                    iconColor: "#1E2A30"
                                 }
 
                                 MouseArea {

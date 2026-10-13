@@ -3,6 +3,9 @@ import Quickshell
 import Quickshell.Wayland
 import ".."
 import "../components"
+import "styles/Island" as Island
+import "styles/Convex" as Convex
+import "styles/Gaming" as Gaming
 
 PanelWindow {
     id: root
@@ -11,27 +14,52 @@ PanelWindow {
     screen: screenModel
 
     // Sizing & Modes
-    property int barHeight: 38
-    property bool isFloating: true
+    property int barHeight: Theme.isGamingBar ? 32 : (Theme.isConvexBar ? 40 : 38)
+    property bool isFloating: Theme.isIslandBar ? true : (Theme.isConvexBar ? false : (Theme.isGamingBar ? false : true))
     property int horizontalMargin: isFloating ? 12 : 0
-    property int topMargin: isFloating ? 8 : 0
+    property int topMargin: isFloating ? 6 : 0
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "quickshell:agility-status-bar"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    WlrLayershell.exclusiveZone: isFloating ? (barHeight + topMargin * 2) : barHeight
+    WlrLayershell.exclusiveZone: Theme.isGamingBar ? 32 : (Theme.isConvexBar ? 46 : (barHeight + topMargin * 2))
 
     anchors {
         top: true
         left: true
         right: true
     }
-    implicitHeight: isFloating ? (barHeight + topMargin * 2) : barHeight
+    implicitHeight: Theme.isGamingBar ? 32 : (Theme.isConvexBar ? 46 : (barHeight + topMargin * 2))
     color: "transparent"
 
-    // Container panel
+    // ─── Minflair Island Style Bar ───
+    Island.IslandBar {
+        anchors.fill: parent
+        screenModel: root.screenModel
+        barHeight: root.barHeight
+        visible: Theme.isIslandBar
+    }
+
+    // ─── Minflair Convex Style Bar ───
+    Convex.ConvexBar {
+        anchors.fill: parent
+        screenModel: root.screenModel
+        barHeight: root.barHeight
+        visible: Theme.isConvexBar
+    }
+
+    // ─── Minflair Gaming Style Bar ───
+    Gaming.GamingBar {
+        anchors.fill: parent
+        screenModel: root.screenModel
+        barHeight: root.barHeight
+        visible: Theme.isGamingBar
+    }
+
+    // ─── Agility Classic Container Panel ───
     GlassCard {
         id: barContainer
+        visible: Theme.isClassicBar
         anchors.fill: parent
         anchors.topMargin: root.topMargin
         anchors.bottomMargin: root.topMargin

@@ -14,6 +14,19 @@ import "components" as Components
 
 ShellRoot {
     IpcHandler {
+        target: "bar-style"
+        function set(name: string) {
+            Theme.setBarStyle(name)
+        }
+        function cycle() {
+            var styles = ["island", "convex", "gaming", "classic"]
+            var idx = styles.indexOf(Theme.barStyle)
+            var next = styles[(idx + 1) % styles.length]
+            Theme.setBarStyle(next)
+        }
+    }
+
+    IpcHandler {
         target: "suits"
         function reload() {
             Theme.reloadSettings()

@@ -5,3 +5,4 @@ WifiPopout 1.0 WifiPopout.qml
 BluetoothPopout 1.0 BluetoothPopout.qml
 AudioMixerPopout 1.0 AudioMixerPopout.qml
 SessionMenu 1.0 SessionMenu.qml
+MusicPlayerPopout 1.0 MusicPlayerPopout.qml

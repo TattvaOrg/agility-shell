@@ -46,6 +46,10 @@ Item {
     property string mediaTitle: ""
     property string mediaArtist: ""
     property bool mediaPlaying: mediaPlaybackStatus === "Playing"
+    property string mediaArtUrl: ""
+    property real mediaPositionRatio: 0.0
+    property string mediaPositionFormatted: "00:00"
+    property string mediaLengthFormatted: "00:00"
 
     // Power & Toggles
     property bool caffeineActive: false
@@ -97,6 +101,20 @@ Item {
 
     function mediaPrevious() {
         runCmd("busctl --user call org.agility.Daemon /org/agility/Daemon/Media org.agility.Daemon.Media Previous 2>/dev/null || playerctl previous 2>/dev/null || true")
+    }
+
+    function mediaToggleShuffle() {
+        runCmd("busctl --user call org.agility.Daemon /org/agility/Daemon/Media org.agility.Daemon.Media Shuffle 2>/dev/null || playerctl shuffle toggle 2>/dev/null || true")
+    }
+
+    function mediaCycleLoop() {
+        runCmd("busctl --user call org.agility.Daemon /org/agility/Daemon/Media org.agility.Daemon.Media Loop 2>/dev/null || playerctl loop Track 2>/dev/null || true")
+    }
+
+    function seekMediaRatio(ratio) {
+        var clamped = Math.max(0.0, Math.min(1.0, ratio))
+        root.mediaPositionRatio = clamped
+        runCmd("playerctl position $(echo \"$clamped * $(playerctl metadata mpris:length 2>/dev/null || echo 0) / 1000000\" | bc 2>/dev/null) 2>/dev/null || true")
     }
 
     function toggleCaffeine() {

@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import ".."
+import "../components" as Components
 
 Item {
     id: root
@@ -77,6 +78,7 @@ Item {
         })
 
         Theme.saveWidgetConfig(widgetKey, updated)
+        Components.SoundService.play("widget-placed")
     }
 
     function toggleWidgetVisibility(widgetKey) {
@@ -88,6 +90,12 @@ Item {
         if (!Theme.widgetVisibility) Theme.widgetVisibility = {}
         Theme.widgetVisibility[widgetKey] = newVis
         Theme.settingsUpdated()
+
+        if (newVis) {
+            Components.SoundService.play("widget-placed")
+        } else {
+            Components.SoundService.play("widget-removed")
+        }
 
         // Persist to widget_settings.json
         var shCmd = "mkdir -p ~/.config/agility-shell && " +

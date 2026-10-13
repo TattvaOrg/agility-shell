@@ -56,16 +56,18 @@ Item {
     }
 
     function saveSettings() {
-        var jsonStr = JSON.stringify(root.habitsList).replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"habits\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"list\":" + jsonStr + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
-        saveSettingsProc.command = ["sh", "-c", script]
-        saveSettingsProc.running = true
+        Theme.saveWidgetConfig("habits", {
+            "x": Math.round(root.x),
+            "y": Math.round(root.y),
+            "scale": parseFloat(root.scaleFactor.toFixed(2)),
+            "list": root.habitsList
+        })
     }
 
     // ─── GTK3 Custom Habit Prompt ───
     Process {
         id: addHabitProc
-        command: ["python3", "-c", "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk; dialog=Gtk.Dialog(title='Add New Habit', buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)); vbox=dialog.get_content_area(); entry=Gtk.Entry(); entry.set_placeholder_text('Habit Name (e.g. Exercise, Meditate)'); vbox.pack_start(entry, True, True, 8); dialog.show_all(); res=dialog.run(); name=entry.get_text().strip(); dialog.destroy(); print(name if res==Gtk.ResponseType.OK else '')"]
+        command: ["sh", "-c", "zenity --entry --title='Add New Habit' --text='Habit Name (e.g. Exercise, Meditate):' 2>/dev/null || kdialog --inputbox 'Habit Name:' '' 2>/dev/null || true"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {

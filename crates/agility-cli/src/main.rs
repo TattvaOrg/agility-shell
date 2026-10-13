@@ -1,7 +1,7 @@
 //! Agility Shell CLI (`agl`)
 //! High-speed command-line client for controlling Agility Shell daemon and user interface surfaces.
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::Path;
@@ -78,6 +78,14 @@ enum Commands {
         #[arg(default_value = "toggle")]
         action: String,
     },
+    /// Sound effects dispatcher ('play <name>', 'list')
+    Sound {
+        #[arg(default_value = "list")]
+        action: String,
+        name: Option<String>,
+    },
+    /// Output status bar JSON metrics snapshot for QML bar
+    BarData,
     /// Verify system runtime and compositor dependencies
     Deps,
     /// Perform self-update check and upgrade
@@ -105,6 +113,8 @@ async fn main() -> Result<()> {
         Commands::Screenshot { mode } => handle_screenshot(&mode).await?,
         Commands::Record { action, with_audio } => handle_record(&action, with_audio).await?,
         Commands::Caffeine { action: _ } => handle_caffeine().await?,
+        Commands::Sound { action, name } => handle_sound(&action, name.as_deref()).await?,
+        Commands::BarData => handle_bar_data().await?,
         Commands::Deps => handle_deps().await?,
         Commands::Update => handle_update().await?,
     }
@@ -817,6 +827,337 @@ async fn handle_update() -> Result<()> {
     }
 
     println!("✓ Local build is current.");
+    Ok(())
+}
+
+async fn handle_sound(action: &str, name: Option<&str>) -> Result<()> {
+    match action.to_lowercase().as_str() {
+        "list" => {
+            println!("🔊 Available Agility Shell Sound Events:");
+            println!("  • session-start    - Shell startup chime");
+            println!("  • session-quit     - Lockscreen / shutdown event");
+            println!("  • notification     - Incoming desktop notification");
+            println!("  • battery-low      - Battery level critical/low warning");
+            println!("  • battery-warning  - Battery charge warning");
+            println!("  • battery-charge   - AC power charger plugged in");
+            println!("  • error            - Authentication or action error");
+            println!("  • confirm          - Authentication success / action confirm");
+            println!("  • alarm            - Timer countdown completion alert");
+            println!("  • widget-placed    - Canvas widget added or moved");
+            println!("  • widget-removed   - Canvas widget removed from canvas");
+            println!("\nUsage: agl sound play <name>");
+            Ok(())
+        }
+        "play" => {
+            let sound_name = name.context(
+                "Missing sound name. Use 'agl sound list' to see available sound effects.",
+            )?;
+            let conn = Connection::session()
+                .await
+                .context("Failed to connect to D-Bus session bus")?;
+            let reply = conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    "/org/agility/Daemon/Sounds",
+                    Some("org.agility.Daemon.Sounds"),
+                    "Play",
+                    &(sound_name,),
+                )
+                .await
+                .context("D-Bus Sounds.Play call failed")?;
+
+            let success: bool = reply.body().deserialize()?;
+            if success {
+                println!("🔊 Played sound: '{sound_name}'");
+            } else {
+                eprintln!(
+                    "⚠ Could not play sound: '{sound_name}'. Ensure audio subsystem and sound files are present."
+                );
+            }
+            Ok(())
+        }
+        other => bail!("Unknown sound action: '{other}'. Use 'list' or 'play'."),
+    }
+}
+
+async fn handle_bar_data() -> Result<()> {
+    let mut data = serde_json::json!({
+        "workspaces": [],
+        "active_ws_idx": 1,
+        "win_title": "",
+        "win_app": "",
+        "cpu": 5.0,
+        "mem": 25.0,
+        "bat": 100.0,
+        "bat_chg": false,
+        "vol": 0.65,
+        "muted": false,
+        "wifi": true,
+        "wifi_ssid": "WiFi",
+        "wifi_sig": 80,
+        "bt": false,
+        "bt_count": 0,
+        "media_status": "Stopped",
+        "media_title": "",
+        "media_artist": "",
+        "caffeine": false,
+        "night_light": false,
+        "power_profile": "balanced",
+        "suite_name": "Default"
+    });
+
+    if let Ok(conn) = Connection::session().await {
+        async fn get_prop<T: TryFrom<zbus::zvariant::OwnedValue>>(
+            conn: &Connection,
+            path: &str,
+            iface: &str,
+            prop: &str,
+        ) -> Option<T> {
+            let reply = conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    path,
+                    Some("org.freedesktop.DBus.Properties"),
+                    "Get",
+                    &(iface, prop),
+                )
+                .await
+                .ok()?;
+            let val: zbus::zvariant::OwnedValue = reply.body().deserialize().ok()?;
+            T::try_from(val).ok()
+        }
+
+        if let Some(s) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Workspaces",
+            "org.agility.Daemon.Workspaces",
+            "workspaces",
+        )
+        .await
+        {
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&s) {
+                data["workspaces"] = parsed;
+            }
+        }
+        if let Some(idx) = get_prop::<u32>(
+            &conn,
+            "/org/agility/Daemon/Workspaces",
+            "org.agility.Daemon.Workspaces",
+            "active_workspace_idx",
+        )
+        .await
+        {
+            data["active_ws_idx"] = serde_json::json!(idx);
+        }
+        if let Some(title) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Workspaces",
+            "org.agility.Daemon.Workspaces",
+            "active_window_title",
+        )
+        .await
+        {
+            data["win_title"] = serde_json::json!(title);
+        }
+        if let Some(app) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Workspaces",
+            "org.agility.Daemon.Workspaces",
+            "active_window_app_id",
+        )
+        .await
+        {
+            data["win_app"] = serde_json::json!(app);
+        }
+
+        if let Some(cpu) = get_prop::<f64>(
+            &conn,
+            "/org/agility/Daemon/Hardware",
+            "org.agility.Daemon.Hardware",
+            "cpu_usage",
+        )
+        .await
+        {
+            data["cpu"] = serde_json::json!(cpu);
+        }
+        if let Some(mem) = get_prop::<f64>(
+            &conn,
+            "/org/agility/Daemon/Hardware",
+            "org.agility.Daemon.Hardware",
+            "memory_usage",
+        )
+        .await
+        {
+            data["mem"] = serde_json::json!(mem);
+        }
+        if let Some(bat) = get_prop::<f64>(
+            &conn,
+            "/org/agility/Daemon/Hardware",
+            "org.agility.Daemon.Hardware",
+            "battery_percent",
+        )
+        .await
+        {
+            data["bat"] = serde_json::json!(bat);
+        }
+        if let Some(chg) = get_prop::<bool>(
+            &conn,
+            "/org/agility/Daemon/Hardware",
+            "org.agility.Daemon.Hardware",
+            "battery_charging",
+        )
+        .await
+        {
+            data["bat_chg"] = serde_json::json!(chg);
+        }
+
+        if let Some(vol) = get_prop::<f64>(
+            &conn,
+            "/org/agility/Daemon/Audio",
+            "org.agility.Daemon.Audio",
+            "volume",
+        )
+        .await
+        {
+            data["vol"] = serde_json::json!(vol);
+        }
+        if let Some(muted) = get_prop::<bool>(
+            &conn,
+            "/org/agility/Daemon/Audio",
+            "org.agility.Daemon.Audio",
+            "muted",
+        )
+        .await
+        {
+            data["muted"] = serde_json::json!(muted);
+        }
+
+        if let Some(wifi) = get_prop::<bool>(
+            &conn,
+            "/org/agility/Daemon/Connectivity",
+            "org.agility.Daemon.Connectivity",
+            "wifi_connected",
+        )
+        .await
+        {
+            data["wifi"] = serde_json::json!(wifi);
+        }
+        if let Some(ssid) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Connectivity",
+            "org.agility.Daemon.Connectivity",
+            "wifi_ssid",
+        )
+        .await
+        {
+            data["wifi_ssid"] = serde_json::json!(ssid);
+        }
+        if let Some(sig) = get_prop::<u32>(
+            &conn,
+            "/org/agility/Daemon/Connectivity",
+            "org.agility.Daemon.Connectivity",
+            "wifi_signal",
+        )
+        .await
+        {
+            data["wifi_sig"] = serde_json::json!(sig);
+        }
+        if let Some(bt) = get_prop::<bool>(
+            &conn,
+            "/org/agility/Daemon/Connectivity",
+            "org.agility.Daemon.Connectivity",
+            "bluetooth_connected",
+        )
+        .await
+        {
+            data["bt"] = serde_json::json!(bt);
+        }
+        if let Some(cnt) = get_prop::<u32>(
+            &conn,
+            "/org/agility/Daemon/Connectivity",
+            "org.agility.Daemon.Connectivity",
+            "bluetooth_device_count",
+        )
+        .await
+        {
+            data["bt_count"] = serde_json::json!(cnt);
+        }
+
+        if let Some(status) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Media",
+            "org.agility.Daemon.Media",
+            "playback_status",
+        )
+        .await
+        {
+            data["media_status"] = serde_json::json!(status);
+        }
+        if let Some(title) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Media",
+            "org.agility.Daemon.Media",
+            "title",
+        )
+        .await
+        {
+            data["media_title"] = serde_json::json!(title);
+        }
+        if let Some(artist) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Media",
+            "org.agility.Daemon.Media",
+            "artist",
+        )
+        .await
+        {
+            data["media_artist"] = serde_json::json!(artist);
+        }
+
+        if let Some(caf) = get_prop::<bool>(
+            &conn,
+            "/org/agility/Daemon/Power",
+            "org.agility.Daemon.Power",
+            "caffeine_active",
+        )
+        .await
+        {
+            data["caffeine"] = serde_json::json!(caf);
+        }
+        if let Some(nl) = get_prop::<bool>(
+            &conn,
+            "/org/agility/Daemon/Power",
+            "org.agility.Daemon.Power",
+            "night_light_active",
+        )
+        .await
+        {
+            data["night_light"] = serde_json::json!(nl);
+        }
+        if let Some(prof) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Power",
+            "org.agility.Daemon.Power",
+            "power_profile",
+        )
+        .await
+        {
+            data["power_profile"] = serde_json::json!(prof);
+        }
+
+        if let Some(suite) = get_prop::<String>(
+            &conn,
+            "/org/agility/Daemon/Suits",
+            "org.agility.Daemon.Suits",
+            "active_suite_name",
+        )
+        .await
+        {
+            data["suite_name"] = serde_json::json!(suite);
+        }
+    }
+
+    println!("{}", serde_json::to_string(&data).unwrap_or_default());
     Ok(())
 }
 

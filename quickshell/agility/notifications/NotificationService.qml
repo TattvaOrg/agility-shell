@@ -19,7 +19,7 @@ Item {
     readonly property string soundPath: {
         var base = Qt.resolvedUrl("../../../sounds/notification.wav").toString()
         if (base.startsWith("file://")) return base.slice(7)
-        return "/home/cachy/github-p/github-based/agility-shell/sounds/notification.wav"
+        return "/usr/share/agility-shell/sounds/notification.wav"
     }
 
     // ─── Drawer Controls ───
@@ -115,8 +115,9 @@ Item {
     }
 
     function playSound() {
-        var cmd = "pw-play \"" + root.soundPath + "\" 2>/dev/null || paplay \"" + root.soundPath + "\" 2>/dev/null || aplay \"" + root.soundPath + "\" 2>/dev/null || true"
-        runCmd(cmd)
+        var busCmd = "busctl --user call org.agility.Daemon /org/agility/Daemon/Sounds org.agility.Daemon.Sounds Play s notification 2>/dev/null"
+        var playerCmd = "pw-play \"" + root.soundPath + "\" 2>/dev/null || paplay \"" + root.soundPath + "\" 2>/dev/null || aplay \"" + root.soundPath + "\" 2>/dev/null || true"
+        runCmd(busCmd + " || " + playerCmd)
     }
 
     // ─── Query History from agilityd / Freedesktop Service ───
@@ -146,17 +147,7 @@ Item {
 
     function refreshHistory() {
         if (!historyProc.running) {
-            var cmd = "busctl --user call org.freedesktop.Notifications /org/freedesktop/Notifications org.freedesktop.Notifications GetHistory 2>/dev/null || " +
-                      "python3 -c '\n" +
-                      "import subprocess, json\n" +
-                      "try:\n" +
-                      "    r = subprocess.run([\"busctl\", \"--user\", \"call\", \"org.freedesktop.Notifications\", \"/org/freedesktop/Notifications\", \"org.freedesktop.Notifications\", \"GetHistory\"], capture_output=True, text=True, timeout=0.5)\n" +
-                      "    if r.returncode == 0:\n" +
-                      "        parts = r.stdout.strip().split(maxsplit=2)\n" +
-                      "        if len(parts) >= 3: print(json.loads(parts[2]))\n" +
-                      "except Exception: pass\n" +
-                      "' 2>/dev/null || true"
-
+            var cmd = "busctl --user call org.freedesktop.Notifications /org/freedesktop/Notifications org.freedesktop.Notifications GetHistory 2>/dev/null || true"
             historyProc.command = ["sh", "-c", cmd]
             historyProc.running = true
         }

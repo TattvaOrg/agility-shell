@@ -106,38 +106,34 @@ Item {
 
     Process {
         id: wifiScanProc
-        command: [
-            "sh", "-c",
-            "python3 -c '\n" +
-            "import subprocess, json\n" +
-            "try:\n" +
-            "    r = subprocess.run([\"nmcli\", \"-t\", \"-f\", \"IN-USE,SSID,SIGNAL,SECURITY\", \"device\", \"wifi\", \"list\"], capture_output=True, text=True, timeout=3.0)\n" +
-            "    lines = r.stdout.strip().splitlines()\n" +
-            "    seen = set()\n" +
-            "    nets = []\n" +
-            "    for line in lines:\n" +
-            "        parts = line.split(\":\")\n" +
-            "        if len(parts) >= 4:\n" +
-            "            in_use = parts[0].strip() == \"*\"\n" +
-            "            ssid = parts[1].strip()\n" +
-            "            if not ssid or ssid in seen: continue\n" +
-            "            seen.add(ssid)\n" +
-            "            sig = int(parts[2].strip() or 0)\n" +
-            "            sec = parts[3].strip()\n" +
-            "            nets.append({\"inUse\": in_use, \"ssid\": ssid, \"signal\": sig, \"security\": sec, \"isSecure\": sec != \"--\" and sec != \"\"})\n" +
-            "    print(json.dumps(nets))\n" +
-            "except Exception: print(\"[]\")\n" +
-            "'\n"
-        ]
+        command: ["nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 root.wifiScanning = false
                 try {
-                    var parsed = JSON.parse(text)
-                    if (Array.isArray(parsed)) {
-                        root.wifiNetworks = parsed
+                    var lines = text.trim().split("\n")
+                    var seen = {}
+                    var nets = []
+                    for (var i = 0; i < lines.length; i++) {
+                        var parts = lines[i].split(":")
+                        if (parts.length >= 4) {
+                            var ssid = parts[1].trim()
+                            if (!ssid || seen[ssid]) continue
+                            seen[ssid] = true
+                            var inUse = parts[0].trim() === "*"
+                            var sig = parseInt(parts[2].trim(), 10) || 0
+                            var sec = parts[3].trim()
+                            nets.push({
+                                "inUse": inUse,
+                                "ssid": ssid,
+                                "signal": sig,
+                                "security": sec,
+                                "isSecure": sec !== "--" && sec !== ""
+                            })
+                        }
                     }
+                    root.wifiNetworks = nets
                 } catch (e) {}
             }
         }
@@ -166,33 +162,23 @@ Item {
 
     Process {
         id: btScanProc
-        command: [
-            "sh", "-c",
-            "python3 -c '\n" +
-            "import subprocess, json\n" +
-            "try:\n" +
-            "    r = subprocess.run([\"bluetoothctl\", \"devices\"], capture_output=True, text=True, timeout=2.0)\n" +
-            "    lines = r.stdout.strip().splitlines()\n" +
-            "    devs = []\n" +
-            "    for line in lines:\n" +
-            "        parts = line.split(maxsplit=2)\n" +
-            "        if len(parts) >= 3 and parts[0] == \"Device\":\n" +
-            "            addr = parts[1]\n" +
-            "            name = parts[2]\n" +
-            "            devs.append({\"address\": addr, \"name\": name, \"connected\": False})\n" +
-            "    print(json.dumps(devs))\n" +
-            "except Exception: print(\"[]\")\n" +
-            "'\n"
-        ]
+        command: ["bluetoothctl", "devices"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 root.bluetoothScanning = false
                 try {
-                    var parsed = JSON.parse(text)
-                    if (Array.isArray(parsed)) {
-                        root.bluetoothDevices = parsed
+                    var lines = text.trim().split("\n")
+                    var devs = []
+                    for (var i = 0; i < lines.length; i++) {
+                        var parts = lines[i].trim().split(" ")
+                        if (parts.length >= 3 && parts[0] === "Device") {
+                            var addr = parts[1]
+                            var name = parts.slice(2).join(" ")
+                            devs.push({ "address": addr, "name": name, "connected": false })
+                        }
                     }
+                    root.bluetoothDevices = devs
                 } catch (e) {}
             }
         }
@@ -229,47 +215,49 @@ Item {
 
     Process {
         id: audioQueryProc
-        command: [
-            "sh", "-c",
-            "python3 -c '\n" +
-            "import subprocess, json\n" +
-            "out = {\"sinks\": [], \"sources\": [], \"streams\": []}\n" +
-            "try:\n" +
-            "    r = subprocess.run([\"pactl\", \"list\", \"sinks\", \"short\"], capture_output=True, text=True, timeout=1.0)\n" +
-            "    if r.returncode == 0:\n" +
-            "        for l in r.stdout.strip().splitlines():\n" +
-            "            p = l.split()\n" +
-            "            if len(p) >= 2: out[\"sinks\"].append({\"id\": p[0], \"name\": p[1], \"desc\": p[1].replace(\"alsa_output.\", \"\")})\n" +
-            "    r2 = subprocess.run([\"pactl\", \"list\", \"sources\", \"short\"], capture_output=True, text=True, timeout=1.0)\n" +
-            "    if r2.returncode == 0:\n" +
-            "        for l in r2.stdout.strip().splitlines():\n" +
-            "            p = l.split()\n" +
-            "            if len(p) >= 2 and \".monitor\" not in p[1]: out[\"sources\"].append({\"id\": p[0], \"name\": p[1], \"desc\": p[1].replace(\"alsa_input.\", \"\")})\n" +
-            "    r3 = subprocess.run([\"pactl\", \"list\", \"sink-inputs\"], capture_output=True, text=True, timeout=1.0)\n" +
-            "    if r3.returncode == 0:\n" +
-            "        curr = {}\n" +
-            "        for line in r3.stdout.splitlines():\n" +
-            "            s = line.strip()\n" +
-            "            if s.startswith(\"Sink Input #\"):\n" +
-            "                if curr.get(\"id\"): out[\"streams\"].append(curr)\n" +
-            "                curr = {\"id\": s.replace(\"Sink Input #\", \"\"), \"name\": \"App\", \"volume\": 1.0, \"muted\": False}\n" +
-            "            elif \"application.name = \" in s:\n" +
-            "                curr[\"name\"] = s.split(\"=\")[1].strip(\" \\\"\\'\")\n" +
-            "            elif s.startswith(\"Mute:\"):\n" +
-            "                curr[\"muted\"] = \"yes\" in s.lower()\n" +
-            "        if curr.get(\"id\"): out[\"streams\"].append(curr)\n" +
-            "    print(json.dumps(out))\n" +
-            "except Exception: print(json.dumps(out))\n" +
-            "'\n"
-        ]
+        command: ["sh", "-c", "echo '===SINKS===' ; pactl list sinks short 2>/dev/null; echo '===SOURCES===' ; pactl list sources short 2>/dev/null; echo '===INPUTS===' ; pactl list sink-inputs 2>/dev/null"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    var data = JSON.parse(text)
-                    if (data.sinks) root.audioSinks = data.sinks
-                    if (data.sources) root.audioSources = data.sources
-                    if (data.streams) root.audioStreams = data.streams
+                    var sinks = []
+                    var sources = []
+                    var streams = []
+
+                    var parts = text.split("===SOURCES===")
+                    var sinkSection = (parts[0] || "").replace("===SINKS===", "").trim()
+                    var rest = parts[1] || ""
+                    var restParts = rest.split("===INPUTS===")
+                    var sourceSection = (restParts[0] || "").trim()
+                    var inputSection = (restParts[1] || "").trim()
+
+                    sinkSection.split("\n").forEach(function(l) {
+                        var p = l.trim().split(/\s+/)
+                        if (p.length >= 2) sinks.push({ "id": p[0], "name": p[1], "desc": p[1].replace("alsa_output.", "") })
+                    })
+
+                    sourceSection.split("\n").forEach(function(l) {
+                        var p = l.trim().split(/\s+/)
+                        if (p.length >= 2 && p[1].indexOf(".monitor") === -1) sources.push({ "id": p[0], "name": p[1], "desc": p[1].replace("alsa_input.", "") })
+                    })
+
+                    var curr = null
+                    inputSection.split("\n").forEach(function(l) {
+                        var s = l.trim()
+                        if (s.startsWith("Sink Input #")) {
+                            if (curr && curr.id) streams.push(curr)
+                            curr = { "id": s.replace("Sink Input #", "").trim(), "name": "App", "volume": 1.0, "muted": false }
+                        } else if (curr && s.indexOf("application.name = ") !== -1) {
+                            curr.name = s.split("=")[1].trim().replace(/^["']|["']$/g, "")
+                        } else if (curr && s.startsWith("Mute:")) {
+                            curr.muted = s.toLowerCase().indexOf("yes") !== -1
+                        }
+                    })
+                    if (curr && curr.id) streams.push(curr)
+
+                    root.audioSinks = sinks
+                    root.audioSources = sources
+                    root.audioStreams = streams
                 } catch (e) {}
             }
         }

@@ -1,5 +1,6 @@
 singleton Theme 1.0 Theme.qml
 singleton IconResolver 1.0 components/IconResolver.qml
+singleton SoundService 1.0 components/SoundService.qml
 GlassCard 1.0 components/GlassCard.qml
 GlassPill 1.0 components/GlassPill.qml
 GlassButton 1.0 components/GlassButton.qml

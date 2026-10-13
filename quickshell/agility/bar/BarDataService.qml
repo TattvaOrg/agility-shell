@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../components" as Components
 
 Item {
     id: root
@@ -130,46 +131,7 @@ Item {
     // ─── Asynchronous Poller Querying agilityd ───
     Process {
         id: pollProc
-        command: [
-            "sh", "-c",
-            "python3 -c '\n" +
-            "import subprocess, json\n" +
-            "def call_dbus(prop, iface, path):\n" +
-            "    try:\n" +
-            "        r = subprocess.run([\"busctl\", \"--user\", \"get-property\", \"org.agility.Daemon\", path, iface, prop], capture_output=True, text=True, timeout=0.4)\n" +
-            "        if r.returncode == 0:\n" +
-            "            parts = r.stdout.strip().split(maxsplit=1)\n" +
-            "            return parts[1].strip(\"\\\"\\'\") if len(parts) > 1 else parts[0]\n" +
-            "    except Exception: pass\n" +
-            "    return None\n" +
-            "\n" +
-            "out = {}\n" +
-            "w = call_dbus(\"workspaces\", \"org.agility.Daemon.Workspaces\", \"/org/agility/Daemon/Workspaces\")\n" +
-            "if w: out[\"workspaces\"] = json.loads(w)\n" +
-            "out[\"active_ws_idx\"] = int(call_dbus(\"active_workspace_idx\", \"org.agility.Daemon.Workspaces\", \"/org/agility/Daemon/Workspaces\") or 0)\n" +
-            "out[\"win_title\"] = call_dbus(\"active_window_title\", \"org.agility.Daemon.Workspaces\", \"/org/agility/Daemon/Workspaces\") or \"\"\n" +
-            "out[\"win_app\"] = call_dbus(\"active_window_app_id\", \"org.agility.Daemon.Workspaces\", \"/org/agility/Daemon/Workspaces\") or \"\"\n" +
-            "out[\"cpu\"] = float(call_dbus(\"cpu_usage\", \"org.agility.Daemon.Hardware\", \"/org/agility/Daemon/Hardware\") or 5.0)\n" +
-            "out[\"mem\"] = float(call_dbus(\"memory_usage\", \"org.agility.Daemon.Hardware\", \"/org/agility/Daemon/Hardware\") or 25.0)\n" +
-            "out[\"bat\"] = float(call_dbus(\"battery_percent\", \"org.agility.Daemon.Hardware\", \"/org/agility/Daemon/Hardware\") or 100.0)\n" +
-            "out[\"bat_chg\"] = (call_dbus(\"battery_charging\", \"org.agility.Daemon.Hardware\", \"/org/agility/Daemon/Hardware\") or \"false\") == \"true\"\n" +
-            "out[\"vol\"] = float(call_dbus(\"volume\", \"org.agility.Daemon.Audio\", \"/org/agility/Daemon/Audio\") or 0.65)\n" +
-            "out[\"muted\"] = (call_dbus(\"muted\", \"org.agility.Daemon.Audio\", \"/org/agility/Daemon/Audio\") or \"false\") == \"true\"\n" +
-            "out[\"wifi\"] = (call_dbus(\"wifi_connected\", \"org.agility.Daemon.Connectivity\", \"/org/agility/Daemon/Connectivity\") or \"true\") == \"true\"\n" +
-            "out[\"wifi_ssid\"] = call_dbus(\"wifi_ssid\", \"org.agility.Daemon.Connectivity\", \"/org/agility/Daemon/Connectivity\") or \"WiFi\"\n" +
-            "out[\"wifi_sig\"] = int(call_dbus(\"wifi_signal\", \"org.agility.Daemon.Connectivity\", \"/org/agility/Daemon/Connectivity\") or 80)\n" +
-            "out[\"bt\"] = (call_dbus(\"bluetooth_connected\", \"org.agility.Daemon.Connectivity\", \"/org/agility/Daemon/Connectivity\") or \"false\") == \"true\"\n" +
-            "out[\"bt_count\"] = int(call_dbus(\"bluetooth_device_count\", \"org.agility.Daemon.Connectivity\", \"/org/agility/Daemon/Connectivity\") or 0)\n" +
-            "out[\"media_status\"] = call_dbus(\"playback_status\", \"org.agility.Daemon.Media\", \"/org/agility/Daemon/Media\") or \"Stopped\"\n" +
-            "out[\"media_title\"] = call_dbus(\"title\", \"org.agility.Daemon.Media\", \"/org/agility/Daemon/Media\") or \"\"\n" +
-            "out[\"media_artist\"] = call_dbus(\"artist\", \"org.agility.Daemon.Media\", \"/org/agility/Daemon/Media\") or \"\"\n" +
-            "out[\"caffeine\"] = (call_dbus(\"caffeine_active\", \"org.agility.Daemon.Power\", \"/org/agility/Daemon/Power\") or \"false\") == \"true\"\n" +
-            "out[\"night_light\"] = (call_dbus(\"night_light_active\", \"org.agility.Daemon.Power\", \"/org/agility/Daemon/Power\") or \"false\") == \"true\"\n" +
-            "out[\"power_profile\"] = call_dbus(\"power_profile\", \"org.agility.Daemon.Power\", \"/org/agility/Daemon/Power\") or \"balanced\"\n" +
-            "out[\"suite_name\"] = call_dbus(\"active_suite_name\", \"org.agility.Daemon.Suits\", \"/org/agility/Daemon/Suits\") or \"Default\"\n" +
-            "print(json.dumps(out))\n" +
-            "'\n"
-        ]
+        command: ["agl", "bar-data"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
@@ -181,8 +143,24 @@ Item {
                     if (d.win_app !== undefined) root.activeWindowAppId = d.win_app
                     if (d.cpu !== undefined) root.cpuUsage = d.cpu
                     if (d.mem !== undefined) root.memoryUsage = d.mem
-                    if (d.bat !== undefined) root.batteryPercent = d.bat
-                    if (d.bat_chg !== undefined) root.batteryCharging = d.bat_chg
+
+                    if (d.bat !== undefined) {
+                        var prevBat = root.batteryPercent
+                        root.batteryPercent = d.bat
+                        if (d.bat <= 10 && prevBat > 10) {
+                            Components.SoundService.play("battery-low")
+                        } else if (d.bat <= 20 && prevBat > 20) {
+                            Components.SoundService.play("battery-warning")
+                        }
+                    }
+                    if (d.bat_chg !== undefined) {
+                        var prevChg = root.batteryCharging
+                        root.batteryCharging = d.bat_chg
+                        if (d.bat_chg && !prevChg) {
+                            Components.SoundService.play("battery-charge")
+                        }
+                    }
+
                     if (d.vol !== undefined) root.volume = d.vol
                     if (d.muted !== undefined) root.volumeMuted = d.muted
                     if (d.wifi !== undefined) root.wifiConnected = d.wifi

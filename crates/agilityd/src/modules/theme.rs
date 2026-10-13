@@ -510,7 +510,7 @@ impl ThemeService {
         let t_dir = self.cache_dir.join("templates");
         let _ = fs::create_dir_all(&t_dir);
 
-        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/home/cachy".to_string());
+        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         let config_root = PathBuf::from(&home_dir).join(".config");
 
         let strip_hash = |hex: &str| -> String { hex.trim_start_matches('#').to_string() };

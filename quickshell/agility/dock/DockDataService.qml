@@ -146,27 +146,21 @@ Item {
     // ─── Query Niri & Windows ───
     Process {
         id: niriQueryProc
-        command: [
-            "sh", "-c",
-            "python3 -c '\n" +
-            "import subprocess, json\n" +
-            "try:\n" +
-            "    r = subprocess.run([\"niri\", \"msg\", \"-j\", \"windows\"], capture_output=True, text=True, timeout=0.3)\n" +
-            "    if r.returncode == 0:\n" +
-            "        wins = json.loads(r.stdout)\n" +
-            "        out = [{\"id\": w.get(\"id\"), \"appId\": w.get(\"app_id\", \"\"), \"title\": w.get(\"title\", \"\"), \"isFocused\": w.get(\"is_focused\", False)} for w in wins]\n" +
-            "        print(json.dumps(out))\n" +
-            "    else: print(\"[]\")\n" +
-            "except Exception: print(\"[]\")\n" +
-            "'\n"
-        ]
+        command: ["sh", "-c", "niri msg -j windows 2>/dev/null || echo '[]'"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    var parsed = JSON.parse(text)
-                    if (Array.isArray(parsed)) {
-                        root.runningWindows = parsed
+                    var wins = JSON.parse(text)
+                    if (Array.isArray(wins)) {
+                        root.runningWindows = wins.map(function(w) {
+                            return {
+                                "id": w.id,
+                                "appId": w.app_id || "",
+                                "title": w.title || "",
+                                "isFocused": !!w.is_focused
+                            }
+                        })
                     }
                 } catch (e) {}
             }

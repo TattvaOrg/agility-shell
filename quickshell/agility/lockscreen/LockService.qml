@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../components" as Components
 
 Item {
     id: root
@@ -34,6 +35,7 @@ Item {
         root.errorMessage = ""
         root.fetchLockStatus()
         root.refreshUserInfo()
+        Components.SoundService.play("session-quit")
 
         // Call D-Bus LockSession to inform daemon and systemd logind
         lockDbusProc.command = ["busctl", "--user", "call", "org.agility.Daemon", "/org/agility/Daemon/Lock", "org.agility.Daemon.Lock", "LockSession"]
@@ -48,6 +50,7 @@ Item {
         root.failedAttempts = 0
         root.isLockedOut = false
         root.remainingLockoutSecs = 0.0
+        Components.SoundService.play("confirm")
         root.authSuccess()
     }
 
@@ -108,6 +111,7 @@ Item {
                 } else {
                     root.authenticating = false
                     root.failedAttempts += 1
+                    Components.SoundService.play("error")
                     root.authFailed()
                     root.fetchLockStatus()
 
@@ -125,6 +129,7 @@ Item {
             if (exitCode !== 0 && root.authenticating) {
                 root.authenticating = false
                 root.failedAttempts += 1
+                Components.SoundService.play("error")
                 root.authFailed()
                 root.fetchLockStatus()
                 if (root.errorMessage === "") {
@@ -163,21 +168,13 @@ Item {
     Process {
         id: probeUserProc
         command: [
-            "python3", "-c",
-            "import os, pwd, socket\n" +
-            "u = os.environ.get('USER', 'user')\n" +
-            "av = next((p for p in ['/var/lib/AccountsService/icons/' + u, os.path.expanduser('~/.face'), os.path.expanduser('~/.face.icon')] if os.path.isfile(p)), '')\n" +
-            "rn = ''\n" +
-            "try:\n" +
-            "    rn = pwd.getpwnam(u).pw_gecos.split(',')[0]\n" +
-            "except Exception:\n" +
-            "    pass\n" +
-            "bw = next((p for p in [os.path.expanduser('~/.cache/agility-shell/wallpaper_blurred'), os.path.expanduser('~/.cache/agility/wallpaper_blurred')] if os.path.isfile(p)), '')\n" +
-            "hn = socket.gethostname()\n" +
-            "print(av)\n" +
-            "print(rn)\n" +
-            "print(bw)\n" +
-            "print(hn)\n"
+            "sh", "-c",
+            "u=\"${USER:-user}\"; " +
+            "av=\"\"; [ -f \"/var/lib/AccountsService/icons/$u\" ] && av=\"/var/lib/AccountsService/icons/$u\" || { [ -f \"$HOME/.face\" ] && av=\"$HOME/.face\" || { [ -f \"$HOME/.face.icon\" ] && av=\"$HOME/.face.icon\"; }; }; " +
+            "rn=\"$(getent passwd \"$u\" 2>/dev/null | cut -d: -f5 | cut -d, -f1)\"; " +
+            "bw=\"\"; [ -f \"$HOME/.cache/agility-shell/wallpaper_blurred\" ] && bw=\"$HOME/.cache/agility-shell/wallpaper_blurred\" || { [ -f \"$HOME/.cache/agility/wallpaper_blurred\" ] && bw=\"$HOME/.cache/agility/wallpaper_blurred\"; }; " +
+            "hn=\"$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null)\"; " +
+            "printf \"%s\n%s\n%s\n%s\n\" \"$av\" \"$rn\" \"$bw\" \"$hn\""
         ]
         stdout: StdioCollector {
             onStreamFinished: {

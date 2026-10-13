@@ -254,9 +254,8 @@ impl NotificationService {
     pub fn play_notification_sound(&self) {
         let sound_paths = [
             self.config_dir.join("sounds").join("notification.wav"),
-            PathBuf::from(
-                "/home/cachy/github-p/github-based/agility-shell/sounds/notification.wav",
-            ),
+            PathBuf::from("sounds/notification.wav"),
+            PathBuf::from("/usr/share/agility-shell/sounds/notification.wav"),
             PathBuf::from("/usr/share/sounds/freedesktop/stereo/message.oga"),
             PathBuf::from("/usr/share/sounds/freedesktop/stereo/bell.oga"),
         ];

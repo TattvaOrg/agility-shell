@@ -298,7 +298,7 @@ impl ClipboardService {
         };
 
         // Determine cliphist database path
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/cachy".to_string());
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         let cliphist_db = PathBuf::from(&home)
             .join(".cache")
             .join("cliphist")

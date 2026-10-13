@@ -1,4 +1,5 @@
 singleton IconResolver 1.0 IconResolver.qml
+singleton SoundService 1.0 SoundService.qml
 GlassCard 1.0 GlassCard.qml
 GlassPill 1.0 GlassPill.qml
 GlassButton 1.0 GlassButton.qml

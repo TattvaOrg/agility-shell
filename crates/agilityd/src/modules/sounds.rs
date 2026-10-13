@@ -47,6 +47,20 @@ impl SoundService {
             let local = PathBuf::from("sounds");
             if local.is_dir() {
                 local
+            } else if let Ok(exe) = std::env::current_exe() {
+                if let Some(parent) = exe.parent() {
+                    let exe_local = parent.join("sounds");
+                    let exe_rel = parent.join("../../../sounds");
+                    if exe_local.is_dir() {
+                        exe_local
+                    } else if exe_rel.is_dir() {
+                        exe_rel
+                    } else {
+                        PathBuf::from("/usr/share/agility-shell/sounds")
+                    }
+                } else {
+                    PathBuf::from("/usr/share/agility-shell/sounds")
+                }
             } else {
                 PathBuf::from("/usr/share/agility-shell/sounds")
             }
@@ -89,6 +103,12 @@ impl SoundService {
         let fallback = PathBuf::from("sounds").join(&wav);
         if fallback.is_file() {
             return Some(fallback);
+        }
+
+        // Fallback system path
+        let sys_fallback = PathBuf::from("/usr/share/agility-shell/sounds").join(&wav);
+        if sys_fallback.is_file() {
+            return Some(sys_fallback);
         }
 
         None

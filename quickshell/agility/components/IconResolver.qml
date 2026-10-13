@@ -8,7 +8,7 @@ Item {
     readonly property string svgsDir: {
         var resolved = Qt.resolvedUrl("../../../svgs").toString()
         if (resolved.startsWith("file://")) return resolved
-        return "file:///home/cachy/github-p/github-based/agility-shell/svgs"
+        return "file:///usr/share/agility-shell/svgs"
     }
 
     // Mapping from common app IDs & categories to Phosphor duotone SVGs

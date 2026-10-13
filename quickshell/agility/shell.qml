@@ -10,6 +10,7 @@ import "osd" as Osd
 import "notifications" as Notifications
 import "canvas" as Canvas
 import "lockscreen" as Lockscreen
+import "components" as Components
 
 ShellRoot {
     IpcHandler {
@@ -109,6 +110,17 @@ ShellRoot {
         function trigger(duration: real, cols: int) {
             Lockscreen.DoomMeltService.triggerMelt("", duration, cols, [])
         }
+    }
+
+    IpcHandler {
+        target: "sounds"
+        function play(sound: string) {
+            Components.SoundService.play(sound)
+        }
+    }
+
+    Component.onCompleted: {
+        Components.SoundService.play("session-start")
     }
 
     // Top Multi-Monitor Status Bar

@@ -242,16 +242,7 @@ Item {
     function queryIndex(pattern) {
         if (!queryProc.running) {
             var q = pattern.replace(/"/g, "\\\"")
-            var cmd = "busctl --user call org.agility.Daemon /org/agility/Daemon/Launcher org.agility.Daemon.Launcher Query s \"" + q + "\" 2>/dev/null || " +
-                      "python3 -c '\n" +
-                      "import subprocess, json\n" +
-                      "cmd = [\"busctl\", \"--user\", \"call\", \"org.agility.Daemon\", \"/org/agility/Daemon/Launcher\", \"org.agility.Daemon.Launcher\", \"Query\", \"s\", \"\"\"" + q + "\"\"\"]\n" +
-                      "r = subprocess.run(cmd, capture_output=True, text=True)\n" +
-                      "if r.returncode == 0:\n" +
-                      "    parts = r.stdout.strip().split(maxsplit=2)\n" +
-                      "    if len(parts) >= 3: print(json.loads(parts[2]))\n" +
-                      "' 2>/dev/null || true"
-
+            var cmd = "busctl --user call org.agility.Daemon /org/agility/Daemon/Launcher org.agility.Daemon.Launcher Query s \"" + q + "\" 2>/dev/null || true"
             queryProc.command = ["sh", "-c", cmd]
             queryProc.running = true
         }

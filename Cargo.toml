@@ -24,7 +24,7 @@ thiserror = "2.0"
 anyhow = "1.0"
 async-trait = "0.1"
 clap = { version = "4.5", features = ["derive"] }
-sysinfo = "0.33"
+sysinfo = "0.39"
 nucleo = "0.5"
 pam-sys = "0.5"
 libpulse-binding = "2.28"

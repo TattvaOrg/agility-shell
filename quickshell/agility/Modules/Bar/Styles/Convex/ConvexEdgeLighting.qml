@@ -36,10 +36,11 @@ Item {
         return SettingsService.edgeLightingCustomColor;
     }
 
-    // Geometry & Channel Thickness
+    // Geometry & Channel Thickness matching the exact Convex bezel
     readonly property real screenW: Math.round(root.width)
     readonly property real screenH: Math.round(root.height)
-    readonly property real channelThickness: Math.round(Math.max(root.bezelSize, SettingsService.edgeLightingThickness) * dynamicScale)
+    readonly property real channelThickness: Math.round(root.bezelSize * (1.0 + (root.beatEnergy * 0.15)) * root.fsTransitionProg)
+    readonly property real arcLength: Math.max(0.10, Math.min(1.0, SettingsService.edgeLightingLength / 100.0))
 
     // Rotation Direction & Speed
     readonly property bool isClockwise: SettingsService.edgeLightingDirection !== "counter_clockwise"
@@ -87,42 +88,40 @@ Item {
 
         Item {
             anchors.centerIn: parent
-            width: Math.max(root.screenW, root.screenH) * 1.6
+            width: Math.max(root.screenW, root.screenH) * 1.5
             height: width
 
             GE.ConicalGradient {
                 anchors.fill: parent
                 angle: root.travelAngle
                 gradient: Gradient {
-                    readonly property real arcLength: Math.max(0.10, Math.min(1.0, SettingsService.edgeLightingLength / 100.0))
-
                     GradientStop {
                         position: 0.0
                         color: "transparent"
                     }
                     GradientStop {
-                        position: Math.max(0.001, 1.0 - arcLength)
+                        position: Math.max(0.001, 1.0 - root.arcLength)
                         color: "transparent"
                     }
                     GradientStop {
-                        position: Math.max(0.002, 1.0 - (arcLength * 0.70))
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.15)
+                        position: Math.max(0.002, 1.0 - (root.arcLength * 0.65))
+                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.25)
                     }
                     GradientStop {
-                        position: Math.max(0.003, 1.0 - (arcLength * 0.35))
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.50)
+                        position: Math.max(0.003, 1.0 - (root.arcLength * 0.30))
+                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.65)
                     }
                     GradientStop {
-                        position: Math.max(0.004, 1.0 - (arcLength * 0.10))
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.85)
+                        position: Math.max(0.004, 1.0 - (root.arcLength * 0.08))
+                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.95)
                     }
                     GradientStop {
-                        position: Math.max(0.005, 1.0 - (arcLength * 0.02))
-                        color: Qt.rgba(Math.min(1, root.baseColor.r * 1.25), Math.min(1, root.baseColor.g * 1.25), Math.min(1, root.baseColor.b * 1.25), 1.0)
+                        position: Math.max(0.005, 1.0 - (root.arcLength * 0.01))
+                        color: Qt.rgba(Math.min(1.0, root.baseColor.r * 1.3), Math.min(1.0, root.baseColor.g * 1.3), Math.min(1.0, root.baseColor.b * 1.3), 1.0)
                     }
                     GradientStop {
                         position: 1.0
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.0)
+                        color: "transparent"
                     }
                 }
             }
@@ -148,15 +147,16 @@ Item {
 
                 PathSvg {
                     path: {
-                        let W = root.screenW;
-                        let H = root.screenH;
+                        let W = Math.round(root.width);
+                        let H = Math.round(root.height);
                         let b = Math.max(1, Math.round(root.channelThickness));
-                        let r = Math.max(1, root.innerRadius);
+                        let r = root.innerRadius;
                         let off = root.expandOffset;
+                        let topBezel = 0;
                         let inX = b - off;
-                        let inY = b - off;
+                        let inY = topBezel - off;
                         let inW = W - 2 * b + 2 * off;
-                        let inH = H - 2 * b + 2 * off;
+                        let inH = H - topBezel - b + 2 * off;
                         if (W <= 0 || H <= 0 || inW <= 0 || inH <= 0)
                             return "";
 
@@ -192,26 +192,27 @@ Item {
         }
     }
 
-    // Primary Luminous Channel Pass (Broad Soft Core Glow)
-    MultiEffect {
-        anchors.fill: parent
-        source: maskedBeam
-        blurEnabled: true
-        blur: 0.20
-        blurMax: 8
-        brightness: 0.15 + (root.beatEnergy * 0.30)
-        contrast: 0.12
-        opacity: 0.92
-    }
-
     // Secondary Ambient Diffusion Bloom (Atmospheric Rim Radiance)
     MultiEffect {
         anchors.fill: parent
         source: maskedBeam
+        visible: SettingsService.edgeLightingGlow > 0
         blurEnabled: true
-        blur: Math.min(1.0, (SettingsService.edgeLightingGlow * root.dynamicScale) / 28.0)
-        blurMax: Math.round(SettingsService.edgeLightingGlow * 2.2 * root.dynamicScale)
-        brightness: 0.20 + (root.beatEnergy * 0.40)
-        opacity: 0.80
+        blur: Math.min(1.0, (SettingsService.edgeLightingGlow * root.dynamicScale) / 32.0)
+        blurMax: Math.round(SettingsService.edgeLightingGlow * 1.8 * root.dynamicScale)
+        brightness: 0.15 + (root.beatEnergy * 0.30)
+        contrast: 0.10
+        opacity: 0.85
+    }
+
+    // Primary Broad Luminous Channel (Core Glow inside bezel channel)
+    MultiEffect {
+        anchors.fill: parent
+        source: maskedBeam
+        blurEnabled: true
+        blur: 0.10
+        blurMax: 6
+        brightness: 0.20 + (root.beatEnergy * 0.25)
+        opacity: 0.95
     }
 }

@@ -232,7 +232,7 @@ AppContainer {
                 to: 32
                 stepSize: 2
                 value: SettingsService.edgeLightingThickness
-                defaultValue: 12
+                defaultValue: 8
                 suffix: "px"
                 onMoved: (val) => {
                     SettingsService.edgeLightingThickness = Math.round(val);

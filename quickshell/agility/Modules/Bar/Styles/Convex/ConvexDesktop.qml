@@ -20,6 +20,13 @@ PanelWindow {
     property int barHeight: BarStyleConfig.barHeight("convex")
     property real animatedBarHeight: barHeight
     property int bezelSize: DisplayProfileService.gameModeActive ? 0 : Constants.sizeXs
+    readonly property real effectiveBezelWidth: {
+        let b = root.bezelSize;
+        if (SettingsService.edgeLightingEnabled) {
+            b = Math.max(b, SettingsService.edgeLightingThickness);
+        }
+        return b;
+    }
     property bool hasFullscreen: (Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.hasFullscreen) ? HyprlandService.isTrueFullscreen : false
     property real fsTransitionProg: hasFullscreen ? 0 : 1
     readonly property bool needsFocus: AppState.isFocusWidgetOpen && convexPanels.hasAnyDrawerOpen
@@ -125,7 +132,7 @@ PanelWindow {
             isShellReady: root.isShellReady
             barHeight: Math.round(root.animatedBarHeight)
             activeBarStyle: root.activeBarStyle
-            bezelSize: root.bezelSize
+            bezelSize: Math.round(root.effectiveBezelWidth)
             fsTransitionProg: root.fsTransitionProg
         }
 
@@ -133,10 +140,9 @@ PanelWindow {
             id: edgeLighting
 
             z: 11
-            anchors.fill: parent
-            anchors.topMargin: Math.round(root.animatedBarHeight)
+            anchors.fill: shellFrameContainer
             barHeight: Math.round(root.animatedBarHeight)
-            bezelSize: root.bezelSize
+            bezelSize: Math.round(root.effectiveBezelWidth)
             innerRadius: Constants.size4Xl
             fsTransitionProg: root.fsTransitionProg
             expandOffset: shellFrameContainer.expandOffset
@@ -230,24 +236,24 @@ PanelWindow {
         Region {
             x: 0
             y: root.barHeight * root.fsTransitionProg
-            width: root.bezelSize * root.fsTransitionProg
+            width: Math.round(root.effectiveBezelWidth * root.fsTransitionProg)
             height: root.height
         }
 
         // Right border
         Region {
-            x: root.width - (root.bezelSize * root.fsTransitionProg)
+            x: root.width - Math.round(root.effectiveBezelWidth * root.fsTransitionProg)
             y: root.barHeight * root.fsTransitionProg
-            width: root.bezelSize * root.fsTransitionProg
+            width: Math.round(root.effectiveBezelWidth * root.fsTransitionProg)
             height: root.height
         }
 
         // Bottom border
         Region {
-            x: root.bezelSize * root.fsTransitionProg
-            y: root.height - (root.bezelSize * root.fsTransitionProg)
-            width: root.width - (2 * root.bezelSize * root.fsTransitionProg)
-            height: root.bezelSize * root.fsTransitionProg
+            x: Math.round(root.effectiveBezelWidth * root.fsTransitionProg)
+            y: root.height - Math.round(root.effectiveBezelWidth * root.fsTransitionProg)
+            width: root.width - (2 * Math.round(root.effectiveBezelWidth * root.fsTransitionProg))
+            height: Math.round(root.effectiveBezelWidth * root.fsTransitionProg)
         }
 
         // Active Panels Overlay (Full Screen for Clicks/Focus)

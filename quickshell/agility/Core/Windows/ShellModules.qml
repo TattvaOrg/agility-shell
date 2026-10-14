@@ -1,9 +1,16 @@
 import QtQuick
+import qs.Core
 import qs.Core.Components
+import qs.Core.Services
+import qs.Core.Windows
 import qs.Modules.Clipboard
+import qs.Modules.ControlCenter
+import qs.Modules.Dashboard
 import qs.Modules.KeybindsCheatSheet
 import qs.Modules.Launcher
 import qs.Modules.LockScreen
+import qs.Modules.Music
+import qs.Modules.NotificationCenter
 import qs.Modules.PackageManager
 import qs.Modules.Settings
 import qs.Modules.WallpaperSelector
@@ -11,21 +18,51 @@ import qs.Modules.WallpaperSelector
 Item {
     id: root
 
-    // Bar & media sockets
+    // Bar & media popups (loaded as standalone windows when in Pill or external modes)
     WidgetLoader {
         widgetId: "dashboard"
+
+        sourceComponent: Component {
+            Dashboard {
+            }
+        }
     }
 
     WidgetLoader {
         widgetId: "controlCenter"
+
+        sourceComponent: Component {
+            ControlCenter {
+            }
+        }
     }
 
     WidgetLoader {
         widgetId: "notificationsCenter"
+
+        sourceComponent: Component {
+            SidebarWindow {
+                widgetId: "notificationsCenter"
+                isOpen: AppState.isWidgetOpen("notificationsCenter")
+                anchors.fill: parent
+                preferredHeight: 0
+                backgroundColor: Theme.bg
+                preferredWidth: 420
+
+                NotificationCenter {
+                    anchors.fill: parent
+                }
+            }
+        }
     }
 
     WidgetLoader {
         widgetId: "music"
+
+        sourceComponent: Component {
+            MiniMusicWidget {
+            }
+        }
     }
 
     // Application & drawer widgets
@@ -35,9 +72,7 @@ Item {
         sourceComponent: Component {
             Launcher {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -46,9 +81,7 @@ Item {
         sourceComponent: Component {
             Clipboard {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -57,9 +90,7 @@ Item {
         sourceComponent: Component {
             WallpaperSelector {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -78,9 +109,7 @@ Item {
         sourceComponent: Component {
             KeybindsCheatSheet {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -90,9 +119,7 @@ Item {
         sourceComponent: Component {
             Settings {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -102,13 +129,10 @@ Item {
         sourceComponent: Component {
             PackageManager {
             }
-
         }
-
     }
 
     LockScreen {
         id: lockScreen
     }
-
 }

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 import qs.Core
 import qs.Core.Components
 import qs.Core.Services
@@ -16,8 +17,19 @@ Item {
     readonly property real containerPadding: compact ? 8 : 10
     readonly property int dotHeight: compact ? 6 : 8
     readonly property int activePillWidth: compact ? 18 : 24
-    readonly property int activeWsId: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1
+
+    // Compositor detection: Niri vs Hyprland
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET") !== undefined || Quickshell.env("XDG_CURRENT_DESKTOP") === "niri"
+
+    property int niriActiveWs: 1
+    property var niriOccupiedMap: ({})
+    property int niriMaxWs: 1
+
+    readonly property int activeWsId: isNiri ? niriActiveWs : (Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1)
     readonly property int maxOccupiedWsId: {
+        if (isNiri)
+            return Math.max(niriMaxWs, niriActiveWs);
+
         let maxId = 1;
         if (Hyprland.workspaces && Hyprland.workspaces.values) {
             const list = Hyprland.workspaces.values;
@@ -37,7 +49,6 @@ Item {
 
                 if (hasWins && ws.id > maxId)
                     maxId = ws.id;
-
             }
         }
         if (Hyprland.toplevels && Hyprland.toplevels.values) {
@@ -45,19 +56,31 @@ Item {
                 const top = Hyprland.toplevels.values[j];
                 if (top && top.workspace && top.workspace.id > maxId)
                     maxId = top.workspace.id;
-
             }
         }
         return maxId;
     }
     readonly property int visibleWorkspaceCount: Math.min(10, Math.max(Math.max(activeWsId, maxOccupiedWsId) + 1, 5))
 
+    function focusWorkspace(targetId) {
+        if (targetId < 1 || targetId > 10)
+            return;
+
+        if (root.isNiri) {
+            root.niriActiveWs = targetId;
+            niriFocusProc.command = ["niri", "msg", "action", "focus-workspace", targetId.toString()];
+            niriFocusProc.running = false;
+            niriFocusProc.running = true;
+        } else {
+            Hyprland.dispatch('hl.dsp.focus({workspace=' + targetId + '})');
+        }
+    }
+
     function handleWheel(wheel) {
-        const currentId = Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1;
+        const currentId = root.activeWsId;
         const targetId = wheel.angleDelta.y > 0 ? (currentId - 1) : (currentId + 1);
         if (targetId >= 1 && targetId <= 10)
-            Hyprland.dispatch('hl.dsp.focus({workspace=' + targetId + '})');
-
+            root.focusWorkspace(targetId);
     }
 
     implicitHeight: customHeight
@@ -80,9 +103,7 @@ Item {
             ColorAnimation {
                 duration: Constants.animFast
             }
-
         }
-
     }
 
     MouseArea {
@@ -109,15 +130,17 @@ Item {
 
                 readonly property int wsId: index + 1
                 readonly property bool isVisibleSlot: wsId <= root.visibleWorkspaceCount
-                readonly property var workspace: Hyprland.workspaces.values.find((ws) => {
+                readonly property var workspace: (!root.isNiri && Hyprland.workspaces && Hyprland.workspaces.values) ? Hyprland.workspaces.values.find((ws) => {
                     return ws.id === wsId;
-                })
+                }) : null
                 readonly property bool isActive: root.activeWsId === wsId
                 readonly property bool hasActualWindows: {
+                    if (root.isNiri)
+                        return root.niriOccupiedMap[wsId] === true;
+
                     if (workspace && workspace.toplevels && workspace.toplevels.values) {
                         if (workspace.toplevels.values.length > 0)
                             return true;
-
                     }
                     if (Hyprland.toplevels && Hyprland.toplevels.values)
                         return Hyprland.toplevels.values.some((top) => {
@@ -156,7 +179,6 @@ Item {
                         ColorAnimation {
                             duration: Constants.animFast
                         }
-
                     }
 
                     Behavior on scale {
@@ -164,9 +186,7 @@ Item {
                             duration: Constants.animFast
                             easing.type: Easing.OutQuad
                         }
-
                     }
-
                 }
 
                 MouseArea {
@@ -177,7 +197,7 @@ Item {
                     height: Math.max(parent.height, 18)
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Hyprland.dispatch('hl.dsp.focus({workspace=' + wsSlot.wsId + '})')
+                    onClicked: root.focusWorkspace(wsSlot.wsId)
                     onWheel: (wheel) => {
                         return root.handleWheel(wheel);
                     }
@@ -188,31 +208,28 @@ Item {
                         duration: Constants.animNormal
                         easing.type: Easing.OutCubic
                     }
-
                 }
 
                 Behavior on opacity {
                     NumberAnimation {
                         duration: Constants.animFast
                     }
-
                 }
-
             }
-
         }
-
     }
 
+    // ─── Hyprland Event Handling ───
     Connections {
         function onRawEvent(event) {
+            if (root.isNiri)
+                return;
             if (!event || !event.name)
-                return ;
+                return;
 
             const ev = event.name;
             if (ev === "openwindow" || ev === "closewindow" || ev === "movewindowv2" || ev === "createworkspacev2" || ev === "destroyworkspacev2")
                 refreshDebounce.restart();
-
         }
 
         target: Hyprland
@@ -223,7 +240,97 @@ Item {
 
         interval: 100
         repeat: false
-        onTriggered: Hyprland.refreshWorkspaces()
+        onTriggered: {
+            if (!root.isNiri)
+                Hyprland.refreshWorkspaces();
+        }
     }
 
+    // ─── Niri IPC Engine ───
+    Process {
+        id: niriFocusProc
+    }
+
+    Process {
+        id: niriQueryProc
+
+        command: ["niri", "msg", "-j", "workspaces"]
+
+        stdout: SplitParser {
+            onRead: (data) => {
+                if (!data)
+                    return;
+                try {
+                    let list = JSON.parse(data.trim());
+                    if (!Array.isArray(list))
+                        return;
+
+                    let occMap = {};
+                    let maxIdx = 1;
+                    for (let i = 0; i < list.length; i++) {
+                        let ws = list[i];
+                        let idx = ws.idx !== undefined ? ws.idx : (i + 1);
+                        if (ws.is_active || ws.is_focused)
+                            root.niriActiveWs = idx;
+
+                        if (ws.active_window_id !== null && ws.active_window_id !== undefined)
+                            occMap[idx] = true;
+
+                        if (idx > maxIdx)
+                            maxIdx = idx;
+                    }
+                    root.niriOccupiedMap = occMap;
+                    root.niriMaxWs = maxIdx;
+                } catch (e) {
+                }
+            }
+        }
+    }
+
+    Process {
+        id: niriEventStreamProc
+
+        command: ["niri", "msg", "event-stream"]
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                if (!line)
+                    return;
+                if (line.includes("Workspace") || line.includes("Window")) {
+                    niriQueryDebounce.restart();
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: niriQueryDebounce
+
+        interval: 50
+        repeat: false
+        onTriggered: {
+            if (root.isNiri && !niriQueryProc.running)
+                niriQueryProc.running = true;
+        }
+    }
+
+    Timer {
+        id: niriPollTimer
+
+        interval: 2000
+        repeat: true
+        running: root.isNiri
+        triggeredOnStart: true
+        onTriggered: {
+            if (!niriQueryProc.running)
+                niriQueryProc.running = true;
+        }
+    }
+
+    Component.onCompleted: {
+        if (root.isNiri) {
+            niriQueryProc.running = true;
+            niriEventStreamProc.running = true;
+        }
+    }
 }

@@ -130,6 +130,7 @@ pub fn list_all_wallpapers() -> Vec<PathBuf> {
 }
 
 /// Dynamic theming and wallpaper orchestration service.
+#[derive(Clone)]
 pub struct ThemeService {
     config_dir: PathBuf,
     cache_dir: PathBuf,
@@ -297,41 +298,54 @@ impl ThemeService {
             let _ = fs::write(qs_cache.join("current_wallpaper"), &abs_str);
         }
 
-        // 1. Invoke wallpaper setter (awww / swww)
+        // 1. Instantly dispatch wallpaper setter (awww / swww) in < 5ms
         let t_type = transition_type.unwrap_or("grow");
-        let t_dur = duration.unwrap_or(0.35);
+        let t_dur = duration.unwrap_or(0.25);
         Self::dispatch_wallpaper_backend(&abs_str, t_type, t_dur);
 
-        // 2. Fast blurred wallpaper generation (<15ms)
-        let blurred_cache = self.cache_dir.join("wallpaper_blurred");
-        if let Err(e) =
-            Self::generate_blurred_wallpaper(&abs_path, &blurred_cache, DEFAULT_BLUR_RADIUS)
-        {
-            warn!("Failed to generate blurred wallpaper cache: {e:#}");
-        }
-        if let Ok(home) = std::env::var("HOME") {
-            let qs_blurred = PathBuf::from(&home).join(".cache/quickshell/wallpaper_blurred");
-            let _ = fs::copy(&blurred_cache, qs_blurred);
-        }
-
-        // 3. Extract dynamic color palette
-        let is_dark = self.is_dark();
-        let mut tokens = self
-            .extract_palette(&abs_path, is_dark)
-            .unwrap_or_else(|e| {
-                warn!("Color extraction failed ({e:#}), falling back to default theme");
-                if is_dark {
-                    ThemeTokens::dark()
-                } else {
-                    ThemeTokens::light()
-                }
-            });
-
-        tokens.active_wallpaper = abs_str;
-        tokens.is_dark = is_dark;
+        // Immediate responsive token return with new wallpaper
+        let mut tokens = self.tokens();
+        tokens.active_wallpaper = abs_str.clone();
         tokens.active_preset = "Wallpaper".to_string();
+        *self.tokens.write().unwrap() = tokens.clone();
 
-        self.apply_new_tokens(tokens)
+        // 2. Offload heavy processing (Gaussian blur thumbnail, Matugen palette extraction, template rendering)
+        // to asynchronous background worker thread so UI and callers return in < 10ms.
+        let this = self.clone();
+        let abs_path_clone = abs_path.clone();
+        let abs_str_clone = abs_str.clone();
+        std::thread::spawn(move || {
+            let blurred_cache = this.cache_dir.join("wallpaper_blurred");
+            if let Err(e) =
+                Self::generate_blurred_wallpaper(&abs_path_clone, &blurred_cache, DEFAULT_BLUR_RADIUS)
+            {
+                warn!("Failed to generate blurred wallpaper cache: {e:#}");
+            }
+            if let Ok(home) = std::env::var("HOME") {
+                let qs_blurred = PathBuf::from(&home).join(".cache/quickshell/wallpaper_blurred");
+                let _ = fs::copy(&blurred_cache, qs_blurred);
+            }
+
+            let is_dark = this.is_dark();
+            let mut extracted = this
+                .extract_palette(&abs_path_clone, is_dark)
+                .unwrap_or_else(|e| {
+                    warn!("Color extraction failed ({e:#}), falling back to default theme");
+                    if is_dark {
+                        ThemeTokens::dark()
+                    } else {
+                        ThemeTokens::light()
+                    }
+                });
+
+            extracted.active_wallpaper = abs_str_clone;
+            extracted.is_dark = is_dark;
+            extracted.active_preset = "Wallpaper".to_string();
+
+            let _ = this.apply_new_tokens(extracted);
+        });
+
+        Ok(tokens)
     }
 
     /// List all discovered wallpapers.
@@ -580,14 +594,20 @@ impl ThemeService {
         })
     }
 
-    /// Shell out to `awww` or `swww` wallpaper daemons.
+    /// Shell out to `awww` or `swww` wallpaper daemons without blocking sleep loops.
     fn dispatch_wallpaper_backend(path: &str, transition_type: &str, duration: f64) {
-        if Command::new("which")
-            .arg("awww")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
-        {
+        let dur_str = format!("{duration:.2}");
+
+        // 1. Fast path for awww
+        let has_awww = Path::new("/usr/bin/awww").exists()
+            || Path::new("/usr/local/bin/awww").exists()
+            || Command::new("which")
+                .arg("awww")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+        if has_awww {
             let is_daemon_running = Command::new("pgrep")
                 .arg("-x")
                 .arg("awww-daemon")
@@ -596,25 +616,9 @@ impl ThemeService {
                 .unwrap_or(false);
 
             if !is_daemon_running {
-                if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-                    if let Ok(entries) = fs::read_dir(runtime) {
-                        for entry in entries.flatten() {
-                            if entry.file_name().to_string_lossy().contains("awww-daemon") {
-                                let _ = fs::remove_file(entry.path());
-                            }
-                        }
-                    }
-                }
-                let _ = Command::new("sh")
-                    .args([
-                        "-c",
-                        "systemctl --user start awww-daemon.service 2>/dev/null || nohup awww-daemon >/dev/null 2>&1 &",
-                    ])
-                    .spawn();
-                std::thread::sleep(std::time::Duration::from_millis(250));
+                let _ = Command::new("awww-daemon").spawn();
             }
 
-            let dur_str = format!("{duration:.2}");
             let _ = Command::new("awww")
                 .arg("img")
                 .arg(path)
@@ -626,12 +630,16 @@ impl ThemeService {
             return;
         }
 
-        if Command::new("which")
-            .arg("swww")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
-        {
+        // 2. Fallback to swww
+        let has_swww = Path::new("/usr/bin/swww").exists()
+            || Path::new("/usr/local/bin/swww").exists()
+            || Command::new("which")
+                .arg("swww")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+        if has_swww {
             let is_daemon_running = Command::new("pgrep")
                 .arg("-x")
                 .arg("swww-daemon")
@@ -641,10 +649,8 @@ impl ThemeService {
 
             if !is_daemon_running {
                 let _ = Command::new("swww-daemon").spawn();
-                std::thread::sleep(std::time::Duration::from_millis(150));
             }
 
-            let dur_str = format!("{duration:.2}");
             let _ = Command::new("swww")
                 .arg("img")
                 .arg(path)
@@ -656,12 +662,7 @@ impl ThemeService {
             return;
         }
 
-        if Command::new("which")
-            .arg("hyprpaper")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
-        {
+        if Path::new("/usr/bin/hyprctl").exists() {
             let _ = Command::new("hyprctl")
                 .args(["hyprpaper", "wallpaper", &format!(",{}", path)])
                 .spawn();

@@ -41,7 +41,7 @@ enum Commands {
     /// Toggle specific UI overlay or surface
     Toggle {
         /// Target surface ('launcher', 'control-center', 'dashboard', 'calendar',
-        /// 'clipboard', 'weather', 'media', 'notifications', 'suits', 'applets-edit', 'wallpaper')
+        /// 'clipboard', 'weather', 'media', 'notifications', 'suits', 'applets-edit', 'wallpaper', 'edgelight')
         target: String,
     },
     /// Set or get system power profile ('balanced', 'performance', 'power-saver', 'get')
@@ -574,6 +574,7 @@ async fn handle_toggle(target: &str) -> Result<()> {
         "settings" | "minflair_settings" => toggle_widget("minflair_settings"),
         "keybinds" | "minflair_keybinds" => toggle_widget("minflair_keybinds"),
         "packages" | "packagemanager" => toggle_widget("packagemanager"),
+        "edgelight" | "edgelighting" | "edge-lighting" | "ambient" => toggle_widget("edgelight"),
         "suits" => dispatch_qs_ipc("suits", "reload", &[]),
         "osd" => dispatch_qs_ipc("osd", "volume", &["50"]),
         other => {

@@ -127,6 +127,34 @@ Item {
 
     }
 
+    property bool isSinkInputActive: false
+
+    function checkSinkInputs() {
+        sinkInputsCheckProc.running = false;
+        sinkInputsCheckProc.running = true;
+    }
+
+    Timer {
+        interval: 3000
+        repeat: true
+        running: true
+        onTriggered: audioService.checkSinkInputs()
+    }
+
+    Process {
+        id: sinkInputsCheckProc
+
+        command: ["sh", "-c", "pactl list sink-inputs short"]
+        stdout: StdioCollector {
+            id: sinkInputsOutput
+        }
+        onExited: (code) => {
+            if (code === 0) {
+                audioService.isSinkInputActive = (sinkInputsOutput.text.trim().length > 0);
+            }
+        }
+    }
+
     Process {
         id: pactlSubscribeProc
 
@@ -137,7 +165,8 @@ Item {
             onRead: (data) => {
                 if (data.includes("source") && SettingsService.settingsLoaded)
                     audioService.updateMicStatus();
-
+                if (data.includes("sink-input") || data.includes("sink"))
+                    audioService.checkSinkInputs();
             }
         }
 

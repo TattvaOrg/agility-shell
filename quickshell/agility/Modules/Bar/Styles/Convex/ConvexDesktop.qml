@@ -129,6 +129,20 @@ PanelWindow {
             fsTransitionProg: root.fsTransitionProg
         }
 
+        ConvexEdgeLighting {
+            id: edgeLighting
+
+            z: 11
+            anchors.fill: parent
+            anchors.topMargin: Math.round(root.animatedBarHeight)
+            barHeight: Math.round(root.animatedBarHeight)
+            bezelSize: root.bezelSize
+            innerRadius: Constants.size4Xl
+            fsTransitionProg: root.fsTransitionProg
+            expandOffset: shellFrameContainer.expandOffset
+            visible: SettingsService.edgeLightingEnabled && root.isConvexMode && !root.hasFullscreen
+        }
+
         Item {
             id: barContainer
 

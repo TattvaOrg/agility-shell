@@ -159,4 +159,99 @@ AppContainer {
 
     }
 
+    AppGroup {
+        title: "Ambient Edge Lighting"
+        icon: "sun"
+
+        SettingToggle {
+            label: "Enable Ambient Edge Lighting"
+            description: "Glowing perimeter beam along screen bezel (Convex bar)"
+            onCheckedChanged: {
+                if (checked !== SettingsService.edgeLightingEnabled)
+                    SettingsService.edgeLightingEnabled = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.edgeLightingEnabled
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Constants.sizeMd
+            enabled: SettingsService.edgeLightingEnabled
+            opacity: enabled ? 1 : 0.5
+
+            SettingToggle {
+                label: "Activate Only When Audio Plays"
+                description: "Lights up on music or system audio; glows idle when off"
+                onCheckedChanged: {
+                    if (checked !== SettingsService.edgeLightingAudioOnly)
+                        SettingsService.edgeLightingAudioOnly = checked;
+                }
+
+                Binding on checked {
+                    value: SettingsService.edgeLightingAudioOnly
+                }
+            }
+
+            SettingToggle {
+                label: "Dynamic Album Art Colors"
+                description: "Extract color from playing music; disable to use custom color"
+                onCheckedChanged: {
+                    let mode = checked ? "album_art" : "custom";
+                    if (mode !== SettingsService.edgeLightingColorMode)
+                        SettingsService.edgeLightingColorMode = mode;
+                }
+
+                Binding on checked {
+                    value: SettingsService.edgeLightingColorMode === "album_art"
+                }
+            }
+
+            SettingSpinBox {
+                label: "Rotation Speed"
+                description: "Speed of traveling light beam around the screen"
+                from: 0.2
+                to: 3.0
+                stepSize: 0.2
+                value: SettingsService.edgeLightingSpeed
+                defaultValue: 1.0
+                decimals: 1
+                suffix: "x"
+                onMoved: (val) => {
+                    SettingsService.edgeLightingSpeed = Number(val.toFixed(1));
+                }
+            }
+
+            SettingSpinBox {
+                label: "Beam Length"
+                description: "Length of the glowing comet arc along perimeter"
+                from: 10
+                to: 100
+                stepSize: 5
+                value: SettingsService.edgeLightingLength
+                defaultValue: 25
+                suffix: "%"
+                onMoved: (val) => {
+                    SettingsService.edgeLightingLength = Math.round(val);
+                }
+            }
+
+            SettingSpinBox {
+                label: "Glow Spread & Bloom"
+                description: "Softness and radius of ambient rim light"
+                from: 2
+                to: 24
+                stepSize: 1
+                value: SettingsService.edgeLightingGlow
+                defaultValue: 12
+                suffix: "px"
+                onMoved: (val) => {
+                    SettingsService.edgeLightingGlow = Math.round(val);
+                }
+            }
+        }
+    }
+
 }

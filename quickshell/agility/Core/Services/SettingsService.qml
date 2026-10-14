@@ -31,6 +31,14 @@ Item {
     property bool barPillMode: barStyle === "pill"
     property string islandRightMode: "auto"
     readonly property int barWidgetHeight: 28
+    property bool edgeLightingEnabled: true
+    property string edgeLightingColorMode: "album_art"
+    property color edgeLightingCustomColor: Theme.accent
+    property real edgeLightingSpeed: 1.0
+    property real edgeLightingLength: 25.0
+    property real edgeLightingThickness: 4.0
+    property real edgeLightingGlow: 12.0
+    property bool edgeLightingAudioOnly: true
     property var actionShortcuts: [
         {"id": "launcher", "title": "Open Launcher", "key": "Mod+Space", "cmd": ["agl", "toggle", "launcher"]},
         {"id": "settings", "title": "Open Settings", "key": "Mod+S", "cmd": ["agl", "toggle", "settings"]},
@@ -39,7 +47,8 @@ Item {
         {"id": "wallpaper", "title": "Wallpaper Gallery", "key": "Mod+Shift+W", "cmd": ["agl", "toggle", "WallpaperPicker"]},
         {"id": "clipboard", "title": "Clipboard History", "key": "Mod+V", "cmd": ["agl", "toggle", "clipboard"]},
         {"id": "screenshot", "title": "Screenshot Tool", "key": "Mod+Shift+S", "cmd": ["agl", "toggle", "screenshot"]},
-        {"id": "powerMenu", "title": "Power Menu", "key": "Mod+Shift+E", "cmd": ["agl", "toggle", "power"]}
+        {"id": "powerMenu", "title": "Power Menu", "key": "Mod+Shift+E", "cmd": ["agl", "toggle", "power"]},
+        {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]}
     ]
     property var customShortcuts: []
 
@@ -171,6 +180,14 @@ Item {
             saveSettings();
 
     }
+    onEdgeLightingEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingColorModeChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingCustomColorChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingSpeedChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingLengthChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingThicknessChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingGlowChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingAudioOnlyChanged: { if (settingsLoaded) saveSettings(); }
 
     Timer {
         id: saveTimer
@@ -219,7 +236,15 @@ Item {
                 "barStyle": settingsService.barStyle,
                 "islandRightMode": settingsService.islandRightMode,
                 "actionShortcuts": settingsService.actionShortcuts,
-                "customShortcuts": settingsService.customShortcuts
+                "customShortcuts": settingsService.customShortcuts,
+                "edgeLightingEnabled": settingsService.edgeLightingEnabled,
+                "edgeLightingColorMode": settingsService.edgeLightingColorMode,
+                "edgeLightingCustomColor": settingsService.edgeLightingCustomColor.toString(),
+                "edgeLightingSpeed": settingsService.edgeLightingSpeed,
+                "edgeLightingLength": settingsService.edgeLightingLength,
+                "edgeLightingThickness": settingsService.edgeLightingThickness,
+                "edgeLightingGlow": settingsService.edgeLightingGlow,
+                "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly
             };
             syncShortcuts();
             settingsSaver.command = ["sh", "-c", "mkdir -p ~/.cache/quickshell /var/tmp/sddm-theme && cat << 'EOF' > ~/.cache/quickshell/settings_prefs.json
@@ -381,6 +406,23 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.customShortcuts !== undefined)
                             settingsService.customShortcuts = prefs.customShortcuts;
+
+                        if (prefs.edgeLightingEnabled !== undefined)
+                            settingsService.edgeLightingEnabled = prefs.edgeLightingEnabled;
+                        if (prefs.edgeLightingColorMode !== undefined)
+                            settingsService.edgeLightingColorMode = prefs.edgeLightingColorMode;
+                        if (prefs.edgeLightingCustomColor !== undefined)
+                            settingsService.edgeLightingCustomColor = prefs.edgeLightingCustomColor;
+                        if (prefs.edgeLightingSpeed !== undefined)
+                            settingsService.edgeLightingSpeed = prefs.edgeLightingSpeed;
+                        if (prefs.edgeLightingLength !== undefined)
+                            settingsService.edgeLightingLength = prefs.edgeLightingLength;
+                        if (prefs.edgeLightingThickness !== undefined)
+                            settingsService.edgeLightingThickness = prefs.edgeLightingThickness;
+                        if (prefs.edgeLightingGlow !== undefined)
+                            settingsService.edgeLightingGlow = prefs.edgeLightingGlow;
+                        if (prefs.edgeLightingAudioOnly !== undefined)
+                            settingsService.edgeLightingAudioOnly = prefs.edgeLightingAudioOnly;
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);

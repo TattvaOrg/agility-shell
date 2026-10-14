@@ -17,18 +17,46 @@ ShellRoot {
 
     IpcHandler {
         function toggle(widgetId: string) {
+            if (widgetId === "edgelight" || widgetId === "edgelighting") {
+                SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
+                return;
+            }
             AppState.toggleWidget(widgetId);
         }
 
         function open(widgetId: string) {
+            if (widgetId === "edgelight" || widgetId === "edgelighting") {
+                SettingsService.edgeLightingEnabled = true;
+                return;
+            }
             AppState.openWidget(widgetId);
         }
 
         function close(widgetId: string) {
+            if (widgetId === "edgelight" || widgetId === "edgelighting") {
+                SettingsService.edgeLightingEnabled = false;
+                return;
+            }
             AppState.closeWidget(widgetId);
         }
 
         target: "widgets"
+    }
+
+    SocketServer {
+        id: edgelightServer
+        path: "/tmp/quickshell_edgelight"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
     }
 
     NotificationService {

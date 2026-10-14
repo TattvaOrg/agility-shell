@@ -45,6 +45,10 @@ QtObject {
     function applyWallpaper(rawPath) {
         if (!rawPath)
             return;
+        if (HyprlandService.wpAutoShuffle) {
+            HyprlandService.wpAutoShuffle = false;
+            SettingsService.saveSettings();
+        }
         wallpaperApplyProc.running = false;
         let cmd = ["agl", "wallpaper", rawPath];
         if (enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) {
@@ -59,6 +63,8 @@ QtObject {
     }
 
     function shuffle() {
+        if (!root.autoShuffle)
+            return;
         randomWallpaperProc.running = false;
         randomWallpaperProc.running = true;
     }
@@ -68,10 +74,13 @@ QtObject {
     }
 
     shuffleTimer: Timer {
-        interval: root.shuffleInterval * 60000
+        interval: Math.max(1, root.shuffleInterval) * 60000
         running: root.autoShuffle
         repeat: true
-        onTriggered: root.shuffle()
+        onTriggered: {
+            if (root.autoShuffle)
+                root.shuffle();
+        }
     }
 
     wallpaperApplyProc: Process {

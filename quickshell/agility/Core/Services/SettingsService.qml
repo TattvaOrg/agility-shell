@@ -38,7 +38,7 @@ Item {
     property real edgeLightingLength: 25.0
     property real edgeLightingThickness: 12.0
     property real edgeLightingGlow: 16.0
-    property bool edgeLightingAudioOnly: true
+    property bool edgeLightingAudioOnly: false
     property string edgeLightingDirection: "clockwise"
     property var actionShortcuts: [
         {"id": "launcher", "title": "Open Launcher", "key": "Mod+Space", "cmd": ["agl", "toggle", "launcher"]},

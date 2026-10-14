@@ -139,8 +139,8 @@ PanelWindow {
         ConvexEdgeLighting {
             id: edgeLighting
 
-            z: 11
-            anchors.fill: shellFrameContainer
+            z: 21
+            anchors.fill: parent
             barHeight: Math.round(root.animatedBarHeight)
             bezelSize: Math.round(root.effectiveBezelWidth)
             innerRadius: Constants.size4Xl

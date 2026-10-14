@@ -12,18 +12,21 @@ import qs.Modules.LockScreen
 import qs.Modules.Music
 import qs.Modules.NotificationCenter
 import qs.Modules.PackageManager
+import qs.Modules.PowerMenu
 import qs.Modules.Settings
 import qs.Modules.WallpaperSelector
 
 Item {
     id: root
 
+    property var notificationService: null
+
     // Bar & media popups (loaded as standalone windows when in Pill or external modes)
     WidgetLoader {
         widgetId: "dashboard"
 
         sourceComponent: Component {
-            Dashboard {
+            DashboardWindow {
             }
         }
     }
@@ -32,7 +35,8 @@ Item {
         widgetId: "controlCenter"
 
         sourceComponent: Component {
-            ControlCenter {
+            ControlCenterWindow {
+                notificationService: root.notificationService
             }
         }
     }
@@ -41,17 +45,8 @@ Item {
         widgetId: "notificationsCenter"
 
         sourceComponent: Component {
-            SidebarWindow {
-                widgetId: "notificationsCenter"
-                isOpen: AppState.isWidgetOpen("notificationsCenter")
-                anchors.fill: parent
-                preferredHeight: 0
-                backgroundColor: Theme.bg
-                preferredWidth: 420
-
-                NotificationCenter {
-                    anchors.fill: parent
-                }
+            NotificationCenterWindow {
+                notificationService: root.notificationService
             }
         }
     }
@@ -99,6 +94,11 @@ Item {
 
     WidgetLoader {
         widgetId: "powerMenu"
+
+        sourceComponent: Component {
+            PowerMenu {
+            }
+        }
     }
 
     // Standalone application windows

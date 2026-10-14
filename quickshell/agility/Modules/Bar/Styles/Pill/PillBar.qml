@@ -70,17 +70,9 @@ Item {
             anchors.centerIn: parent
             spacing: Constants.sizeSm
 
-            // Left Navigation (Material 3 Dashboard, App Launcher, Compositor Workspaces)
+            // Left Navigation (Material 3 Dashboard, Compositor Workspaces)
             MinflairButton {
                 id: minflairBtn
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            BarButton {
-                id: appMenuBtn
-                widgetId: "launcher"
-                icon: "apps"
-                iconSize: Constants.sizeLg
                 Layout.alignment: Qt.AlignVCenter
             }
 

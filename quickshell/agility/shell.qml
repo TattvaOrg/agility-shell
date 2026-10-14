@@ -103,6 +103,7 @@ ShellRoot {
 
     ShellModules {
         id: shellModules
+        notificationService: globalNotificationService
     }
 
 }

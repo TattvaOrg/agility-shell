@@ -204,6 +204,15 @@ PanelWindow {
 
     }
 
+    Component {
+        id: floatingComponent
+
+        FloatingOverlayStyle {
+            widget: root
+        }
+
+    }
+
     mask: Region {
         Region {
             x: (root.isOpen && root.windowFocusable) ? 0 : ((root._windowVisible || (styleLoader.item && styleLoader.item.isHandover)) ? (styleLoader.item ? styleLoader.item.container.x : 0) : 0)

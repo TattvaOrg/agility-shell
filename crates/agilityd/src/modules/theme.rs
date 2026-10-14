@@ -316,9 +316,11 @@ impl ThemeService {
         let abs_str_clone = abs_str.clone();
         std::thread::spawn(move || {
             let blurred_cache = this.cache_dir.join("wallpaper_blurred");
-            if let Err(e) =
-                Self::generate_blurred_wallpaper(&abs_path_clone, &blurred_cache, DEFAULT_BLUR_RADIUS)
-            {
+            if let Err(e) = Self::generate_blurred_wallpaper(
+                &abs_path_clone,
+                &blurred_cache,
+                DEFAULT_BLUR_RADIUS,
+            ) {
                 warn!("Failed to generate blurred wallpaper cache: {e:#}");
             }
             if let Ok(home) = std::env::var("HOME") {

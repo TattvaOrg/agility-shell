@@ -15,11 +15,13 @@ Rectangle {
     property bool isScanning: false
     property bool timedOut: false
     property bool isVisible: true
+    property string passwordPromptSsid: ""
     readonly property var savedList: {
         let res = [];
         for (let i = 0; i < root.wifiList.length; i++) {
-            if (root.wifiList[i].saved || root.wifiList[i].active)
-                res.push(root.wifiList[i]);
+            let item = root.wifiList[i];
+            if (item.saved || item.active || item.in_use)
+                res.push(item);
 
         }
         return res;
@@ -27,14 +29,15 @@ Rectangle {
     readonly property var availableList: {
         let res = [];
         for (let i = 0; i < root.wifiList.length; i++) {
-            if (!root.wifiList[i].saved && !root.wifiList[i].active)
-                res.push(root.wifiList[i]);
+            let item = root.wifiList[i];
+            if (!item.saved && !item.active && !item.in_use)
+                res.push(item);
 
         }
         return res;
     }
 
-    signal connect(string ssid)
+    signal connect(string ssid, string password)
     signal refreshRequested()
 
     function getWifiIcon(signal) {
@@ -156,11 +159,11 @@ Rectangle {
                             Layout.fillWidth: true
                             width: parent.width
                             titleText: modelData.ssid
-                            subtitleText: modelData.active ? ("Connected • " + (modelData.signal > 75 ? "Excellent signal" : (modelData.signal > 50 ? "Good signal" : "Weak signal"))) : (modelData.signal > 75 ? "Excellent signal" : (modelData.signal > 50 ? "Good signal" : "Weak signal"))
-                            iconName: root.getWifiIcon(modelData.signal)
-                            isActive: modelData.active
+                            subtitleText: (modelData.active || modelData.in_use) ? ("Connected • " + ((modelData.signal || modelData.strength) > 75 ? "Excellent signal" : ((modelData.signal || modelData.strength) > 50 ? "Good signal" : "Weak signal"))) : ((modelData.signal || modelData.strength) > 75 ? "Excellent signal" : ((modelData.signal || modelData.strength) > 50 ? "Good signal" : "Weak signal"))
+                            iconName: root.getWifiIcon(modelData.signal || modelData.strength)
+                            isActive: modelData.active || modelData.in_use
                             canForget: true
-                            onClicked: root.connect(modelData.ssid)
+                            onClicked: root.connect(modelData.ssid, "")
                             onActionClicked: {
                                 settingsProc.running = true;
                             }
@@ -197,14 +200,96 @@ Rectangle {
                     Repeater {
                         model: root.availableList
 
-                        ControlCenterListDelegate {
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            width: parent.width
-                            titleText: modelData.ssid
-                            subtitleText: modelData.signal > 75 ? "Excellent signal" : (modelData.signal > 50 ? "Good signal" : "Weak signal")
-                            iconName: root.getWifiIcon(modelData.signal)
-                            isActive: false
-                            onClicked: root.connect(modelData.ssid)
+                            spacing: Constants.size2Xs
+
+                            ControlCenterListDelegate {
+                                Layout.fillWidth: true
+                                width: parent.width
+                                titleText: modelData.ssid
+                                subtitleText: (modelData.security && modelData.security !== "--" && modelData.security !== "none") ? ("Secured (" + modelData.security + ")") : ((modelData.signal || modelData.strength) > 75 ? "Excellent signal" : ((modelData.signal || modelData.strength) > 50 ? "Good signal" : "Weak signal"))
+                                iconName: root.getWifiIcon(modelData.signal || modelData.strength)
+                                isActive: false
+                                onClicked: {
+                                    if (modelData.security && modelData.security !== "--" && modelData.security !== "none") {
+                                        root.passwordPromptSsid = (root.passwordPromptSsid === modelData.ssid) ? "" : modelData.ssid;
+                                    } else {
+                                        root.connect(modelData.ssid, "");
+                                    }
+                                }
+                            }
+
+                            // Inline password card for secured network
+                            Rectangle {
+                                visible: root.passwordPromptSsid === modelData.ssid
+                                Layout.fillWidth: true
+                                implicitHeight: 46
+                                radius: Constants.sizeSm
+                                color: Theme.bgSecondary
+                                border.width: 1
+                                border.color: Theme.accent
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: Constants.sizeSm
+                                    anchors.rightMargin: Constants.sizeSm
+                                    spacing: Constants.sizeSm
+
+                                    TextField {
+                                        id: pwField
+                                        Layout.fillWidth: true
+                                        placeholderText: "Enter Wi-Fi Password"
+                                        echoMode: TextInput.Password
+                                        color: Theme.fg
+                                        placeholderTextColor: Theme.muted
+                                        background: null
+                                        font.pixelSize: Constants.sizeSm
+                                        onAccepted: {
+                                            if (text.length > 0) {
+                                                root.connect(modelData.ssid, text);
+                                                root.passwordPromptSsid = "";
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        implicitWidth: 64
+                                        implicitHeight: 28
+                                        radius: Constants.sizeXs
+                                        color: pwField.text.length > 0 ? Theme.accent : Theme.bgTertiary
+                                        Layout.alignment: Qt.AlignVCenter
+
+                                        ThemedText {
+                                            anchors.centerIn: parent
+                                            text: "Join"
+                                            customSize: Constants.sizeXs + 2
+                                            font.bold: true
+                                            color: pwField.text.length > 0 ? Theme.bg : Theme.muted
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                if (pwField.text.length > 0) {
+                                                    root.connect(modelData.ssid, pwField.text);
+                                                    root.passwordPromptSsid = "";
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    SvgIconButton {
+                                        icon: "x"
+                                        iconSize: Constants.sizeSm
+                                        flat: true
+                                        onClicked: {
+                                            root.passwordPromptSsid = "";
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                     }

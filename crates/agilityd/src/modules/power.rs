@@ -154,10 +154,12 @@ impl PowerService {
 
         if active {
             self.stop_idle_monitor();
+            let _ = Command::new("pkill").args(["-STOP", "swayidle"]).status();
             self.spawn_caffeine_inhibit();
             info!("Caffeine idle inhibitor enabled.");
         } else {
             kill_child(&self.inhibit_child);
+            let _ = Command::new("pkill").args(["-CONT", "swayidle"]).status();
             self.start_idle_monitor();
             info!("Caffeine idle inhibitor disabled.");
         }

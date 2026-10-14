@@ -25,11 +25,10 @@ Item {
 
     function applyNightLight(state) {
         if (state) {
-            nightLightProc.command = ["hyprsunset", "-t", displayProfileService.nightLightTemperature.toString()];
+            nightLightProc.command = ["python3", Quickshell.shellDir + "/Core/Services/scripts/night_light.py", displayProfileService.nightLightTemperature.toString()];
             nightLightProc.running = false;
             nightLightProc.running = true;
         } else {
-            nightLightProc.running = false;
             pkillSunsetProc.running = false;
             pkillSunsetProc.running = true;
         }
@@ -37,9 +36,14 @@ Item {
 
     function applyCaffeine(state) {
         caffeineProc.running = false;
-        if (state)
+        if (state) {
+            pauseSwayidleProc.running = false;
+            pauseSwayidleProc.running = true;
             caffeineProc.running = true;
-
+        } else {
+            resumeSwayidleProc.running = false;
+            resumeSwayidleProc.running = true;
+        }
     }
 
     function applyGameMode(enable) {
@@ -158,13 +162,24 @@ Item {
     Process {
         id: pkillSunsetProc
 
-        command: ["pkill", "hyprsunset"]
+        command: ["python3", Quickshell.shellDir + "/Core/Services/scripts/night_light.py", "revert"]
     }
 
     Process {
         id: caffeineProc
 
-        command: ["systemd-inhibit", "--what=idle", "--who=quickshell", "--why=Keep screen active", "--mode=block", "sleep", "infinity"]
+        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=quickshell", "--why=Keep screen and system active", "--mode=block", "sleep", "infinity"]
     }
 
+    Process {
+        id: pauseSwayidleProc
+
+        command: ["pkill", "-STOP", "swayidle"]
+    }
+
+    Process {
+        id: resumeSwayidleProc
+
+        command: ["pkill", "-CONT", "swayidle"]
+    }
 }

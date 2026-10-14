@@ -247,8 +247,8 @@ Item {
                 isActive: wifiControl.isActive
                 wifiList: wifiControl.wifiList
                 isScanning: wifiControl.isScanning
-                onConnect: (ssid) => {
-                    return wifiControl.connect(ssid);
+                onConnect: (ssid, password) => {
+                    return wifiControl.connect(ssid, password);
                 }
                 onRefreshRequested: {
                     wifiControl.scan(true);

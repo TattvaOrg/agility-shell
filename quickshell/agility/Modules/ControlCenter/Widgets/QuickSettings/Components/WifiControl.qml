@@ -38,8 +38,12 @@ QuickSettingsTile {
         wifiScanProc.running = true;
     }
 
-    function connect(ssid) {
-        wifiConnectProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "connect", ssid];
+    function connect(ssid, password) {
+        let cmd = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "connect", ssid];
+        if (password) {
+            cmd.push(password);
+        }
+        wifiConnectProc.command = cmd;
         wifiConnectProc.running = true;
     }
 

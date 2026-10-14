@@ -1980,29 +1980,14 @@ async fn apply_cli_wallpaper(
 
     // Ensure awww-daemon is running
     if is_command_available("awww-daemon") && get_process_pid("awww-daemon").is_none() {
-        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-            if let Ok(entries) = fs::read_dir(runtime) {
-                for entry in entries.flatten() {
-                    if entry.file_name().to_string_lossy().contains("awww-daemon") {
-                        let _ = fs::remove_file(entry.path());
-                    }
-                }
-            }
-        }
-        let _ = Command::new("sh")
-            .args([
-                "-c",
-                "systemctl --user start awww-daemon.service 2>/dev/null || nohup awww-daemon >/dev/null 2>&1 &",
-            ])
-            .spawn();
-        tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
+        let _ = Command::new("awww-daemon").spawn();
     }
 
     // Dispatch awww img
     if is_command_available("awww") {
         let mut cmd = Command::new("awww");
         cmd.args(["img", &abs_str, "--resize", "crop"]);
-        let _ = cmd.status();
+        let _ = cmd.spawn();
     }
 
     // Write caches

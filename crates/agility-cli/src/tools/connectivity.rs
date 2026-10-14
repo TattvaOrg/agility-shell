@@ -155,7 +155,9 @@ pub struct WifiStatus {
 pub struct WifiNetwork {
     pub ssid: String,
     pub in_use: bool,
+    pub active: bool,
     pub strength: u8,
+    pub signal: u8,
     pub security: String,
     pub saved: bool,
 }
@@ -232,6 +234,26 @@ pub fn get_wifi_status() -> WifiStatus {
 }
 
 pub fn get_wifi_networks() -> Vec<WifiNetwork> {
+    // 1. Discover saved WiFi connections from NetworkManager
+    let saved_out = Command::new("nmcli")
+        .args(["-t", "-f", "NAME,TYPE", "connection", "show"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_default();
+
+    let mut saved_ssids = std::collections::HashSet::new();
+    for line in saved_out.lines() {
+        let parts: Vec<&str> = line.split(':').collect();
+        if parts.len() >= 2
+            && (parts[1].contains("wireless")
+                || parts[1].contains("wifi")
+                || parts[1] == "802-11-wireless")
+        {
+            saved_ssids.insert(parts[0].trim().to_string());
+        }
+    }
+
     let out = Command::new("nmcli")
         .args([
             "-t",
@@ -247,6 +269,7 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
         .unwrap_or_default();
 
     let mut networks = Vec::new();
+    let mut seen_ssids = std::collections::HashSet::new();
     for line in out.lines() {
         let parts: Vec<&str> = line.split(':').collect();
         if parts.len() >= 4 {
@@ -255,15 +278,22 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
             if ssid.is_empty() || ssid == "--" {
                 continue;
             }
+            if seen_ssids.contains(&ssid) {
+                continue;
+            }
+            seen_ssids.insert(ssid.clone());
             let strength = parts[2].trim().parse::<u8>().unwrap_or(0);
             let security = parts[3].trim().to_string();
+            let saved = saved_ssids.contains(&ssid) || in_use;
 
             networks.push(WifiNetwork {
                 ssid,
                 in_use,
+                active: in_use,
                 strength,
+                signal: strength,
                 security,
-                saved: false,
+                saved,
             });
         }
     }
@@ -271,6 +301,7 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
     networks.sort_by(|a, b| {
         b.in_use
             .cmp(&a.in_use)
+            .then_with(|| b.saved.cmp(&a.saved))
             .then_with(|| b.strength.cmp(&a.strength))
     });
     networks
@@ -299,9 +330,14 @@ pub fn run_wifi(args: &[String]) -> i32 {
         }
         "connect" => {
             if let Some(ssid) = args.get(1) {
-                let status = Command::new("nmcli")
-                    .args(["device", "wifi", "connect", ssid])
-                    .status();
+                let mut cmd = Command::new("nmcli");
+                cmd.args(["device", "wifi", "connect", ssid]);
+                if let Some(pw) = args.get(2) {
+                    if !pw.is_empty() {
+                        cmd.args(["password", pw]);
+                    }
+                }
+                let status = cmd.status();
                 if status.map(|s| s.success()).unwrap_or(false) {
                     0
                 } else {

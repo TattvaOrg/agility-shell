@@ -1,31 +1,63 @@
 import QtQuick
+import qs.Core
 import qs.Core.Components
+import qs.Core.Services
+import qs.Core.Windows
 import qs.Modules.Clipboard
+import qs.Modules.ControlCenter
+import qs.Modules.Dashboard
 import qs.Modules.KeybindsCheatSheet
 import qs.Modules.Launcher
 import qs.Modules.LockScreen
+import qs.Modules.Music
+import qs.Modules.NotificationCenter
 import qs.Modules.PackageManager
+import qs.Modules.PowerMenu
 import qs.Modules.Settings
 import qs.Modules.WallpaperSelector
 
 Item {
     id: root
 
-    // Bar & media sockets
+    property var notificationService: null
+
+    // Bar & media popups (loaded as standalone windows when in Pill or external modes)
     WidgetLoader {
         widgetId: "dashboard"
+
+        sourceComponent: Component {
+            DashboardWindow {
+            }
+        }
     }
 
     WidgetLoader {
         widgetId: "controlCenter"
+
+        sourceComponent: Component {
+            ControlCenterWindow {
+                notificationService: root.notificationService
+            }
+        }
     }
 
     WidgetLoader {
         widgetId: "notificationsCenter"
+
+        sourceComponent: Component {
+            NotificationCenterWindow {
+                notificationService: root.notificationService
+            }
+        }
     }
 
     WidgetLoader {
         widgetId: "music"
+
+        sourceComponent: Component {
+            MiniMusicWidget {
+            }
+        }
     }
 
     // Application & drawer widgets
@@ -35,9 +67,7 @@ Item {
         sourceComponent: Component {
             Launcher {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -46,9 +76,7 @@ Item {
         sourceComponent: Component {
             Clipboard {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -57,9 +85,7 @@ Item {
         sourceComponent: Component {
             WallpaperSelector {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -68,6 +94,11 @@ Item {
 
     WidgetLoader {
         widgetId: "powerMenu"
+
+        sourceComponent: Component {
+            PowerMenu {
+            }
+        }
     }
 
     // Standalone application windows
@@ -78,9 +109,7 @@ Item {
         sourceComponent: Component {
             KeybindsCheatSheet {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -90,9 +119,7 @@ Item {
         sourceComponent: Component {
             Settings {
             }
-
         }
-
     }
 
     WidgetLoader {
@@ -102,13 +129,10 @@ Item {
         sourceComponent: Component {
             PackageManager {
             }
-
         }
-
     }
 
     LockScreen {
         id: lockScreen
     }
-
 }

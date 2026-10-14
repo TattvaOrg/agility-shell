@@ -1,3 +1,4 @@
+import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Layouts
 import qs.Core
@@ -35,6 +36,7 @@ Item {
     anchors.left: parent.left
     anchors.right: parent.right
     height: root.baseBarHeight
+    implicitWidth: pillContainer.implicitWidth
 
     function close() {
     }
@@ -45,11 +47,22 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         height: root.baseBarHeight
-        implicitWidth: contentRow.implicitWidth + (Constants.sizeLg * 2)
+        width: Math.max(contentRow.implicitWidth + (Constants.sizeLg * 2), 480)
+        implicitWidth: width
         radius: height / 2
         color: Theme.bg
         border.color: Theme.borderSecondary
         border.width: 1
+
+        layer.enabled: true
+        layer.effect: DropShadow {
+            transparentBorder: true
+            color: Theme.shadow
+            radius: Constants.sizeSm
+            samples: 12
+            verticalOffset: 2
+            horizontalOffset: 0
+        }
 
         RowLayout {
             id: contentRow
@@ -57,17 +70,9 @@ Item {
             anchors.centerIn: parent
             spacing: Constants.sizeSm
 
-            // Left Section (Material 3 Star button, Launcher, Workspaces)
+            // Left Navigation (Material 3 Dashboard, Compositor Workspaces)
             MinflairButton {
                 id: minflairBtn
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            BarButton {
-                id: appMenuBtn
-                widgetId: "launcher"
-                icon: "apps"
-                iconSize: Constants.sizeLg
                 Layout.alignment: Qt.AlignVCenter
             }
 
@@ -77,7 +82,7 @@ Item {
                 visible: true
             }
 
-            // Subtle Divider
+            // Subtle Visual Divider
             Rectangle {
                 width: 1
                 height: 16
@@ -86,7 +91,7 @@ Item {
                 opacity: 0.6
             }
 
-            // Center Section (Clock & Media)
+            // Center (Clock & Live Playing Media)
             ClockButton {
                 id: clockBtn
                 Layout.alignment: Qt.AlignVCenter
@@ -97,7 +102,7 @@ Item {
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            // Subtle Divider
+            // Subtle Visual Divider
             Rectangle {
                 width: 1
                 height: 16
@@ -106,7 +111,7 @@ Item {
                 opacity: 0.6
             }
 
-            // Right Section (Recording, Tray, CC, Notif, Power)
+            // Right Quick Controls (Recording, Tray, QuickSettings, Notifications, Power)
             RecordingIndicator {
                 id: recIndicator
                 Layout.alignment: Qt.AlignVCenter

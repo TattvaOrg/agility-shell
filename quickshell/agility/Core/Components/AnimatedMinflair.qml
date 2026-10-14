@@ -13,10 +13,8 @@ Item {
     property bool enableIntroAnim: true
     property bool enableIntervalAnim: true
 
-    // Material 3 Expressive 4-pointed curved star ("auto_awesome" / Gemini sparkle)
-    readonly property string m3StarPath: "M 12 2 C 12 7.52 7.52 12 2 12 C 7.52 12 12 16.48 12 22 C 12 16.48 16.48 12 22 12 C 16.48 12 12 7.52 12 2 Z"
-    // Companion mini-sparkle
-    readonly property string m3MiniStarPath: "M 19 2.5 C 19 4.4 17.4 6 15.5 6 C 17.4 6 19 7.6 19 9.5 C 19 7.6 20.6 6 22.5 6 C 20.6 6 19 4.4 19 2.5 Z"
+    // Official Google Material Theme 'space_dashboard' (2x2 asymmetric rounded tiles)
+    readonly property string m3DashboardPath: "M 3 5 C 3 3.9 3.9 3 5 3 L 9 3 C 10.1 3 11 3.9 11 5 L 11 11 C 11 12.1 10.1 13 9 13 L 5 13 C 3.9 13 3 12.1 3 11 Z M 3 17 C 3 15.9 3.9 15 5 15 L 9 15 C 10.1 15 11 15.9 11 17 L 11 19 C 11 20.1 10.1 21 9 21 L 5 21 C 3.9 21 3 20.1 3 19 Z M 13 5 C 13 3.9 13.9 3 15 3 L 19 3 C 20.1 3 21 3.9 21 5 L 21 19 C 21 20.1 20.1 21 19 21 L 15 21 C 13.9 21 13 20.1 13 19 Z"
 
     width: scaledIconSize
     height: scaledIconSize
@@ -25,7 +23,7 @@ Item {
     layer.enabled: HyprlandService.hyprShadow && !DisplayProfileService.gameModeActive && (SystemInfoService.powerProfile !== "power-saver")
 
     Item {
-        id: starContainer
+        id: iconContainer
 
         width: 24
         height: 24
@@ -33,9 +31,8 @@ Item {
         anchors.centerIn: parent
         enabled: false
 
-        // Main M3 4-pointed sparkle
         Item {
-            id: mainStarShape
+            id: dashboardShape
 
             width: 24
             height: 24
@@ -52,33 +49,7 @@ Item {
                     strokeWidth: 0
 
                     PathSvg {
-                        path: root.m3StarPath
-                    }
-                }
-            }
-        }
-
-        // Companion secondary mini-sparkle (top right)
-        Item {
-            id: companionStarShape
-
-            width: 24
-            height: 24
-            anchors.centerIn: parent
-            transformOrigin: Item.Center
-            opacity: 0.85
-
-            Shape {
-                anchors.fill: parent
-                preferredRendererType: Shape.CurveRenderer
-
-                ShapePath {
-                    fillColor: root.iconColor
-                    strokeColor: "transparent"
-                    strokeWidth: 0
-
-                    PathSvg {
-                        path: root.m3MiniStarPath
+                        path: root.m3DashboardPath
                     }
                 }
             }
@@ -91,13 +62,7 @@ Item {
             running: HyprlandService.enableAnimations && root.enableIntroAnim
 
             PropertyAction {
-                target: mainStarShape
-                property: "scale"
-                value: 0
-            }
-
-            PropertyAction {
-                target: companionStarShape
+                target: dashboardShape
                 property: "scale"
                 value: 0
             }
@@ -106,34 +71,17 @@ Item {
                 duration: 50
             }
 
-            ParallelAnimation {
-                NumberAnimation {
-                    target: mainStarShape
-                    property: "scale"
-                    to: 1
-                    duration: Constants.animExpressive + 200
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.15
-                }
-
-                SequentialAnimation {
-                    PauseAnimation {
-                        duration: 120
-                    }
-
-                    NumberAnimation {
-                        target: companionStarShape
-                        property: "scale"
-                        to: 1
-                        duration: Constants.animExpressive
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 1.2
-                    }
-                }
+            NumberAnimation {
+                target: dashboardShape
+                property: "scale"
+                to: 1
+                duration: Constants.animExpressive + 100
+                easing.type: Easing.OutBack
+                easing.overshoot: 1.15
             }
         }
 
-        // Idle micro-animation
+        // Idle gentle micro-animation
         SequentialAnimation {
             id: intervalAnim
 
@@ -141,58 +89,24 @@ Item {
             loops: Animation.Infinite
 
             PauseAnimation {
-                duration: 4500
+                duration: 5000
             }
 
-            ParallelAnimation {
-                SequentialAnimation {
-                    NumberAnimation {
-                        target: mainStarShape
-                        property: "scale"
-                        to: 1.08
-                        duration: 350
-                        easing.type: Easing.OutQuad
-                    }
-
-                    NumberAnimation {
-                        target: mainStarShape
-                        property: "scale"
-                        to: 1.0
-                        duration: 450
-                        easing.type: Easing.InOutQuad
-                    }
+            SequentialAnimation {
+                NumberAnimation {
+                    target: dashboardShape
+                    property: "scale"
+                    to: 1.08
+                    duration: 250
+                    easing.type: Easing.OutQuad
                 }
 
-                SequentialAnimation {
-                    NumberAnimation {
-                        target: companionStarShape
-                        property: "opacity"
-                        to: 1.0
-                        duration: 300
-                    }
-
-                    NumberAnimation {
-                        target: companionStarShape
-                        property: "scale"
-                        to: 1.18
-                        duration: 350
-                        easing.type: Easing.OutBack
-                    }
-
-                    NumberAnimation {
-                        target: companionStarShape
-                        property: "scale"
-                        to: 1.0
-                        duration: 400
-                        easing.type: Easing.OutQuad
-                    }
-
-                    NumberAnimation {
-                        target: companionStarShape
-                        property: "opacity"
-                        to: 0.85
-                        duration: 300
-                    }
+                NumberAnimation {
+                    target: dashboardShape
+                    property: "scale"
+                    to: 1.0
+                    duration: 350
+                    easing.type: Easing.InOutQuad
                 }
             }
         }

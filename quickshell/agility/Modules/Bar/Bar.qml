@@ -1,6 +1,7 @@
 import QtQuick
 import "Styles/Convex"
 import "Styles/Island"
+import "Styles/Pill"
 import qs.Core
 import qs.Core.Services
 
@@ -12,6 +13,7 @@ Item {
     property string activeBarStyle: SettingsService.barStyle
     readonly property bool isCurrentIsland: activeBarStyle === "island"
     readonly property bool isCurrentConvex: activeBarStyle === "convex"
+    readonly property bool isCurrentPill: activeBarStyle === "pill"
     // Use unified interface exposed by IBarStyle implementation
     readonly property QtObject currentStyleItem: {
         switch (mainBar.activeBarStyle) {
@@ -19,6 +21,8 @@ Item {
             return islandLoader.item;
         case "convex":
             return convexLoader.item;
+        case "pill":
+            return pillLoader.item;
         default:
             return islandLoader.item ? islandLoader.item : convexLoader.item;
         }
@@ -66,6 +70,16 @@ Item {
         enabled: visible
     }
 
+    Loader {
+        id: pillLoader
+
+        anchors.fill: parent
+        active: mainBar.isCurrentPill
+        visible: active
+        sourceComponent: pillComp
+        enabled: visible
+    }
+
     Component {
         id: islandComp
 
@@ -80,6 +94,16 @@ Item {
         id: convexComp
 
         ConvexBar {
+            notificationService: mainBar.notificationService
+            mainPanelWidget: mainBar.mainPanelWidget
+        }
+
+    }
+
+    Component {
+        id: pillComp
+
+        PillBar {
             notificationService: mainBar.notificationService
             mainPanelWidget: mainBar.mainPanelWidget
         }

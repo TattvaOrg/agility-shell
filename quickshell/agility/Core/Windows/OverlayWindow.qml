@@ -68,6 +68,8 @@ PanelWindow {
 
     surfaceFormat.opaque: false
     color: "transparent"
+    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.keyboardFocus: (root.isOpen && root.windowFocusable) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     focusable: root.isOpen && root.windowFocusable
     exclusionMode: ExclusionMode.Ignore
     visible: _windowVisible || forceVisible || (styleLoader.item && styleLoader.item.isHandover)
@@ -82,8 +84,11 @@ PanelWindow {
 
             _windowVisible = true;
             root.widgetOpened();
-            if (root.initialFocusItem)
+            if (root.initialFocusItem) {
+                grabInitialFocus();
+                Qt.callLater(grabInitialFocus);
                 initialFocusTimer.start();
+            }
 
         } else {
             let anotherFocusOpen = AppState.isFocusWidgetOpen && !AppState.isWidgetOpen(widgetId);
@@ -136,19 +141,21 @@ PanelWindow {
         }
     }
 
+    function grabInitialFocus() {
+        if (root.windowFocusable && root.initialFocusItem) {
+            if (root.initialFocusItem.textField)
+                root.initialFocusItem.textField.forceActiveFocus();
+            else
+                root.initialFocusItem.forceActiveFocus();
+        }
+    }
+
     Timer {
         id: initialFocusTimer
 
-        interval: 30
+        interval: 25
         repeat: false
-        onTriggered: {
-            if (root.windowFocusable && root.initialFocusItem) {
-                if (root.initialFocusItem.textField)
-                    root.initialFocusItem.textField.forceActiveFocus();
-                else
-                    root.initialFocusItem.forceActiveFocus();
-            }
-        }
+        onTriggered: root.grabInitialFocus()
     }
 
     Loader {

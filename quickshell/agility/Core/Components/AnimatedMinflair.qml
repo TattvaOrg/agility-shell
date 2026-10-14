@@ -9,10 +9,14 @@ Item {
 
     property int iconSize: Constants.size3Xl
     property color iconColor: Theme.accent
-    property string plusStarPath: "M 11.6 2.5 Q 12 1.2 12.4 2.5 L 14 10 L 21.5 11.6 Q 22.8 12 21.5 12.4 L 14 14 L 12.4 21.5 Q 12 22.8 11.6 21.5 L 10 14 L 2.5 12.4 Q 1.2 12 2.5 11.6 L 10 10 Z"
     readonly property int scaledIconSize: Math.round(iconSize * SettingsService.fontScale)
     property bool enableIntroAnim: true
     property bool enableIntervalAnim: true
+
+    // Material 3 Expressive 4-pointed curved star ("auto_awesome" / Gemini sparkle)
+    readonly property string m3StarPath: "M 12 2 C 12 7.52 7.52 12 2 12 C 7.52 12 12 16.48 12 22 C 12 16.48 16.48 12 22 12 C 16.48 12 12 7.52 12 2 Z"
+    // Companion mini-sparkle
+    readonly property string m3MiniStarPath: "M 19 2.5 C 19 4.4 17.4 6 15.5 6 C 17.4 6 19 7.6 19 9.5 C 19 7.6 20.6 6 22.5 6 C 20.6 6 19 4.4 19 2.5 Z"
 
     width: scaledIconSize
     height: scaledIconSize
@@ -23,26 +27,24 @@ Item {
     Item {
         id: starContainer
 
-        width: Constants.size2Xl
-        height: Constants.size2Xl
-        scale: root.scaledIconSize / Constants.size2Xl
-        rotation: 45
+        width: 24
+        height: 24
+        scale: root.scaledIconSize / 24
         anchors.centerIn: parent
         enabled: false
 
+        // Main M3 4-pointed sparkle
         Item {
             id: mainStarShape
 
-            width: Constants.size2Xl
-            height: Constants.size2Xl
+            width: 24
+            height: 24
+            anchors.centerIn: parent
             transformOrigin: Item.Center
-            rotation: 0
 
             Shape {
-                width: Constants.size2Xl
-                height: Constants.size2Xl
+                anchors.fill: parent
                 preferredRendererType: Shape.CurveRenderer
-                opacity: 0.4
 
                 ShapePath {
                     fillColor: root.iconColor
@@ -50,29 +52,25 @@ Item {
                     strokeWidth: 0
 
                     PathSvg {
-                        path: root.plusStarPath
+                        path: root.m3StarPath
                     }
-
                 }
-
             }
-
         }
 
+        // Companion secondary mini-sparkle (top right)
         Item {
-            id: xStarShape
+            id: companionStarShape
 
-            width: Constants.size2Xl
-            height: Constants.size2Xl
+            width: 24
+            height: 24
+            anchors.centerIn: parent
             transformOrigin: Item.Center
-            rotation: 45
-            scale: 1
+            opacity: 0.85
 
             Shape {
-                width: Constants.size2Xl
-                height: Constants.size2Xl
+                anchors.fill: parent
                 preferredRendererType: Shape.CurveRenderer
-                opacity: 1
 
                 ShapePath {
                     fillColor: root.iconColor
@@ -80,15 +78,13 @@ Item {
                     strokeWidth: 0
 
                     PathSvg {
-                        path: root.plusStarPath
+                        path: root.m3MiniStarPath
                     }
-
                 }
-
             }
-
         }
 
+        // Intro animation
         SequentialAnimation {
             id: introAnim
 
@@ -101,81 +97,43 @@ Item {
             }
 
             PropertyAction {
-                target: xStarShape
+                target: companionStarShape
                 property: "scale"
                 value: 0
             }
 
-            PropertyAction {
-                target: mainStarShape
-                property: "rotation"
-                value: -360
-            }
-
-            PropertyAction {
-                target: xStarShape
-                property: "rotation"
-                value: -315
-            }
-
             PauseAnimation {
-                duration: Math.max(0, Constants.animNormal - 50)
+                duration: 50
             }
 
             ParallelAnimation {
-                ParallelAnimation {
-                    NumberAnimation {
-                        target: mainStarShape
-                        property: "scale"
-                        to: 1
-                        duration: Constants.animExpressive + 400
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 1.2
-                    }
-
-                    NumberAnimation {
-                        target: mainStarShape
-                        property: "rotation"
-                        to: 0
-                        duration: Constants.animExpressive + 400
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 1.2
-                    }
-
+                NumberAnimation {
+                    target: mainStarShape
+                    property: "scale"
+                    to: 1
+                    duration: Constants.animExpressive + 200
+                    easing.type: Easing.OutBack
+                    easing.overshoot: 1.15
                 }
 
                 SequentialAnimation {
                     PauseAnimation {
-                        duration: Constants.animFast
+                        duration: 120
                     }
 
-                    ParallelAnimation {
-                        NumberAnimation {
-                            target: xStarShape
-                            property: "scale"
-                            to: 1
-                            duration: Constants.animExpressive + 400
-                            easing.type: Easing.OutBack
-                            easing.overshoot: 1.2
-                        }
-
-                        NumberAnimation {
-                            target: xStarShape
-                            property: "rotation"
-                            to: 45
-                            duration: Constants.animExpressive + 400
-                            easing.type: Easing.OutBack
-                            easing.overshoot: 1.2
-                        }
-
+                    NumberAnimation {
+                        target: companionStarShape
+                        property: "scale"
+                        to: 1
+                        duration: Constants.animExpressive
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 1.2
                     }
-
                 }
-
             }
-
         }
 
+        // Idle micro-animation
         SequentialAnimation {
             id: intervalAnim
 
@@ -183,56 +141,70 @@ Item {
             loops: Animation.Infinite
 
             PauseAnimation {
-                duration: Constants.animExpressive * 10
+                duration: 4500
             }
 
             ParallelAnimation {
-                NumberAnimation {
-                    target: mainStarShape
-                    property: "rotation"
-                    from: 0
-                    to: 90
-                    duration: Constants.animUltraSlow * 3
-                    easing.type: Easing.InOutBack
-                    easing.overshoot: 1.2
+                SequentialAnimation {
+                    NumberAnimation {
+                        target: mainStarShape
+                        property: "scale"
+                        to: 1.08
+                        duration: 350
+                        easing.type: Easing.OutQuad
+                    }
+
+                    NumberAnimation {
+                        target: mainStarShape
+                        property: "scale"
+                        to: 1.0
+                        duration: 450
+                        easing.type: Easing.InOutQuad
+                    }
                 }
 
-                NumberAnimation {
-                    target: xStarShape
-                    property: "rotation"
-                    from: 45
-                    to: -45
-                    duration: Constants.animUltraSlow * 3
-                    easing.type: Easing.InOutBack
-                    easing.overshoot: 1.2
+                SequentialAnimation {
+                    NumberAnimation {
+                        target: companionStarShape
+                        property: "opacity"
+                        to: 1.0
+                        duration: 300
+                    }
+
+                    NumberAnimation {
+                        target: companionStarShape
+                        property: "scale"
+                        to: 1.18
+                        duration: 350
+                        easing.type: Easing.OutBack
+                    }
+
+                    NumberAnimation {
+                        target: companionStarShape
+                        property: "scale"
+                        to: 1.0
+                        duration: 400
+                        easing.type: Easing.OutQuad
+                    }
+
+                    NumberAnimation {
+                        target: companionStarShape
+                        property: "opacity"
+                        to: 0.85
+                        duration: 300
+                    }
                 }
-
             }
-
-            PropertyAction {
-                target: mainStarShape
-                property: "rotation"
-                value: 0
-            }
-
-            PropertyAction {
-                target: xStarShape
-                property: "rotation"
-                value: 45
-            }
-
         }
-
     }
 
     layer.effect: DropShadow {
         id: shadowEffect
 
         transparentBorder: true
-        color: root.iconColor
+        color: Qt.rgba(root.iconColor.r, root.iconColor.g, root.iconColor.b, 0.4)
         radius: Constants.sizeXs
-        samples: 17
+        samples: 15
         spread: 0.1
     }
-
 }

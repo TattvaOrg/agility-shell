@@ -24,6 +24,111 @@ pub const BLUR_TARGET_HEIGHT: u32 = 540;
 /// Fallback preset names supported by agilityd.
 pub const PRESETS: &[&str] = &["Dark", "Light", "TokyoNight", "Catppuccin", "Gruvbox"];
 
+/// Expand leading `~` or `~/` to user's home directory.
+pub fn expand_tilde(path_str: &str) -> PathBuf {
+    let trimmed = path_str.trim();
+    if let Some(rest) = trimmed.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home).join(rest);
+        }
+    } else if trimmed == "~" {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home);
+        }
+    }
+    PathBuf::from(trimmed)
+}
+
+/// Resolve wallpaper path across common candidate search paths if not found directly.
+pub fn resolve_wallpaper_path(path_str: &str) -> Option<PathBuf> {
+    let trimmed = path_str.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let direct = expand_tilde(trimmed);
+    if direct.is_file() {
+        return Some(direct.canonicalize().unwrap_or(direct));
+    }
+
+    let file_name = direct.file_name()?.to_str()?;
+    let mut search_dirs = Vec::new();
+
+    if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(PathBuf::from(&home).join(".config/agility-shell/wallpapers"));
+        search_dirs.push(PathBuf::from(&home).join("Pictures/Wallpapers"));
+        search_dirs.push(PathBuf::from(&home).join("Pictures"));
+    }
+    search_dirs.push(PathBuf::from("/usr/share/agility-shell/wallpapers"));
+    search_dirs.push(PathBuf::from("wallpapers"));
+
+    for dir in search_dirs {
+        let cand = dir.join(file_name);
+        if cand.is_file() {
+            return Some(cand.canonicalize().unwrap_or(cand));
+        }
+    }
+
+    None
+}
+
+/// Discover all available wallpaper image files across candidate directories.
+pub fn list_all_wallpapers() -> Vec<PathBuf> {
+    let mut search_dirs = Vec::new();
+    if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(PathBuf::from(&home).join(".config/agility-shell/wallpapers"));
+        search_dirs.push(PathBuf::from(&home).join("Pictures/Wallpapers"));
+        search_dirs.push(PathBuf::from(&home).join("Pictures"));
+    }
+    search_dirs.push(PathBuf::from("/usr/share/agility-shell/wallpapers"));
+    search_dirs.push(PathBuf::from("wallpapers"));
+
+    let mut found = Vec::new();
+    let mut seen_names = std::collections::HashSet::new();
+
+    for dir in search_dirs {
+        if !dir.exists() || !dir.is_dir() {
+            continue;
+        }
+        if let Ok(entries) = fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_file() {
+                    if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                        let ext_lower = ext.to_lowercase();
+                        if matches!(ext_lower.as_str(), "jpg" | "jpeg" | "png" | "webp" | "gif") {
+                            let name = p
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            if seen_names.insert(name) {
+                                let canon = p.canonicalize().unwrap_or(p);
+                                found.push(canon);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    found.sort_by(|a, b| {
+        a.file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_lowercase()
+            .cmp(
+                &b.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase(),
+            )
+    });
+
+    found
+}
+
 /// Dynamic theming and wallpaper orchestration service.
 pub struct ThemeService {
     config_dir: PathBuf,
@@ -52,8 +157,10 @@ impl ThemeService {
         if wallpaper_cache_file.exists() {
             if let Ok(wall) = fs::read_to_string(&wallpaper_cache_file) {
                 let trimmed = wall.trim();
-                if !trimmed.is_empty() && Path::new(trimmed).exists() {
-                    initial_wall = trimmed.to_string();
+                if !trimmed.is_empty() {
+                    if let Some(resolved) = resolve_wallpaper_path(trimmed) {
+                        initial_wall = resolved.to_string_lossy().to_string();
+                    }
                 }
             }
         }
@@ -173,20 +280,22 @@ impl ThemeService {
         transition_type: Option<&str>,
         duration: Option<f64>,
     ) -> Result<ThemeTokens> {
-        let wall_path = PathBuf::from(path);
-        if !wall_path.exists() {
-            anyhow::bail!("Wallpaper file not found: {:?}", wall_path);
-        }
-
-        let abs_path = wall_path.canonicalize().unwrap_or(wall_path);
+        let abs_path = resolve_wallpaper_path(path)
+            .with_context(|| format!("Wallpaper file not found: {path}"))?;
         let abs_str = abs_path.to_string_lossy().to_string();
 
         *self.active_wallpaper.write().unwrap() = abs_str.clone();
         *self.active_preset.write().unwrap() = None;
 
-        // Persist wallpaper path cache
+        // Persist wallpaper path cache for both agility-shell and quickshell
         let wall_cache = self.cache_dir.join("wallpaper");
         let _ = fs::write(&wall_cache, &abs_str);
+
+        if let Ok(home) = std::env::var("HOME") {
+            let qs_cache = PathBuf::from(&home).join(".cache/quickshell");
+            let _ = fs::create_dir_all(&qs_cache);
+            let _ = fs::write(qs_cache.join("current_wallpaper"), &abs_str);
+        }
 
         // 1. Invoke wallpaper setter (awww / swww)
         let t_type = transition_type.unwrap_or("grow");
@@ -199,6 +308,10 @@ impl ThemeService {
             Self::generate_blurred_wallpaper(&abs_path, &blurred_cache, DEFAULT_BLUR_RADIUS)
         {
             warn!("Failed to generate blurred wallpaper cache: {e:#}");
+        }
+        if let Ok(home) = std::env::var("HOME") {
+            let qs_blurred = PathBuf::from(&home).join(".cache/quickshell/wallpaper_blurred");
+            let _ = fs::copy(&blurred_cache, qs_blurred);
         }
 
         // 3. Extract dynamic color palette
@@ -219,6 +332,28 @@ impl ThemeService {
         tokens.active_preset = "Wallpaper".to_string();
 
         self.apply_new_tokens(tokens)
+    }
+
+    /// List all discovered wallpapers.
+    pub fn list_wallpapers(&self) -> Vec<PathBuf> {
+        list_all_wallpapers()
+    }
+
+    /// Select and apply a random wallpaper from available directories.
+    pub fn random_wallpaper(&self) -> Result<String> {
+        let all = list_all_wallpapers();
+        if all.is_empty() {
+            anyhow::bail!("No wallpapers found in search paths");
+        }
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let idx = (nanos as usize) % all.len();
+        let chosen = &all[idx];
+        let path_str = chosen.to_string_lossy().to_string();
+        self.set_wallpaper(&path_str, None, None)?;
+        Ok(path_str)
     }
 
     /// Fast Rust-native blurred wallpaper generator using `image` crate.
@@ -453,6 +588,32 @@ impl ThemeService {
             .map(|o| o.status.success())
             .unwrap_or(false)
         {
+            let is_daemon_running = Command::new("pgrep")
+                .arg("-x")
+                .arg("awww-daemon")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+            if !is_daemon_running {
+                if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+                    if let Ok(entries) = fs::read_dir(runtime) {
+                        for entry in entries.flatten() {
+                            if entry.file_name().to_string_lossy().contains("awww-daemon") {
+                                let _ = fs::remove_file(entry.path());
+                            }
+                        }
+                    }
+                }
+                let _ = Command::new("sh")
+                    .args([
+                        "-c",
+                        "systemctl --user start awww-daemon.service 2>/dev/null || nohup awww-daemon >/dev/null 2>&1 &",
+                    ])
+                    .spawn();
+                std::thread::sleep(std::time::Duration::from_millis(250));
+            }
+
             let dur_str = format!("{duration:.2}");
             let _ = Command::new("awww")
                 .arg("img")
@@ -471,6 +632,18 @@ impl ThemeService {
             .map(|o| o.status.success())
             .unwrap_or(false)
         {
+            let is_daemon_running = Command::new("pgrep")
+                .arg("-x")
+                .arg("swww-daemon")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+            if !is_daemon_running {
+                let _ = Command::new("swww-daemon").spawn();
+                std::thread::sleep(std::time::Duration::from_millis(150));
+            }
+
             let dur_str = format!("{duration:.2}");
             let _ = Command::new("swww")
                 .arg("img")
@@ -479,6 +652,18 @@ impl ThemeService {
                 .arg(transition_type)
                 .arg("--transition-duration")
                 .arg(&dur_str)
+                .spawn();
+            return;
+        }
+
+        if Command::new("which")
+            .arg("hyprpaper")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            let _ = Command::new("hyprctl")
+                .args(["hyprpaper", "wallpaper", &format!(",{}", path)])
                 .spawn();
         }
     }
@@ -491,6 +676,30 @@ impl ThemeService {
         let cache_file = self.cache_dir.join("theme.json");
         if let Ok(json) = serde_json::to_string_pretty(&tokens) {
             let _ = fs::write(&cache_file, json);
+        }
+
+        // Also write to ~/.cache/quickshell/colorscheme.json
+        if let Ok(home) = std::env::var("HOME") {
+            let qs_cache = PathBuf::from(&home).join(".cache/quickshell");
+            let _ = fs::create_dir_all(&qs_cache);
+            let qs_colorscheme = serde_json::json!({
+                "bg": tokens.background_color,
+                "fg": tokens.on_surface,
+                "accent": tokens.primary_color,
+                "accentComplementary": tokens.secondary_color,
+                "bgSecondary": tokens.surface_color,
+                "bgTertiary": tokens.surface_container,
+                "muted": tokens.outline,
+                "border": tokens.outline,
+                "is_dark": tokens.is_dark,
+                "generateFromWallpaper": true,
+                "wallpaperIsDark": tokens.is_dark,
+                "name": tokens.active_preset,
+            });
+            let _ = fs::write(
+                qs_cache.join("colorscheme.json"),
+                serde_json::to_string_pretty(&qs_colorscheme).unwrap_or_default(),
+            );
         }
 
         // 2. Render templates for terminals and Niri borders
@@ -799,6 +1008,37 @@ impl ThemeInterface {
             Err(e) => {
                 error!("Failed to set wallpaper: {e:#}");
                 Ok(false)
+            }
+        }
+    }
+
+    /// List all discovered wallpapers as JSON string array.
+    async fn list_wallpapers(&self) -> String {
+        let walls = self.service.list_wallpapers();
+        let paths: Vec<String> = walls
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        serde_json::to_string(&paths).unwrap_or_else(|_| "[]".to_string())
+    }
+
+    /// Select and apply a random wallpaper from available search paths.
+    async fn random_wallpaper(
+        &self,
+        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
+    ) -> zbus::fdo::Result<String> {
+        match self.service.random_wallpaper() {
+            Ok(path) => {
+                let tokens = self.service.tokens();
+                let json = serde_json::to_string(&tokens).unwrap_or_default();
+                let _ = Self::theme_changed(&emitter, &json).await;
+                Ok(path)
+            }
+            Err(e) => {
+                error!("Failed to select random wallpaper: {e:#}");
+                Err(zbus::fdo::Error::Failed(format!(
+                    "Failed to select random wallpaper: {e:#}"
+                )))
             }
         }
     }

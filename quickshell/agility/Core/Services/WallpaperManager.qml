@@ -29,59 +29,33 @@ QtObject {
     function applyWallpaperWithSync(wallpaperName, rawPath) {
         currentWallpaper = wallpaperName;
         currentWallpaperPath = rawPath;
-        saveCurrentWallpaper(wallpaperName);
         applyWallpaper(rawPath);
     }
 
     function reapplyCurrentWallpaper() {
-        let p = currentWallpaperPath;
-        if (p && !p.startsWith("/"))
-            p = Quickshell.env("HOME") + "/Pictures/Wallpapers/" + p;
-        else if (!p && currentWallpaper)
-            p = currentWallpaper.startsWith("/") ? currentWallpaper : (Quickshell.env("HOME") + "/Pictures/Wallpapers/" + currentWallpaper);
+        let p = currentWallpaperPath || currentWallpaper;
         if (p)
-            applyWallpaperInstant(p);
-
+            applyWallpaper(p);
     }
 
     function applyWallpaperInstant(rawPath) {
-        wallpaperApplyProc.running = false;
-        let rMode = HyprlandService.wpResizeMode || "crop";
-        let gravity = HyprlandService.wpCropGravity || "center";
-        let cmd = ["awww", "img", rawPath, "--resize", rMode];
-        if (rMode === "crop")
-            cmd.push("--crop-gravity", gravity);
+        applyWallpaper(rawPath);
+    }
 
-        cmd.push("--transition-type", "none");
+    function applyWallpaper(rawPath) {
+        if (!rawPath)
+            return;
+        wallpaperApplyProc.running = false;
+        let cmd = ["agl", "wallpaper", rawPath];
+        if (enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) {
+            cmd.push("--transition", transitionType);
+        }
         wallpaperApplyProc.command = cmd;
         wallpaperApplyProc.startDetached();
     }
 
-    function applyWallpaper(rawPath) {
-        wallpaperApplyProc.running = false;
-        let rMode = HyprlandService.wpResizeMode || "crop";
-        let gravity = HyprlandService.wpCropGravity || "center";
-        let cmd = ["awww", "img", rawPath, "--resize", rMode];
-        if (rMode === "crop")
-            cmd.push("--crop-gravity", gravity);
-
-        if (enableTransitions && SystemInfoService.powerProfile !== "power-saver") {
-            cmd.push("--transition-type", transitionType, "--transition-pos", transitionPos, "--transition-step", String(transitionStep), "--transition-fps", String(transitionFps));
-            if (transitionType === "wipe" || transitionType === "wave")
-                cmd.push("--transition-angle", String(transitionAngle));
-
-            wallpaperApplyProc.command = cmd;
-        } else {
-            cmd.push("--transition-type", "none");
-            wallpaperApplyProc.command = cmd;
-        }
-        wallpaperApplyProc.startDetached();
-    }
-
     function saveCurrentWallpaper(wallName) {
-        wallpaperSaveProc.running = false;
-        wallpaperSaveProc.command = ["bash", "-c", "mkdir -p ~/.cache/quickshell /var/tmp/sddm-theme && echo '" + wallName + "' > ~/.cache/quickshell/current_wallpaper && echo '" + wallName + "' > /var/tmp/sddm-theme/current_wallpaper && python3 " + Quickshell.shellDir + "/Scripts/theme/apply_theme.py 2>/dev/null || true"];
-        wallpaperSaveProc.startDetached();
+        // Handled automatically by agl wallpaper
     }
 
     function shuffle() {
@@ -107,14 +81,14 @@ QtObject {
     }
 
     randomWallpaperProc: Process {
-        command: ["bash", "-c", "find ~/Pictures/Wallpapers -maxdepth 2 -type f 2>/dev/null | grep -iE '\\.(jpg|jpeg|png|webp|gif)$' | shuf -n 1"]
+        command: ["agl", "wallpaper", "random"]
         onExited: function(exitCode) {
             if (exitCode === 0) {
                 let path = randomWallOutput.text.trim();
-                if (path) {
+                if (path && path !== "none") {
                     let parts = path.split('/');
-                    let wallName = parts[parts.length - 1];
-                    root.applyWallpaperWithSync(wallName, path);
+                    root.currentWallpaper = parts[parts.length - 1];
+                    root.currentWallpaperPath = path;
                 }
             }
         }
@@ -126,13 +100,14 @@ QtObject {
     }
 
     wallpaperLoader: Process {
-        command: ["cat", Quickshell.env("HOME") + "/.cache/quickshell/current_wallpaper"]
+        command: ["agl", "wallpaper", "get"]
         onExited: function(exitCode) {
             if (exitCode === 0) {
-                let name = wallpaperLoaderOutput.text.trim();
-                if (name) {
-                    root.currentWallpaper = name;
-                    root.currentWallpaperPath = name.startsWith("/") ? name : (Quickshell.env("HOME") + "/Pictures/Wallpapers/" + name);
+                let path = wallpaperLoaderOutput.text.trim();
+                if (path && path !== "none") {
+                    let parts = path.split('/');
+                    root.currentWallpaper = parts[parts.length - 1];
+                    root.currentWallpaperPath = path;
                 }
             }
         }

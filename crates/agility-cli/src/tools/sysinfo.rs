@@ -68,7 +68,7 @@ pub fn get_system_specs() -> SystemSpecs {
         .to_string();
 
     // Window Manager
-    let wm = "Hyprland (Wayland)".to_string();
+    let wm = get_wm();
 
     // Packages count
     let packages = get_package_counts();
@@ -213,6 +213,87 @@ fn get_gpus() -> String {
         }
     }
     "Integrated Graphics".to_string()
+}
+
+fn get_wm() -> String {
+    // 1. Direct environment checks
+    if std::env::var("NIRI_SOCKET").is_ok() {
+        return "Niri (Wayland)".to_string();
+    }
+    if std::env::var("HYPRLAND_INSTANCE_SIGNATURE").is_ok() {
+        return "Hyprland (Wayland)".to_string();
+    }
+    if std::env::var("SWAYSOCK").is_ok() {
+        return "Sway (Wayland)".to_string();
+    }
+
+    // 2. Check XDG_RUNTIME_DIR for niri socket
+    if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+        let p = Path::new(&runtime_dir);
+        if let Ok(entries) = fs::read_dir(p) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with("niri.") && name.ends_with(".sock") {
+                    return "Niri (Wayland)".to_string();
+                }
+            }
+        }
+    }
+
+    // 3. Process inspection
+    if Command::new("pidof")
+        .arg("niri")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        return "Niri (Wayland)".to_string();
+    }
+    if Command::new("pidof")
+        .arg("Hyprland")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        return "Hyprland (Wayland)".to_string();
+    }
+    if Command::new("pidof")
+        .arg("sway")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        return "Sway (Wayland)".to_string();
+    }
+
+    // 4. Desktop session environment variables
+    if let Ok(desktop) = std::env::var("XDG_CURRENT_DESKTOP") {
+        let lower = desktop.to_lowercase();
+        if lower.contains("niri") {
+            return "Niri (Wayland)".to_string();
+        } else if lower.contains("hyprland") {
+            return "Hyprland (Wayland)".to_string();
+        } else if lower.contains("sway") {
+            return "Sway (Wayland)".to_string();
+        } else if lower.contains("gnome") {
+            return "GNOME (Wayland)".to_string();
+        } else if lower.contains("kde") {
+            return "KDE Plasma (Wayland)".to_string();
+        }
+        return format!("{desktop} (Wayland)");
+    }
+
+    if let Ok(session) = std::env::var("DESKTOP_SESSION") {
+        let lower = session.to_lowercase();
+        if lower.contains("niri") {
+            return "Niri (Wayland)".to_string();
+        } else if lower.contains("hyprland") {
+            return "Hyprland (Wayland)".to_string();
+        }
+        return format!("{session} (Wayland)");
+    }
+
+    "Wayland".to_string()
 }
 
 pub fn get_processes() -> Vec<ProcessItem> {

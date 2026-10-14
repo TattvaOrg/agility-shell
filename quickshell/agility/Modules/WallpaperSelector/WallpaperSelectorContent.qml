@@ -187,7 +187,7 @@ Item {
 
         property var lines: []
 
-        command: ["bash", "-c", "find ~/Pictures/Wallpapers -maxdepth 2 -type f 2>/dev/null | grep -iE '\\.(jpg|jpeg|png|webp|gif)$'"]
+        command: ["agl", "wallpaper", "list"]
         onExited: function(exitCode) {
             let sortedLines = lines.sort(function(a, b) {
                 return a.name.localeCompare(b.name);

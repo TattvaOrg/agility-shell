@@ -18,6 +18,12 @@ QtObject {
             "usesFloatingPopups": false,
             "isPill": true
         },
+        "pill": {
+            "hasFrame": false,
+            "hasExpandableHost": false,
+            "usesFloatingPopups": true,
+            "isPill": true
+        },
         "gaming": {
             "hasFrame": false,
             "hasExpandableHost": false,
@@ -37,6 +43,9 @@ QtObject {
         if (style === "island")
             return 32;
 
+        if (style === "pill")
+            return 38;
+
         return 40; // convex
     }
 
@@ -47,6 +56,9 @@ QtObject {
         if (style === "convex")
             return 0;
 
+        if (style === "pill")
+            return 8;
+
         return 8; // island
     }
 
@@ -55,7 +67,7 @@ QtObject {
     }
 
     function isPill(style) {
-        return style === "island";
+        return style === "island" || style === "pill";
     }
 
     function isExpandable(style) {

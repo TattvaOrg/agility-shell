@@ -13,7 +13,7 @@ Item {
     property string hostname: "Loading..."
     property string username: "Loading..."
     property string shell: "Loading..."
-    property string wm: "Hyprland (Wayland)"
+    property string wm: "Loading..."
     property string packages: "Loading..."
     property string display: "Loading..."
     property string cpuModel: "Loading..."
@@ -44,7 +44,7 @@ Item {
                     root.hostname = info.hostname || "";
                     root.username = info.username || "";
                     root.shell = info.shell || "";
-                    root.wm = info.wm || "Hyprland (Wayland)";
+                    root.wm = info.wm || "Wayland";
                     root.packages = info.packages || "";
                     root.display = info.display || "";
                     root.cpuModel = info.cpu_model || "";

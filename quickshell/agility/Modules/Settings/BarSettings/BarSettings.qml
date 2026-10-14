@@ -16,13 +16,16 @@ AppContainer {
 
         SettingSegmented {
             label: "Style"
-            description: "Choose between Convex or Island"
+            description: "Choose between Convex, Island, or Floating Pill"
             model: [{
                 "text": "Convex",
                 "value": "convex"
             }, {
                 "text": "Island",
                 "value": "island"
+            }, {
+                "text": "Floating Pill",
+                "value": "pill"
             }]
             currentValue: SettingsService.barStyle
             onActivated: (value) => {

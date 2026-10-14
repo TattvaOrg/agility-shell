@@ -1630,7 +1630,12 @@ async fn handle_launch(target: &str) -> Result<()> {
     let found = apps.into_iter().find(|a| {
         a.name.to_lowercase() == target_lower
             || a.exec.to_lowercase() == target_lower
-            || a.exec.split_whitespace().next().unwrap_or("").to_lowercase() == target_lower
+            || a.exec
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .to_lowercase()
+                == target_lower
     });
 
     let (exec, term) = if let Some(app) = found {
@@ -1812,7 +1817,12 @@ fn list_cli_wallpapers() -> Vec<std::path::PathBuf> {
             .unwrap_or_default()
             .to_string_lossy()
             .to_lowercase()
-            .cmp(&b.file_name().unwrap_or_default().to_string_lossy().to_lowercase())
+            .cmp(
+                &b.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase(),
+            )
     });
 
     found
@@ -1964,8 +1974,8 @@ async fn apply_cli_wallpaper(
     }
 
     // Direct fallback:
-    let resolved = resolve_cli_wallpaper(path_str)
-        .context(format!("Wallpaper file not found: {path_str}"))?;
+    let resolved =
+        resolve_cli_wallpaper(path_str).context(format!("Wallpaper file not found: {path_str}"))?;
     let abs_str = resolved.to_string_lossy().to_string();
 
     // Ensure awww-daemon is running

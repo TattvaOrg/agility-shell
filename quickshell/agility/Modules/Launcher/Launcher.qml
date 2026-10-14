@@ -12,6 +12,8 @@ OverlayWindow {
     initialFocusItem: content.initialFocusItem
     onWidgetOpened: {
         content.resetLauncher();
+        if (content.initialFocusItem && content.initialFocusItem.textField)
+            content.initialFocusItem.textField.forceActiveFocus();
     }
 
     LauncherContent {

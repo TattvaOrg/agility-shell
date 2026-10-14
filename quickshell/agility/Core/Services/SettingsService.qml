@@ -28,8 +28,30 @@ Item {
     property string barStyle: "convex"
     property bool barIslandMode: barStyle === "island"
     property bool barConvexMode: barStyle === "convex"
+    property bool barPillMode: barStyle === "pill"
     property string islandRightMode: "auto"
     readonly property int barWidgetHeight: 28
+    property var actionShortcuts: [
+        {"id": "launcher", "title": "Open Launcher", "key": "Mod+Space", "cmd": ["agl", "toggle", "launcher"]},
+        {"id": "settings", "title": "Open Settings", "key": "Mod+S", "cmd": ["agl", "toggle", "settings"]},
+        {"id": "controlCenter", "title": "Control Center", "key": "Mod+C", "cmd": ["agl", "toggle", "cc"]},
+        {"id": "dashboard", "title": "Open Dash", "key": "Mod+D", "cmd": ["agl", "toggle", "dash"]},
+        {"id": "wallpaper", "title": "Wallpaper Gallery", "key": "Mod+Shift+W", "cmd": ["agl", "toggle", "WallpaperPicker"]},
+        {"id": "clipboard", "title": "Clipboard History", "key": "Mod+V", "cmd": ["agl", "toggle", "clipboard"]},
+        {"id": "screenshot", "title": "Screenshot Tool", "key": "Mod+Shift+S", "cmd": ["agl", "toggle", "screenshot"]},
+        {"id": "powerMenu", "title": "Power Menu", "key": "Mod+Shift+E", "cmd": ["agl", "toggle", "power"]}
+    ]
+    property var customShortcuts: []
+
+    function syncShortcuts() {
+        let payload = JSON.stringify({
+            "actionShortcuts": settingsService.actionShortcuts,
+            "customShortcuts": settingsService.customShortcuts
+        });
+        syncShortcutsProc.command = ["python3", Quickshell.shellDir + "/Modules/Settings/scripts/sync_shortcuts.py", payload];
+        syncShortcutsProc.running = false;
+        syncShortcutsProc.running = true;
+    }
 
     function saveSettings() {
         saveTimer.restart();
@@ -195,8 +217,11 @@ Item {
                 "cursorTheme": settingsService.cursorTheme,
                 "cursorSize": settingsService.cursorSize,
                 "barStyle": settingsService.barStyle,
-                "islandRightMode": settingsService.islandRightMode
+                "islandRightMode": settingsService.islandRightMode,
+                "actionShortcuts": settingsService.actionShortcuts,
+                "customShortcuts": settingsService.customShortcuts
             };
+            syncShortcuts();
             settingsSaver.command = ["sh", "-c", "mkdir -p ~/.cache/quickshell /var/tmp/sddm-theme && cat << 'EOF' > ~/.cache/quickshell/settings_prefs.json
 " + JSON.stringify(data) + "
 EOF
@@ -343,11 +368,19 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                         if (prefs.barStyle !== undefined) {
                             if (prefs.barStyle === "island")
                                 settingsService.barStyle = "island";
+                            else if (prefs.barStyle === "pill")
+                                settingsService.barStyle = "pill";
                             else
                                 settingsService.barStyle = "convex";
                         }
                         if (prefs.islandRightMode !== undefined)
                             settingsService.islandRightMode = prefs.islandRightMode;
+
+                        if (prefs.actionShortcuts !== undefined)
+                            settingsService.actionShortcuts = prefs.actionShortcuts;
+
+                        if (prefs.customShortcuts !== undefined)
+                            settingsService.customShortcuts = prefs.customShortcuts;
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);
@@ -365,6 +398,10 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                 settingsService.applyFont(settingsService.fontFamily, Math.round(11 * settingsService.fontScale));
             }
         }
+    }
+
+    Process {
+        id: syncShortcutsProc
     }
 
     Process {

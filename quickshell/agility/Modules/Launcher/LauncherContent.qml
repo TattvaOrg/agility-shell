@@ -164,6 +164,13 @@ Item {
             loadAppsProc.running = true;
         }
         searchField.forceActiveFocus();
+        if (searchField.textField) {
+            searchField.textField.forceActiveFocus();
+        }
+        Qt.callLater(function() {
+            if (searchField && searchField.textField)
+                searchField.textField.forceActiveFocus();
+        });
     }
 
     implicitWidth: preferredContentWidth

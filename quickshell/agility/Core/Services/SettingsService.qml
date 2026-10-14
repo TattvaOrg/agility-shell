@@ -36,9 +36,10 @@ Item {
     property color edgeLightingCustomColor: Theme.accent
     property real edgeLightingSpeed: 1.0
     property real edgeLightingLength: 25.0
-    property real edgeLightingThickness: 4.0
-    property real edgeLightingGlow: 12.0
-    property bool edgeLightingAudioOnly: true
+    property real edgeLightingThickness: 12.0
+    property real edgeLightingGlow: 16.0
+    property bool edgeLightingAudioOnly: false
+    property string edgeLightingDirection: "clockwise"
     property var actionShortcuts: [
         {"id": "launcher", "title": "Open Launcher", "key": "Mod+Space", "cmd": ["agl", "toggle", "launcher"]},
         {"id": "settings", "title": "Open Settings", "key": "Mod+S", "cmd": ["agl", "toggle", "settings"]},
@@ -188,6 +189,7 @@ Item {
     onEdgeLightingThicknessChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingGlowChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingAudioOnlyChanged: { if (settingsLoaded) saveSettings(); }
+    onEdgeLightingDirectionChanged: { if (settingsLoaded) saveSettings(); }
 
     Timer {
         id: saveTimer
@@ -244,7 +246,8 @@ Item {
                 "edgeLightingLength": settingsService.edgeLightingLength,
                 "edgeLightingThickness": settingsService.edgeLightingThickness,
                 "edgeLightingGlow": settingsService.edgeLightingGlow,
-                "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly
+                "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly,
+                "edgeLightingDirection": settingsService.edgeLightingDirection
             };
             syncShortcuts();
             settingsSaver.command = ["sh", "-c", "mkdir -p ~/.cache/quickshell /var/tmp/sddm-theme && cat << 'EOF' > ~/.cache/quickshell/settings_prefs.json
@@ -423,6 +426,8 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                             settingsService.edgeLightingGlow = prefs.edgeLightingGlow;
                         if (prefs.edgeLightingAudioOnly !== undefined)
                             settingsService.edgeLightingAudioOnly = prefs.edgeLightingAudioOnly;
+                        if (prefs.edgeLightingDirection !== undefined)
+                            settingsService.edgeLightingDirection = prefs.edgeLightingDirection;
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);

@@ -209,6 +209,36 @@ AppContainer {
                 }
             }
 
+            SettingSegmented {
+                label: "Glow Direction"
+                description: "Rotation direction of the light path along the screen bezel"
+                model: [{
+                    "text": "Clockwise",
+                    "value": "clockwise"
+                }, {
+                    "text": "Counter-Clockwise",
+                    "value": "counter_clockwise"
+                }]
+                currentValue: SettingsService.edgeLightingDirection
+                onActivated: (value) => {
+                    SettingsService.edgeLightingDirection = value;
+                }
+            }
+
+            SettingSpinBox {
+                label: "Glow Width"
+                description: "Thickness of the glowing light band inside the bezel channel"
+                from: 4
+                to: 32
+                stepSize: 2
+                value: SettingsService.edgeLightingThickness
+                defaultValue: 12
+                suffix: "px"
+                onMoved: (val) => {
+                    SettingsService.edgeLightingThickness = Math.round(val);
+                }
+            }
+
             SettingSpinBox {
                 label: "Rotation Speed"
                 description: "Speed of traveling light beam around the screen"
@@ -231,7 +261,7 @@ AppContainer {
                 to: 100
                 stepSize: 5
                 value: SettingsService.edgeLightingLength
-                defaultValue: 25
+                defaultValue: 30
                 suffix: "%"
                 onMoved: (val) => {
                     SettingsService.edgeLightingLength = Math.round(val);
@@ -240,12 +270,12 @@ AppContainer {
 
             SettingSpinBox {
                 label: "Glow Spread & Bloom"
-                description: "Softness and radius of ambient rim light"
+                description: "Atmospheric radiance and diffusion radius of the rim glow"
                 from: 2
-                to: 24
-                stepSize: 1
+                to: 36
+                stepSize: 2
                 value: SettingsService.edgeLightingGlow
-                defaultValue: 12
+                defaultValue: 16
                 suffix: "px"
                 onMoved: (val) => {
                     SettingsService.edgeLightingGlow = Math.round(val);

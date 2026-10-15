@@ -137,6 +137,13 @@ async fn main() -> Result<()> {
         is_locked,
     );
 
+    // Instantiate layer surfaces for all existing outputs discovered during initial roundtrip
+    use smithay_client_toolkit::output::OutputHandler;
+    let initial_outputs: Vec<_> = app_state.output_state.outputs().collect();
+    for output in initial_outputs {
+        app_state.new_output(&wayland_conn, &qh, output);
+    }
+
     // Set up graceful shutdown signal handler (SIGINT / SIGTERM)
     let shutdown_signal = Arc::new(AtomicBool::new(false));
     let sig_clone = Arc::clone(&shutdown_signal);

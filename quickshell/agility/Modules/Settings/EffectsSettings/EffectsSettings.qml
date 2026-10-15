@@ -165,7 +165,7 @@ AppContainer {
 
         SettingToggle {
             label: "Enable Ambient Edge Lighting"
-            description: "Glowing perimeter beam along screen bezel (Convex bar)"
+            description: "Full-perimeter glowing rim lighting along screen bezel (Lumn-style)"
             onCheckedChanged: {
                 if (checked !== SettingsService.edgeLightingEnabled)
                     SettingsService.edgeLightingEnabled = checked;
@@ -197,7 +197,7 @@ AppContainer {
 
             SettingToggle {
                 label: "Dynamic Album Art Colors"
-                description: "Extract color from playing music; disable to use custom color"
+                description: "Extract primary & complementary colors from playing music; disable for custom color"
                 onCheckedChanged: {
                     let mode = checked ? "album_art" : "custom";
                     if (mode !== SettingsService.edgeLightingColorMode)
@@ -210,8 +210,8 @@ AppContainer {
             }
 
             SettingSegmented {
-                label: "Glow Direction"
-                description: "Rotation direction of the light path along the screen bezel"
+                label: "Ambient Drift Direction"
+                description: "Drift direction of the dual-tone ambient gradient around the screen"
                 model: [{
                     "text": "Clockwise",
                     "value": "clockwise"
@@ -226,8 +226,8 @@ AppContainer {
             }
 
             SettingSpinBox {
-                label: "Glow Width"
-                description: "Thickness of the glowing light band inside the bezel channel"
+                label: "Glow Width & Core Rim"
+                description: "Thickness of the glowing core rim along the bezel border"
                 from: 4
                 to: 32
                 stepSize: 2
@@ -240,8 +240,8 @@ AppContainer {
             }
 
             SettingSpinBox {
-                label: "Rotation Speed"
-                description: "Speed of traveling light beam around the screen"
+                label: "Ambient Drift Speed"
+                description: "Speed of ambient color drift around the display edges"
                 from: 0.2
                 to: 3.0
                 stepSize: 0.2
@@ -255,13 +255,13 @@ AppContainer {
             }
 
             SettingSpinBox {
-                label: "Beam Length"
-                description: "Length of the glowing comet arc along perimeter"
-                from: 10
-                to: 100
+                label: "Color Balance (Primary Ratio)"
+                description: "Balance ratio between primary and complementary ambient colors (default 60/40)"
+                from: 30
+                to: 85
                 stepSize: 5
                 value: SettingsService.edgeLightingLength
-                defaultValue: 30
+                defaultValue: 60
                 suffix: "%"
                 onMoved: (val) => {
                     SettingsService.edgeLightingLength = Math.round(val);
@@ -269,13 +269,13 @@ AppContainer {
             }
 
             SettingSpinBox {
-                label: "Glow Spread & Bloom"
-                description: "Atmospheric radiance and diffusion radius of the rim glow"
-                from: 2
-                to: 36
+                label: "Inward Glow Spread & Bloom"
+                description: "Atmospheric radiance and inward diffusion spilling into the screen"
+                from: 4
+                to: 48
                 stepSize: 2
                 value: SettingsService.edgeLightingGlow
-                defaultValue: 16
+                defaultValue: 20
                 suffix: "px"
                 onMoved: (val) => {
                     SettingsService.edgeLightingGlow = Math.round(val);

@@ -4,6 +4,7 @@ import QtQuick.Effects
 import QtQuick.Shapes
 import qs.Core
 import qs.Core.Services
+import qs.Core.Utils
 
 Item {
     id: root
@@ -18,33 +19,83 @@ Item {
     readonly property bool isAudioActive: MprisService.isPlaying || AudioService.isSinkInputActive
     readonly property bool shouldGlow: SettingsService.edgeLightingEnabled && (!SettingsService.edgeLightingAudioOnly || isAudioActive) && fsTransitionProg > 0.01
 
-    // Bass / Beat energy from Cava
-    readonly property real beatEnergy: {
+    // Bass / Beat energy from Cava sub-bass bars (bars 0..3)
+    readonly property real rawBeatEnergy: {
         let data = CavaService.cavaData;
         if (!data || data.length < 4)
-            return 0;
+            return 0.0;
         let sum = data[0] + data[1] + data[2] + data[3];
         return Math.min(1.0, sum / 320.0);
     }
-    readonly property real dynamicScale: 1.0 + (beatEnergy * 0.25)
 
-    // Color derivation
-    readonly property color baseColor: {
+    // Smoothed beat with snappy attack (40ms) and organic decay (300ms)
+    property real smoothedBeat: 0.0
+
+    Binding on smoothedBeat {
+        value: root.isAudioActive ? root.rawBeatEnergy : 0.0
+    }
+
+    Behavior on smoothedBeat {
+        NumberAnimation {
+            duration: root.rawBeatEnergy > root.smoothedBeat ? 40 : 300
+            easing.type: root.rawBeatEnergy > root.smoothedBeat ? Easing.OutQuad : Easing.OutCubic
+        }
+    }
+
+    // Idle breathing oscillation to keep ambient glow living when music is quiet/paused
+    property real idlePhase: 0.0
+    NumberAnimation {
+        target: root
+        property: "idlePhase"
+        from: 0.0
+        to: 6.2831853
+        duration: 5500
+        loops: Animation.Infinite
+        running: root.shouldGlow
+    }
+    readonly property real idleGlow: Math.sin(idlePhase) * 0.06
+
+    // Primary & Complementary palette derivation (Lumn dual-tone style)
+    readonly property color primaryColor: {
         if (SettingsService.edgeLightingColorMode === "album_art") {
             return Theme.accent;
         }
         return SettingsService.edgeLightingCustomColor;
     }
 
-    // Geometry & Channel Thickness matching the exact Convex bezel
+    readonly property color secondaryColor: {
+        if (SettingsService.edgeLightingColorMode === "album_art") {
+            return Theme.accentComplementary;
+        }
+        let c = primaryColor;
+        let r = c.r, g = c.g, b = c.b;
+        let max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, l = (max + min) / 2;
+        if (max !== min) {
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+            else if (max === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h /= 6;
+        }
+        if (s < 0.08) {
+            return Qt.rgba(0.92, 0.45, 0.72, 1.0);
+        }
+        let compH = (h + 0.42) % 1.0;
+        return Qt.hsla(compH, Math.max(0.65, s), Math.min(0.70, Math.max(0.40, l)), 1.0);
+    }
+
+    // Geometry matching the Convex display frame
     readonly property real screenW: Math.round(root.width)
     readonly property real screenH: Math.round(root.height)
-    readonly property real channelThickness: Math.round(root.bezelSize * (1.0 + (root.beatEnergy * 0.15)) * root.fsTransitionProg)
-    readonly property real arcLength: Math.max(0.10, Math.min(1.0, SettingsService.edgeLightingLength / 100.0))
+    readonly property real coreThickness: Math.max(2, Math.round(SettingsService.edgeLightingThickness * (1.0 + (root.smoothedBeat * 0.25)) * root.fsTransitionProg))
+    readonly property real primaryRatio: Math.max(0.30, Math.min(0.85, SettingsService.edgeLightingLength / 100.0))
+    readonly property real dynamicGlowSpread: Math.round((SettingsService.edgeLightingGlow + (root.smoothedBeat * 16)) * root.fsTransitionProg)
 
-    // Rotation Direction & Speed
+    // Gentle ambient drift rotation
     readonly property bool isClockwise: SettingsService.edgeLightingDirection !== "counter_clockwise"
-    property real travelAngle: isClockwise ? 0 : 360
+    property real driftAngle: isClockwise ? 0 : 360
 
     anchors.fill: parent
     visible: opacity > 0.001
@@ -58,13 +109,12 @@ Item {
     }
 
     NumberAnimation {
-        id: rotationAnim
-
+        id: driftAnim
         target: root
-        property: "travelAngle"
+        property: "driftAngle"
         from: root.isClockwise ? 0 : 360
         to: root.isClockwise ? 360 : 0
-        duration: Math.max(800, Math.round(5000 / Math.max(0.1, SettingsService.edgeLightingSpeed)))
+        duration: Math.max(6000, Math.round(30000 / Math.max(0.1, SettingsService.edgeLightingSpeed)))
         loops: Animation.Infinite
         running: root.shouldGlow
     }
@@ -72,17 +122,16 @@ Item {
     Connections {
         target: SettingsService
         function onEdgeLightingDirectionChanged() {
-            rotationAnim.restart();
+            driftAnim.restart();
         }
         function onEdgeLightingSpeedChanged() {
-            rotationAnim.restart();
+            driftAnim.restart();
         }
     }
 
-    // Rotating conical light beam
+    // Dual-tone conical gradient source (seamless wrap at 0/360)
     Item {
-        id: beamSource
-
+        id: gradientSource
         anchors.fill: parent
         visible: false
 
@@ -93,64 +142,57 @@ Item {
 
             GE.ConicalGradient {
                 anchors.fill: parent
-                angle: root.travelAngle
+                angle: root.driftAngle
                 gradient: Gradient {
                     GradientStop {
                         position: 0.0
-                        color: "transparent"
+                        color: root.primaryColor
                     }
                     GradientStop {
-                        position: Math.max(0.001, 1.0 - root.arcLength)
-                        color: "transparent"
+                        position: Math.max(0.05, root.primaryRatio * 0.70)
+                        color: root.primaryColor
                     }
                     GradientStop {
-                        position: Math.max(0.002, 1.0 - (root.arcLength * 0.65))
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.25)
+                        position: Math.min(0.92, root.primaryRatio + ((1.0 - root.primaryRatio) * 0.35))
+                        color: root.secondaryColor
                     }
                     GradientStop {
-                        position: Math.max(0.003, 1.0 - (root.arcLength * 0.30))
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.65)
-                    }
-                    GradientStop {
-                        position: Math.max(0.004, 1.0 - (root.arcLength * 0.08))
-                        color: Qt.rgba(root.baseColor.r, root.baseColor.g, root.baseColor.b, 0.95)
-                    }
-                    GradientStop {
-                        position: Math.max(0.005, 1.0 - (root.arcLength * 0.01))
-                        color: Qt.rgba(Math.min(1.0, root.baseColor.r * 1.3), Math.min(1.0, root.baseColor.g * 1.3), Math.min(1.0, root.baseColor.b * 1.3), 1.0)
+                        position: Math.min(0.96, 1.0 - ((1.0 - root.primaryRatio) * 0.20))
+                        color: root.secondaryColor
                     }
                     GradientStop {
                         position: 1.0
-                        color: "transparent"
+                        color: root.primaryColor
                     }
                 }
             }
         }
     }
 
-    // Broad channel mask matching the exact Convex outline
+    // Full-perimeter rim contour stroke matching exact Convex bezel inner curves
     Item {
-        id: bezelChannelMask
-
+        id: rimShapeContainer
         anchors.fill: parent
         visible: false
 
         Shape {
+            id: rimShape
             anchors.fill: parent
             preferredRendererType: Shape.CurveRenderer
 
             ShapePath {
-                strokeWidth: 0
-                strokeColor: "transparent"
-                fillColor: "white"
-                fillRule: ShapePath.OddEvenFill
+                strokeWidth: Math.round(root.coreThickness)
+                strokeColor: "white"
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
 
                 PathSvg {
                     path: {
                         let W = Math.round(root.width);
                         let H = Math.round(root.height);
-                        let b = Math.max(1, Math.round(root.channelThickness));
-                        let r = root.innerRadius;
+                        let b = Math.max(1, Math.round(root.bezelSize * root.fsTransitionProg));
+                        let r = Math.max(1, root.innerRadius);
                         let off = root.expandOffset;
                         let topBezel = 0;
                         let inX = b - off;
@@ -161,58 +203,67 @@ Item {
                             return "";
 
                         let k = r * 0.552285;
-                        let outer = `M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z `;
-                        let inner = `M ${inX} ${inY + r} ` +
-                                    `L ${inX} ${inY + inH - r} ` +
-                                    `C ${inX} ${inY + inH - r + k}, ${inX + r - k} ${inY + inH}, ${inX + r} ${inY + inH} ` +
-                                    `L ${inX + inW - r} ${inY + inH} ` +
-                                    `C ${inX + inW - r + k} ${inY + inH}, ${inX + inW} ${inY + inH - r + k}, ${inX + inW} ${inY + inH - r} ` +
-                                    `L ${inX + inW} ${inY + r} ` +
-                                    `C ${inX + inW} ${inY + r - k}, ${inX + inW - r + k} ${inY}, ${inX + inW - r} ${inY} ` +
-                                    `L ${inX + r} ${inY} ` +
-                                    `C ${inX + r - k} ${inY}, ${inX} ${inY + r - k}, ${inX} ${inY + r} Z`;
-                        return outer + inner;
+                        return `M ${inX} ${inY + r} ` +
+                               `L ${inX} ${inY + inH - r} ` +
+                               `C ${inX} ${inY + inH - r + k}, ${inX + r - k} ${inY + inH}, ${inX + r} ${inY + inH} ` +
+                               `L ${inX + inW - r} ${inY + inH} ` +
+                               `C ${inX + inW - r + k} ${inY + inH}, ${inX + inW} ${inY + inH - r + k}, ${inX + inW} ${inY + inH - r} ` +
+                               `L ${inX + inW} ${inY + r} ` +
+                               `C ${inX + inW} ${inY + r - k}, ${inX + inW - r + k} ${inY}, ${inX + inW - r} ${inY} ` +
+                               `L ${inX + r} ${inY} ` +
+                               `C ${inX + r - k} ${inY}, ${inX} ${inY + r - k}, ${inX} ${inY + r} Z`;
                     }
                 }
             }
         }
     }
 
-    // Masked traveling beam
+    // Masked dual-tone continuous rim
     Item {
-        id: maskedBeam
-
+        id: maskedRim
         anchors.fill: parent
         visible: false
 
         GE.OpacityMask {
             anchors.fill: parent
-            source: beamSource
-            maskSource: bezelChannelMask
+            source: gradientSource
+            maskSource: rimShapeContainer
         }
     }
 
-    // Secondary Ambient Diffusion Bloom (Atmospheric Rim Radiance)
+    // Pass 1: Atmospheric Inward Bloom Diffusion (Lumn Ambient Radiance)
     MultiEffect {
         anchors.fill: parent
-        source: maskedBeam
+        source: maskedRim
         visible: SettingsService.edgeLightingGlow > 0
         blurEnabled: true
-        blur: Math.min(1.0, (SettingsService.edgeLightingGlow * root.dynamicScale) / 32.0)
-        blurMax: Math.round(SettingsService.edgeLightingGlow * 1.8 * root.dynamicScale)
-        brightness: 0.15 + (root.beatEnergy * 0.30)
-        contrast: 0.10
-        opacity: 0.85
+        blur: Math.min(1.0, root.dynamicGlowSpread / 32.0)
+        blurMax: Math.round(root.dynamicGlowSpread * 1.6)
+        brightness: 0.16 + (root.smoothedBeat * 0.35) + root.idleGlow
+        contrast: 0.12
+        opacity: 0.78 + (root.smoothedBeat * 0.22)
     }
 
-    // Primary Broad Luminous Channel (Core Glow inside bezel channel)
+    // Pass 2: Concentrated Core Aura (Luminous Band along Bezel Rim)
     MultiEffect {
         anchors.fill: parent
-        source: maskedBeam
+        source: maskedRim
         blurEnabled: true
-        blur: 0.10
-        blurMax: 6
-        brightness: 0.20 + (root.beatEnergy * 0.25)
+        blur: 0.18
+        blurMax: Math.round(8 + (root.smoothedBeat * 6))
+        brightness: 0.22 + (root.smoothedBeat * 0.25)
+        contrast: 0.08
+        opacity: 0.88 + (root.smoothedBeat * 0.12)
+    }
+
+    // Pass 3: Precision Luminous Edge (Crisp Definition)
+    MultiEffect {
+        anchors.fill: parent
+        source: maskedRim
+        blurEnabled: true
+        blur: 0.05
+        blurMax: 3
+        brightness: 0.15 + (root.smoothedBeat * 0.15)
         opacity: 0.95
     }
 }

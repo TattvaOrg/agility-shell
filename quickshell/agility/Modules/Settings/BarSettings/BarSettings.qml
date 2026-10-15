@@ -47,6 +47,18 @@ AppContainer {
             }
         }
 
+        Divider {
+        }
+
+        SettingToggle {
+            label: "Open on Hover"
+            description: "Automatically open menus and popups when hovering over bar widgets without needing to click"
+            checked: SettingsService.barOpenOnHover
+            onCheckedChanged: {
+                SettingsService.barOpenOnHover = checked;
+            }
+        }
+
     }
 
     // ISLAND MODE WIDGETS

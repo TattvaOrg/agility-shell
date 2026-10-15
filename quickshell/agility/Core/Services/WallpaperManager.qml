@@ -20,6 +20,7 @@ QtObject {
     property bool enableTransitions: HyprlandService.wpEnableTransitions
     property bool autoShuffle: HyprlandService.wpAutoShuffle
     property int shuffleInterval: HyprlandService.wpShuffleInterval
+    property Process fastAwwwProc
     property Process wallpaperApplyProc
     property Process wallpaperSaveProc
     property Process wallpaperLoader
@@ -49,8 +50,23 @@ QtObject {
             HyprlandService.wpAutoShuffle = false;
             SettingsService.saveSettings();
         }
+
+        // Fast path: Immediately apply wallpaper with awww directly (< 250ms visual switch)
+        fastAwwwProc.running = false;
+        fastAwwwProc.command = [
+            "awww", "img", rawPath,
+            "--resize", "crop",
+            "--filter", "Bilinear",
+            "--transition-type", (enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) ? transitionType : "grow",
+            "--transition-duration", "0.2",
+            "--transition-step", "180",
+            "--transition-fps", "60"
+        ];
+        fastAwwwProc.startDetached();
+
+        // Daemon sync: extracts palette, generates blur, writes cache
         wallpaperApplyProc.running = false;
-        let cmd = ["agl", "wallpaper", rawPath];
+        let cmd = ["agl", "wallpaper", rawPath, "--duration", "0.2"];
         if (enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) {
             cmd.push("--transition", transitionType);
         }
@@ -81,6 +97,9 @@ QtObject {
             if (root.autoShuffle)
                 root.shuffle();
         }
+    }
+
+    fastAwwwProc: Process {
     }
 
     wallpaperApplyProc: Process {

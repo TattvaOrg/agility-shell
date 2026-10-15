@@ -187,9 +187,18 @@ Item {
 
         property var lines: []
 
-        command: ["agl", "wallpaper", "list"]
+        command: ["sh", "-c", "agl wallpaper list 2>/dev/null; find ~/.local/share/agility-shell/wallpapers ~/.config/agility-shell/wallpapers ~/Pictures/Wallpapers -maxdepth 1 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' \\) 2>/dev/null"]
         onExited: function(exitCode) {
-            let sortedLines = lines.sort(function(a, b) {
+            let seen = {};
+            let uniqueLines = [];
+            for (let i = 0; i < lines.length; i++) {
+                let item = lines[i];
+                if (!seen[item.rawPath]) {
+                    seen[item.rawPath] = true;
+                    uniqueLines.push(item);
+                }
+            }
+            let sortedLines = uniqueLines.sort(function(a, b) {
                 return a.name.localeCompare(b.name);
             });
             let changed = (sortedLines.length !== wallModel.count);
@@ -203,8 +212,8 @@ Item {
             }
             if (changed || wallModel.count === 0) {
                 wallModel.clear();
-                for (let i = 0; i < sortedLines.length; i++) {
-                    wallModel.append(sortedLines[i]);
+                for (let j = 0; j < sortedLines.length; j++) {
+                    wallModel.append(sortedLines[j]);
                 }
                 filterWallpapers(searchField.text);
             }

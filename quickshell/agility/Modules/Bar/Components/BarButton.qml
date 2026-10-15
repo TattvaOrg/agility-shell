@@ -37,13 +37,38 @@ Rectangle {
         iconColor: (!root.hasBackground && mouseArea.containsMouse) ? Theme.accent : root.iconColor
     }
 
+    Timer {
+        id: hoverTimer
+
+        interval: 160
+        repeat: false
+        onTriggered: {
+            if (SettingsService.barOpenOnHover && mouseArea.containsMouse) {
+                if (root.widgetId !== "" && root.widgetId !== "powerMenu") {
+                    if (!AppState.isWidgetOpen(root.widgetId))
+                        AppState.openWidget(root.widgetId);
+                } else if (root.widget && !root.widget.isOpen) {
+                    root.widget.isOpen = true;
+                }
+            }
+        }
+    }
+
     MouseArea {
         id: mouseArea
 
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onEntered: {
+            if (SettingsService.barOpenOnHover)
+                hoverTimer.restart();
+        }
+        onExited: {
+            hoverTimer.stop();
+        }
         onClicked: {
+            hoverTimer.stop();
             if (root.widgetId !== "")
                 AppState.toggleWidget(root.widgetId);
             else if (root.widget)

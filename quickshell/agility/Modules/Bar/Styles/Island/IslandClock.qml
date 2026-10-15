@@ -96,11 +96,35 @@ Item {
 
             }
 
+            Timer {
+                id: hoverTimer
+
+                interval: 160
+                repeat: false
+                onTriggered: {
+                    if (SettingsService.barOpenOnHover && clockMouseArea.containsMouse && !AppState.isWidgetOpen("clock")) {
+                        AppState.openWidget("clock");
+                    }
+                }
+            }
+
             MouseArea {
+                id: clockMouseArea
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
+                hoverEnabled: true
                 enabled: root.clickable
-                onClicked: AppState.toggleWidget("clock")
+                onEntered: {
+                    if (SettingsService.barOpenOnHover)
+                        hoverTimer.restart();
+                }
+                onExited: {
+                    hoverTimer.stop();
+                }
+                onClicked: {
+                    hoverTimer.stop();
+                    AppState.toggleWidget("clock");
+                }
             }
 
         }

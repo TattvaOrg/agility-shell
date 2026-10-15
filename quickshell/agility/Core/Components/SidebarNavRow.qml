@@ -10,8 +10,11 @@ Rectangle {
     property string labelText: ""
     property string statusText: ""
     property bool isActive: false
+    property bool hasChevron: false
+    property bool isExpanded: false
 
     signal rowClicked()
+    signal chevronClicked()
 
     Layout.fillWidth: true
     Layout.preferredHeight: Constants.size3Xl
@@ -76,6 +79,24 @@ Rectangle {
                 color: rowRoot.isActive ? Theme.accent : Theme.muted
             }
 
+        }
+
+        SvgIcon {
+            visible: rowRoot.hasChevron
+            icon: "chevron-down"
+            iconSize: 12
+            flat: true
+            rotation: rowRoot.isExpanded ? 0 : -90
+            iconColor: rowRoot.isActive ? Theme.fg : (hoverHandler.hovered ? Theme.fg : Theme.muted)
+            Layout.alignment: Qt.AlignVCenter
+            Layout.rightMargin: Constants.size3Xs
+
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: Constants.animFast
+                    easing.type: Easing.OutQuad
+                }
+            }
         }
 
     }

@@ -48,20 +48,41 @@ Item {
         readonly property real targetPillWidth: Math.round(root.width * (SettingsService.pillBarWidthPercent / 100))
         readonly property bool isFullWidth: SettingsService.pillBarWidthPercent >= 100
 
+        readonly property real bgAlpha: (SettingsService.barGlassMode === "solid") ? 1.0 : (SettingsService.barGlassOpacity / 100)
+        readonly property color baseBgColor: {
+            if (SettingsService.barGlassMode === "adaptive")
+                return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, bgAlpha * 0.65);
+            return Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, bgAlpha);
+        }
+
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         height: root.baseBarHeight
         width: Math.max(minPillWidth, Math.min(root.width - (isFullWidth ? 0 : Constants.sizeMd * 2), targetPillWidth))
         implicitWidth: width
         radius: isFullWidth ? Constants.sizeSm : height / 2
-        color: Theme.bg
-        border.color: Theme.borderSecondary
+        color: baseBgColor
+        border.color: SettingsService.barGlassMode === "adaptive" ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : Theme.borderSecondary
         border.width: 1
+
+        gradient: SettingsService.barGlassMode === "gradient" ? gradientDef : null
+
+        Gradient {
+            id: gradientDef
+            GradientStop { position: 0.0; color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, pillContainer.bgAlpha * 0.95) }
+            GradientStop { position: 1.0; color: Qt.rgba(Theme.bgSecondary.r, Theme.bgSecondary.g, Theme.bgSecondary.b, pillContainer.bgAlpha * 0.7) }
+        }
 
         Behavior on width {
             NumberAnimation {
                 duration: Constants.animFast
                 easing.type: Easing.OutQuad
+            }
+        }
+
+        Behavior on color {
+            ColorAnimation {
+                duration: Constants.animFast
             }
         }
 
@@ -86,7 +107,7 @@ Item {
             anchors.rightMargin: isDistributed ? Constants.sizeLg : 0
             spacing: Constants.sizeSm
 
-            // Left Navigation (Material 3 Dashboard, Compositor Workspaces)
+            // Left Navigation (Material 3 Dashboard, Compositor Workspaces, Active Window)
             RowLayout {
                 id: leftGroup
                 spacing: Constants.sizeSm
@@ -111,6 +132,11 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
                     opacity: 0.6
                 }
+
+                ActiveWindowPill {
+                    id: activeWindowPill
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
 
             // Expanding spacer between Left and Center
@@ -120,7 +146,7 @@ Item {
                 visible: contentRow.isDistributed
             }
 
-            // Center (Clock & Live Playing Media)
+            // Center (Clock, Weather & Live Playing Media)
             RowLayout {
                 id: centerGroup
                 spacing: Constants.sizeSm
@@ -128,6 +154,11 @@ Item {
 
                 ClockButton {
                     id: clockBtn
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                WeatherPill {
+                    id: weatherPill
                     Layout.alignment: Qt.AlignVCenter
                 }
 
@@ -144,7 +175,7 @@ Item {
                 visible: contentRow.isDistributed
             }
 
-            // Right Quick Controls (Recording, Tray, QuickSettings, Notifications, Power)
+            // Right Quick Controls (Battery, Network, DND, Recording, Tray, QuickSettings, Notifications, Power)
             RowLayout {
                 id: rightGroup
                 spacing: Constants.sizeSm
@@ -157,6 +188,21 @@ Item {
                     color: Theme.borderSecondary
                     Layout.alignment: Qt.AlignVCenter
                     opacity: 0.6
+                }
+
+                NetworkPill {
+                    id: netPill
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                DndPill {
+                    id: dndPill
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                BatteryPill {
+                    id: batteryPill
+                    Layout.alignment: Qt.AlignVCenter
                 }
 
                 RecordingIndicator {

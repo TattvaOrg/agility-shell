@@ -10,6 +10,7 @@ AppSidebar {
     id: sidebarRoot
 
     property int activeTab: 0
+    property bool isDesktopBarExpanded: activeTab === 1 || activeTab === 9
 
     signal tabClicked(int index)
 
@@ -73,8 +74,61 @@ AppSidebar {
             anchors.fill: parent
             iconName: "bar"
             labelText: "Desktop Bar"
+            hasChevron: true
+            isExpanded: sidebarRoot.isDesktopBarExpanded
             isActive: sidebarRoot.activeTab === 1
-            onRowClicked: sidebarRoot.tabClicked(1)
+            onRowClicked: {
+                if (sidebarRoot.activeTab === 1) {
+                    sidebarRoot.isDesktopBarExpanded = !sidebarRoot.isDesktopBarExpanded;
+                } else {
+                    sidebarRoot.isDesktopBarExpanded = true;
+                    sidebarRoot.tabClicked(1);
+                }
+            }
+            onChevronClicked: {
+                sidebarRoot.isDesktopBarExpanded = !sidebarRoot.isDesktopBarExpanded;
+            }
+        }
+
+    }
+
+    // Applets Dropdown Submenu (Tab 9)
+    ColumnLayout {
+        id: appletsSubmenuLayout
+        Layout.fillWidth: true
+        spacing: Constants.size2Xs
+        clip: true
+        visible: Layout.preferredHeight > 0 || sidebarRoot.isDesktopBarExpanded
+        Layout.preferredHeight: sidebarRoot.isDesktopBarExpanded ? 34 : 0
+        opacity: sidebarRoot.isDesktopBarExpanded ? 1 : 0
+
+        Behavior on Layout.preferredHeight {
+            NumberAnimation {
+                duration: Constants.animFast
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Constants.animFast
+                easing.type: Easing.OutQuad
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            Layout.leftMargin: Constants.sizeSm + 16
+            Layout.rightMargin: Constants.sizeSm
+            Layout.preferredHeight: 34
+
+            SidebarNavRow {
+                anchors.fill: parent
+                iconName: "widgets"
+                labelText: "Applets"
+                isActive: sidebarRoot.activeTab === 9
+                onRowClicked: sidebarRoot.tabClicked(9)
+            }
         }
 
     }

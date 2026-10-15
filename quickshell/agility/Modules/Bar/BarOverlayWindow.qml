@@ -429,7 +429,7 @@ PanelWindow {
 
             anchors.fill: parent
             acceptedButtons: Qt.AllButtons
-            enabled: root.hasExpandableHost && root.activeHost && root.activeHost.isOpen
+            enabled: (root.hasExpandableHost && root.activeHost && root.activeHost.isOpen) || AppState.isWidgetOpen("weather")
             onClicked: {
                 if (root.activeHost && typeof root.activeHost.close === "function")
                     root.activeHost.close();
@@ -538,6 +538,16 @@ PanelWindow {
         // Sided Pill Panels Overlay (Full Screen for Clicks/Focus when Sided Pill has open panel)
         Region {
             property bool isActive: root.isSidedPill && pillPanelsLoader.item && (pillPanelsLoader.item.hasAnyPanelOpen || pillPanelsLoader.item.isConvexCenterOpen)
+
+            x: 0
+            y: 0
+            width: isActive ? root.width : 0
+            height: isActive ? root.height : 0
+        }
+
+        // Weather Card Popout Overlay
+        Region {
+            property bool isActive: AppState.isWidgetOpen("weather")
 
             x: 0
             y: 0

@@ -13,7 +13,7 @@ Rectangle {
     readonly property bool isPlaying: MprisService.isPlaying
     readonly property string trackTitle: hasPlayer ? (MprisService.activePlayer.trackTitle || "").trim() : ""
     readonly property string trackArtist: hasPlayer ? (MprisService.activePlayer.trackArtist || "").trim() : ""
-    readonly property bool rawHasMedia: hasPlayer && (trackTitle !== "" || trackArtist !== "")
+    readonly property bool rawHasMedia: SettingsService.appletDynamicMedia && hasPlayer && (trackTitle !== "" || trackArtist !== "")
     property bool hasMedia: rawHasMedia
     property string lastTrackTitle: ""
     property string lastTrackArtist: ""
@@ -22,12 +22,33 @@ Rectangle {
     property bool isHovered: mouseArea.containsMouse
     property bool isPressed: mouseArea.pressed
     readonly property bool isCenteredBar: SettingsService.barIslandMode
-    readonly property real fullWidth: Math.min(300, contentRow.implicitWidth)
+    readonly property real fullWidth: Math.min(320, contentRow.implicitWidth + (isHovered && hasPlayer ? 54 : 0))
+    property real dynamicExpansionScale: 1.0
 
     onTrackTitleChanged: {
-        if (trackTitle !== "")
+        if (trackTitle !== "") {
             lastTrackTitle = trackTitle;
+            trackChangeAnim.restart();
+        }
+    }
 
+    SequentialAnimation {
+        id: trackChangeAnim
+
+        NumberAnimation {
+            target: root
+            property: "dynamicExpansionScale"
+            to: 1.08
+            duration: 180
+            easing.type: Easing.OutBack
+        }
+        NumberAnimation {
+            target: root
+            property: "dynamicExpansionScale"
+            to: 1.0
+            duration: 250
+            easing.type: Easing.OutCubic
+        }
     }
     onTrackArtistChanged: {
         if (trackArtist !== "")
@@ -50,7 +71,7 @@ Rectangle {
     visible: hasMedia || opacity > 0.001
     clip: true
     color: "transparent"
-    scale: DisplayProfileService.gameModeActive ? 1 : (isPressed ? 0.95 : (isHovered ? 1.02 : 1))
+    scale: (DisplayProfileService.gameModeActive ? 1 : (isPressed ? 0.95 : (isHovered ? 1.02 : 1))) * dynamicExpansionScale
 
     Timer {
         id: hideDebounceTimer
@@ -92,7 +113,7 @@ Rectangle {
         MiniCavaBars {
             id: visualizerRow
 
-            visible: root.hasMedia
+            visible: root.hasMedia && SettingsService.appletMediaVisualizer
             Layout.alignment: Qt.AlignVCenter
             Layout.preferredWidth: visible ? implicitWidth : 0
             Layout.rightMargin: Constants.size2Xs
@@ -136,6 +157,71 @@ Rectangle {
             elide: Text.ElideRight
             Layout.maximumWidth: root.displayArtist !== "" ? 120 : 200
             Layout.preferredWidth: Math.min(implicitWidth, Layout.maximumWidth)
+        }
+
+        RowLayout {
+            id: hoverControls
+            visible: root.isHovered && root.hasPlayer
+            spacing: 2
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: Constants.size2Xs
+
+            Rectangle {
+                width: 18
+                height: 18
+                radius: 9
+                color: prevHover.hovered ? Theme.bgSecondary : "transparent"
+                Layout.alignment: Qt.AlignVCenter
+
+                SvgIcon {
+                    anchors.centerIn: parent
+                    icon: "player-previous"
+                    iconSize: 10
+                    flat: true
+                    iconColor: prevHover.hovered ? Theme.accent : Theme.fg
+                }
+
+                HoverHandler { id: prevHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: MprisService.activePlayer && MprisService.activePlayer.previous() }
+            }
+
+            Rectangle {
+                width: 18
+                height: 18
+                radius: 9
+                color: playHover.hovered ? Theme.bgSecondary : "transparent"
+                Layout.alignment: Qt.AlignVCenter
+
+                SvgIcon {
+                    anchors.centerIn: parent
+                    icon: MprisService.isPlaying ? "player-pause" : "player-play"
+                    iconSize: 10
+                    flat: true
+                    iconColor: playHover.hovered ? Theme.accent : Theme.fg
+                }
+
+                HoverHandler { id: playHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: MprisService.activePlayer && MprisService.activePlayer.togglePlaying() }
+            }
+
+            Rectangle {
+                width: 18
+                height: 18
+                radius: 9
+                color: nextHover.hovered ? Theme.bgSecondary : "transparent"
+                Layout.alignment: Qt.AlignVCenter
+
+                SvgIcon {
+                    anchors.centerIn: parent
+                    icon: "player-next"
+                    iconSize: 10
+                    flat: true
+                    iconColor: nextHover.hovered ? Theme.accent : Theme.fg
+                }
+
+                HoverHandler { id: nextHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: MprisService.activePlayer && MprisService.activePlayer.next() }
+            }
         }
 
     }

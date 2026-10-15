@@ -71,6 +71,7 @@ ShellRoot {
         readonly property int barMarginSide: BarStyleConfig.barMarginSide(SettingsService.barStyle)
 
         WlrLayershell.layer: WlrLayer.Top
+        WlrLayershell.exclusionMode: (SettingsService.barAutoHide && (SettingsService.barIslandMode || SettingsService.barPillMode)) ? ExclusionMode.Ignore : ExclusionMode.Auto
         color: "transparent"
         focusable: false
         implicitHeight: !SettingsService.settingsLoaded ? 0 : (barMarginTop + barHeight)

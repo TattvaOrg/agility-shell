@@ -338,28 +338,63 @@ impl LauncherService {
             return false;
         }
 
-        let mut cmd = Command::new("sh");
-        if in_terminal {
-            // Pick terminal emulator or fallback to standard x-terminal-emulator
-            let term = if which("alacritty") {
-                "alacritty -e"
-            } else if which("kitty") {
-                "kitty -e"
-            } else if which("foot") {
-                "foot -e"
-            } else if which("xfce4-terminal") {
-                "xfce4-terminal -e"
+        let has_systemd_run = which("systemd-run");
+
+        let mut cmd = if has_systemd_run {
+            let mut c = Command::new("systemd-run");
+            c.args(["--user", "--scope", "--slice=app.slice", "-q", "--"]);
+            if in_terminal {
+                let term = if which("alacritty") {
+                    "alacritty"
+                } else if which("kitty") {
+                    "kitty"
+                } else if which("foot") {
+                    "foot"
+                } else if which("xfce4-terminal") {
+                    "xfce4-terminal"
+                } else {
+                    "xterm"
+                };
+                c.args([term, "-e", "sh", "-c", &cleaned]);
             } else {
-                "xterm -e"
-            };
-            cmd.args(["-c", &format!("{term} {cleaned} &")]);
+                c.args(["sh", "-c", &cleaned]);
+            }
+            c
         } else {
-            cmd.args(["-c", &format!("{cleaned} &")]);
+            let mut c = Command::new("sh");
+            if in_terminal {
+                let term = if which("alacritty") {
+                    "alacritty -e"
+                } else if which("kitty") {
+                    "kitty -e"
+                } else if which("foot") {
+                    "foot -e"
+                } else if which("xfce4-terminal") {
+                    "xfce4-terminal -e"
+                } else {
+                    "xterm -e"
+                };
+                c.args(["-c", &format!("{term} {cleaned} &")]);
+            } else {
+                c.args(["-c", &format!("{cleaned} &")]);
+            }
+            c
+        };
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            unsafe {
+                cmd.pre_exec(|| {
+                    libc::setsid();
+                    Ok(())
+                });
+            }
         }
 
         match cmd.spawn() {
             Ok(_) => {
-                info!("Successfully launched application: {cleaned}");
+                info!("Successfully launched application in isolated app.slice: {cleaned}");
                 true
             }
             Err(e) => {

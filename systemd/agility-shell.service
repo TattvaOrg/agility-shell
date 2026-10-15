@@ -11,7 +11,7 @@ Restart=on-failure
 RestartSec=1s
 Slice=session.slice
 TimeoutStopSec=3s
-KillMode=mixed
+KillMode=process
 
 [Install]
 WantedBy=graphical-session.target

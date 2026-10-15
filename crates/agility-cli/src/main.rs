@@ -1695,23 +1695,48 @@ fn spawn_detached_exec(exec_cmd: &str, in_terminal: bool) -> bool {
         return false;
     }
 
-    let mut cmd = Command::new("sh");
-    if in_terminal {
-        let term = if is_command_available("alacritty") {
-            "alacritty -e"
-        } else if is_command_available("kitty") {
-            "kitty -e"
-        } else if is_command_available("foot") {
-            "foot -e"
-        } else if is_command_available("xfce4-terminal") {
-            "xfce4-terminal -e"
+    let has_systemd_run = is_command_available("systemd-run");
+
+    let mut cmd = if has_systemd_run {
+        let mut c = Command::new("systemd-run");
+        c.args(["--user", "--scope", "--slice=app.slice", "-q", "--"]);
+        if in_terminal {
+            let term = if is_command_available("alacritty") {
+                "alacritty"
+            } else if is_command_available("kitty") {
+                "kitty"
+            } else if is_command_available("foot") {
+                "foot"
+            } else if is_command_available("xfce4-terminal") {
+                "xfce4-terminal"
+            } else {
+                "xterm"
+            };
+            c.args([term, "-e", "sh", "-c", &cleaned]);
         } else {
-            "xterm -e"
-        };
-        cmd.args(["-c", &format!("{term} {cleaned} &")]);
+            c.args(["sh", "-c", &cleaned]);
+        }
+        c
     } else {
-        cmd.args(["-c", &format!("{cleaned} &")]);
-    }
+        let mut c = Command::new("sh");
+        if in_terminal {
+            let term = if is_command_available("alacritty") {
+                "alacritty -e"
+            } else if is_command_available("kitty") {
+                "kitty -e"
+            } else if is_command_available("foot") {
+                "foot -e"
+            } else if is_command_available("xfce4-terminal") {
+                "xfce4-terminal -e"
+            } else {
+                "xterm -e"
+            };
+            c.args(["-c", &format!("{term} {cleaned} &")]);
+        } else {
+            c.args(["-c", &format!("{cleaned} &")]);
+        }
+        c
+    };
 
     #[cfg(unix)]
     {
@@ -1756,9 +1781,13 @@ fn resolve_cli_wallpaper(path_str: &str) -> Option<std::path::PathBuf> {
     let mut search_dirs = Vec::new();
 
     if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(Path::new(&home).join(".local/share/agility-shell/wallpapers"));
         search_dirs.push(Path::new(&home).join(".config/agility-shell/wallpapers"));
         search_dirs.push(Path::new(&home).join("Pictures/Wallpapers"));
         search_dirs.push(Path::new(&home).join("Pictures"));
+    }
+    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+        search_dirs.push(Path::new(&data_home).join("agility-shell/wallpapers"));
     }
     search_dirs.push(Path::new("/usr/share/agility-shell/wallpapers").to_path_buf());
     search_dirs.push(Path::new("wallpapers").to_path_buf());
@@ -1776,9 +1805,13 @@ fn resolve_cli_wallpaper(path_str: &str) -> Option<std::path::PathBuf> {
 fn list_cli_wallpapers() -> Vec<std::path::PathBuf> {
     let mut search_dirs = Vec::new();
     if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(Path::new(&home).join(".local/share/agility-shell/wallpapers"));
         search_dirs.push(Path::new(&home).join(".config/agility-shell/wallpapers"));
         search_dirs.push(Path::new(&home).join("Pictures/Wallpapers"));
         search_dirs.push(Path::new(&home).join("Pictures"));
+    }
+    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+        search_dirs.push(Path::new(&data_home).join("agility-shell/wallpapers"));
     }
     search_dirs.push(Path::new("/usr/share/agility-shell/wallpapers").to_path_buf());
     search_dirs.push(Path::new("wallpapers").to_path_buf());
@@ -1984,10 +2017,27 @@ async fn apply_cli_wallpaper(
         let _ = Command::new("awww-daemon").spawn();
     }
 
-    // Dispatch awww img
+    // Dispatch awww img with ultra-fast bilinear filter and 60fps step
     if is_command_available("awww") {
         let mut cmd = Command::new("awww");
-        cmd.args(["img", &abs_str, "--resize", "crop"]);
+        let t_type = transition.unwrap_or("grow");
+        let dur_str = format!("{:.2}", duration.unwrap_or(0.2));
+        cmd.args([
+            "img",
+            &abs_str,
+            "--resize",
+            "crop",
+            "--filter",
+            "Bilinear",
+            "--transition-type",
+            t_type,
+            "--transition-duration",
+            &dur_str,
+            "--transition-step",
+            "180",
+            "--transition-fps",
+            "60",
+        ]);
         let _ = cmd.spawn();
     }
 

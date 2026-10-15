@@ -85,6 +85,18 @@ Rectangle {
         }
     }
 
+    Timer {
+        id: hoverTimer
+
+        interval: 160
+        repeat: false
+        onTriggered: {
+            if (SettingsService.barOpenOnHover && root.isHovered && root.hasMedia && !AppState.isWidgetOpen("music")) {
+                AppState.openWidget("music");
+            }
+        }
+    }
+
     MouseArea {
         id: mouseArea
 
@@ -92,7 +104,15 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onEntered: {
+            if (SettingsService.barOpenOnHover && root.hasMedia)
+                hoverTimer.restart();
+        }
+        onExited: {
+            hoverTimer.stop();
+        }
         onClicked: (mouse) => {
+            hoverTimer.stop();
             if (mouse.button === Qt.RightButton) {
                 if (root.hasPlayer)
                     MprisService.activePlayer.togglePlaying();

@@ -34,6 +34,7 @@ Item {
     property string pillPopupStyle: "center"
     property string pillWidgetLayout: "distributed"
     property bool barAutoHide: false
+    property bool barOpenOnHover: false
     property string barGlassMode: "solid"
     property int barGlassOpacity: 85
     property bool appletActiveWindow: true
@@ -291,6 +292,7 @@ Item {
                 "pillPopupStyle": settingsService.pillPopupStyle,
                 "pillWidgetLayout": settingsService.pillWidgetLayout,
                 "barAutoHide": settingsService.barAutoHide,
+                "barOpenOnHover": settingsService.barOpenOnHover,
                 "barGlassMode": settingsService.barGlassMode,
                 "barGlassOpacity": settingsService.barGlassOpacity,
                 "appletActiveWindow": settingsService.appletActiveWindow,
@@ -489,6 +491,9 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.barAutoHide !== undefined)
                             settingsService.barAutoHide = Boolean(prefs.barAutoHide);
+
+                        if (prefs.barOpenOnHover !== undefined)
+                            settingsService.barOpenOnHover = Boolean(prefs.barOpenOnHover);
 
                         if (prefs.barGlassMode !== undefined)
                             settingsService.barGlassMode = prefs.barGlassMode;

@@ -43,6 +43,18 @@ Rectangle {
 
     }
 
+    Timer {
+        id: hoverTimer
+
+        interval: 160
+        repeat: false
+        onTriggered: {
+            if (SettingsService.barOpenOnHover && root.isHovered && !root.isActive) {
+                AppState.openWidget("controlCenter");
+            }
+        }
+    }
+
     MouseArea {
         id: mouseArea
 
@@ -50,7 +62,15 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onEntered: {
+            if (SettingsService.barOpenOnHover)
+                hoverTimer.restart();
+        }
+        onExited: {
+            hoverTimer.stop();
+        }
         onClicked: {
+            hoverTimer.stop();
             AppState.toggleWidget("controlCenter");
         }
     }

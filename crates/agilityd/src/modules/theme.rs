@@ -55,9 +55,13 @@ pub fn resolve_wallpaper_path(path_str: &str) -> Option<PathBuf> {
     let mut search_dirs = Vec::new();
 
     if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(PathBuf::from(&home).join(".local/share/agility-shell/wallpapers"));
         search_dirs.push(PathBuf::from(&home).join(".config/agility-shell/wallpapers"));
         search_dirs.push(PathBuf::from(&home).join("Pictures/Wallpapers"));
         search_dirs.push(PathBuf::from(&home).join("Pictures"));
+    }
+    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+        search_dirs.push(PathBuf::from(&data_home).join("agility-shell/wallpapers"));
     }
     search_dirs.push(PathBuf::from("/usr/share/agility-shell/wallpapers"));
     search_dirs.push(PathBuf::from("wallpapers"));
@@ -76,9 +80,13 @@ pub fn resolve_wallpaper_path(path_str: &str) -> Option<PathBuf> {
 pub fn list_all_wallpapers() -> Vec<PathBuf> {
     let mut search_dirs = Vec::new();
     if let Ok(home) = std::env::var("HOME") {
+        search_dirs.push(PathBuf::from(&home).join(".local/share/agility-shell/wallpapers"));
         search_dirs.push(PathBuf::from(&home).join(".config/agility-shell/wallpapers"));
         search_dirs.push(PathBuf::from(&home).join("Pictures/Wallpapers"));
         search_dirs.push(PathBuf::from(&home).join("Pictures"));
+    }
+    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+        search_dirs.push(PathBuf::from(&data_home).join("agility-shell/wallpapers"));
     }
     search_dirs.push(PathBuf::from("/usr/share/agility-shell/wallpapers"));
     search_dirs.push(PathBuf::from("wallpapers"));
@@ -300,7 +308,7 @@ impl ThemeService {
 
         // 1. Instantly dispatch wallpaper setter (awww / swww) in < 5ms
         let t_type = transition_type.unwrap_or("grow");
-        let t_dur = duration.unwrap_or(0.25);
+        let t_dur = duration.unwrap_or(0.20);
         Self::dispatch_wallpaper_backend(&abs_str, t_type, t_dur);
 
         // Immediate responsive token return with new wallpaper
@@ -624,10 +632,18 @@ impl ThemeService {
             let _ = Command::new("awww")
                 .arg("img")
                 .arg(path)
+                .arg("--resize")
+                .arg("crop")
+                .arg("--filter")
+                .arg("Bilinear")
                 .arg("--transition-type")
                 .arg(transition_type)
                 .arg("--transition-duration")
                 .arg(&dur_str)
+                .arg("--transition-step")
+                .arg("180")
+                .arg("--transition-fps")
+                .arg("60")
                 .spawn();
             return;
         }
@@ -660,6 +676,10 @@ impl ThemeService {
                 .arg(transition_type)
                 .arg("--transition-duration")
                 .arg(&dur_str)
+                .arg("--transition-step")
+                .arg("180")
+                .arg("--transition-fps")
+                .arg("60")
                 .spawn();
             return;
         }

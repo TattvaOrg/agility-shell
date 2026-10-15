@@ -1,4 +1,3 @@
-import Qt5Compat.GraphicalEffects as GE
 import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
@@ -57,15 +56,25 @@ Item {
 
     // Primary & Complementary palette derivation (Lumn dual-tone style)
     readonly property color primaryColor: {
+        let c;
         if (SettingsService.edgeLightingColorMode === "album_art") {
-            return Theme.accent;
+            c = Theme.accent;
+        } else {
+            c = SettingsService.edgeLightingCustomColor;
         }
-        return SettingsService.edgeLightingCustomColor;
+        let r = c.r, g = c.g, b = c.b;
+        if (Math.max(r, g, b) < 0.15) {
+            return Qt.rgba(0.65, 0.45, 0.95, 1.0);
+        }
+        return Qt.rgba(r, g, b, 1.0);
     }
 
     readonly property color secondaryColor: {
         if (SettingsService.edgeLightingColorMode === "album_art") {
-            return Theme.accentComplementary;
+            let comp = Theme.accentComplementary;
+            if (Math.max(comp.r, comp.g, comp.b) > 0.15) {
+                return Qt.rgba(comp.r, comp.g, comp.b, 1.0);
+            }
         }
         let c = primaryColor;
         let r = c.r, g = c.g, b = c.b;
@@ -89,7 +98,7 @@ Item {
     // Geometry matching the Convex display frame
     readonly property real screenW: Math.round(root.width)
     readonly property real screenH: Math.round(root.height)
-    readonly property real coreThickness: Math.max(2, Math.round(SettingsService.edgeLightingThickness * (1.0 + (root.smoothedBeat * 0.25)) * root.fsTransitionProg))
+    readonly property real channelThickness: Math.max(2, Math.round(SettingsService.edgeLightingThickness * (1.0 + (root.smoothedBeat * 0.20)) * root.fsTransitionProg))
     readonly property real primaryRatio: Math.max(0.30, Math.min(0.85, SettingsService.edgeLightingLength / 100.0))
     readonly property real dynamicGlowSpread: Math.round((SettingsService.edgeLightingGlow + (root.smoothedBeat * 16)) * root.fsTransitionProg)
 
@@ -129,22 +138,26 @@ Item {
         }
     }
 
-    // Dual-tone conical gradient source (seamless wrap at 0/360)
+    // Dual-tone conical gradient perimeter frame (Direct ShapePath fill, zero white lines)
     Item {
-        id: gradientSource
+        id: glowSource
         anchors.fill: parent
         visible: false
-        layer.enabled: true
 
-        Item {
-            anchors.centerIn: parent
-            width: Math.max(root.screenW, root.screenH) * 1.5
-            height: width
+        Shape {
+            anchors.fill: parent
+            preferredRendererType: Shape.CurveRenderer
 
-            GE.ConicalGradient {
-                anchors.fill: parent
-                angle: root.driftAngle
-                gradient: Gradient {
+            ShapePath {
+                strokeWidth: 0
+                strokeColor: "transparent"
+                fillRule: ShapePath.OddEvenFill
+
+                fillGradient: ConicalGradient {
+                    centerX: glowSource.width / 2
+                    centerY: glowSource.height / 2
+                    angle: root.driftAngle
+
                     GradientStop {
                         position: 0.0
                         color: root.primaryColor
@@ -166,34 +179,12 @@ Item {
                         color: root.primaryColor
                     }
                 }
-            }
-        }
-    }
-
-    // Full-perimeter rim contour stroke matching exact Convex bezel inner curves
-    Item {
-        id: rimShapeContainer
-        anchors.fill: parent
-        visible: false
-        layer.enabled: true
-
-        Shape {
-            id: rimShape
-            anchors.fill: parent
-            preferredRendererType: Shape.CurveRenderer
-
-            ShapePath {
-                strokeWidth: Math.round(root.coreThickness)
-                strokeColor: "white"
-                fillColor: "transparent"
-                capStyle: ShapePath.RoundCap
-                joinStyle: ShapePath.RoundJoin
 
                 PathSvg {
                     path: {
                         let W = Math.round(root.width);
                         let H = Math.round(root.height);
-                        let b = Math.max(1, Math.round(root.bezelSize * root.fsTransitionProg));
+                        let b = Math.max(1, Math.round(root.channelThickness));
                         let r = Math.max(1, root.innerRadius);
                         let off = root.expandOffset;
                         let topBezel = 0;
@@ -205,72 +196,57 @@ Item {
                             return "";
 
                         let k = r * 0.552285;
-                        return `M ${inX} ${inY + r} ` +
-                               `L ${inX} ${inY + inH - r} ` +
-                               `C ${inX} ${inY + inH - r + k}, ${inX + r - k} ${inY + inH}, ${inX + r} ${inY + inH} ` +
-                               `L ${inX + inW - r} ${inY + inH} ` +
-                               `C ${inX + inW - r + k} ${inY + inH}, ${inX + inW} ${inY + inH - r + k}, ${inX + inW} ${inY + inH - r} ` +
-                               `L ${inX + inW} ${inY + r} ` +
-                               `C ${inX + inW} ${inY + r - k}, ${inX + inW - r + k} ${inY}, ${inX + inW - r} ${inY} ` +
-                               `L ${inX + r} ${inY} ` +
-                               `C ${inX + r - k} ${inY}, ${inX} ${inY + r - k}, ${inX} ${inY + r} Z`;
+                        let outer = `M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z `;
+                        let inner = `M ${inX} ${inY + r} ` +
+                                    `L ${inX} ${inY + inH - r} ` +
+                                    `C ${inX} ${inY + inH - r + k}, ${inX + r - k} ${inY + inH}, ${inX + r} ${inY + inH} ` +
+                                    `L ${inX + inW - r} ${inY + inH} ` +
+                                    `C ${inX + inW - r + k} ${inY + inH}, ${inX + inW} ${inY + inH - r + k}, ${inX + inW} ${inY + inH - r} ` +
+                                    `L ${inX + inW} ${inY + r} ` +
+                                    `C ${inX + inW} ${inY + r - k}, ${inX + inW - r + k} ${inY}, ${inX + inW - r} ${inY} ` +
+                                    `L ${inX + r} ${inY} ` +
+                                    `C ${inX + r - k} ${inY}, ${inX} ${inY + r - k}, ${inX} ${inY + r} Z`;
+                        return outer + inner;
                     }
                 }
             }
         }
     }
 
-    // Masked dual-tone continuous rim
-    Item {
-        id: maskedRim
-        anchors.fill: parent
-        visible: false
-        layer.enabled: true
-
-        GE.OpacityMask {
-            anchors.fill: parent
-            source: gradientSource
-            maskSource: rimShapeContainer
-        }
-    }
-
-    // Pass 1: Atmospheric Inward Bloom Diffusion (Lumn Ambient Radiance)
-    // Fixed blurMax (48) prevents runtime shader re-compilation/re-allocation
+    // Pass 1: Broad Atmospheric Inward Bloom (Lumn Ambient Aura spilling into screen)
     MultiEffect {
         anchors.fill: parent
-        source: maskedRim
+        source: glowSource
         visible: SettingsService.edgeLightingGlow > 0
         blurEnabled: true
         blurMax: 48
         blur: Math.min(1.0, root.dynamicGlowSpread / 48.0)
-        brightness: 0.18 + (root.smoothedBeat * 0.38) + root.idleGlow
-        contrast: 0.14 + (root.smoothedBeat * 0.10)
-        saturation: 0.12 + (root.smoothedBeat * 0.20)
-        opacity: 0.80 + (root.smoothedBeat * 0.20)
+        brightness: 0.04 + (root.smoothedBeat * 0.16) + root.idleGlow
+        contrast: 0.08
+        saturation: 0.15 + (root.smoothedBeat * 0.15)
+        opacity: 0.85 + (root.smoothedBeat * 0.15)
     }
 
-    // Pass 2: Concentrated Core Aura (Luminous Band along Bezel Rim)
-    // Fixed blurMax (16) provides steady high-FPS bloom without stutter
+    // Pass 2: Concentrated Core Bloom (Luminous Radiance hugging the inner rim)
     MultiEffect {
         anchors.fill: parent
-        source: maskedRim
+        source: glowSource
         blurEnabled: true
         blurMax: 16
-        blur: Math.min(1.0, (8.0 + (root.smoothedBeat * 6.0)) / 16.0)
-        brightness: 0.24 + (root.smoothedBeat * 0.28)
-        contrast: 0.10
+        blur: Math.min(1.0, (6.0 + (root.smoothedBeat * 6.0)) / 16.0)
+        brightness: 0.06 + (root.smoothedBeat * 0.14)
+        contrast: 0.06
         saturation: 0.15
         opacity: 0.90 + (root.smoothedBeat * 0.10)
     }
 
-    // Pass 3: Precision Luminous Edge (Crisp Definition along Bezel Seam)
+    // Pass 3: Precision Vibrant Perimeter Channel (Crisp Bezel Core)
     MultiEffect {
         anchors.fill: parent
-        source: maskedRim
+        source: glowSource
         blurEnabled: true
         blurMax: 4
         blur: 0.20
-        brightness: 0.18 + (root.smoothedBeat * 0.18)
-        opacity: 0.96
+        opacity: 0.92
     }
 }

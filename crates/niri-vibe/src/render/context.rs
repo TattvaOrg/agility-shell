@@ -21,24 +21,43 @@ impl RenderContext {
     pub fn new() -> Result<Self> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
+            flags: wgpu::InstanceFlags::all(),
             ..Default::default()
         });
 
-        // Request high performance or default adapter
+        // Request default adapter with fallback for older Mesa/Intel Vulkan and GLES
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::LowPower,
+            power_preference: wgpu::PowerPreference::None,
             compatible_surface: None,
             force_fallback_adapter: false,
         }))
+        .or_else(|| {
+            instance
+                .enumerate_adapters(wgpu::Backends::all())
+                .into_iter()
+                .next()
+        })
+        .or_else(|| {
+            pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::None,
+                compatible_surface: None,
+                force_fallback_adapter: true,
+            }))
+        })
         .context("Failed to find suitable GPU adapter for wgpu")?;
 
-        info!("Selected GPU adapter: {:?}", adapter.get_info().name);
+        info!(
+            "Selected GPU adapter: {:?} (backend: {:?})",
+            adapter.get_info().name,
+            adapter.get_info().backend
+        );
 
+        let limits = wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits());
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label: Some("niri-vibe-device"),
                 required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
+                required_limits: limits,
             },
             None,
         ))

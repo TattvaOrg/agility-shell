@@ -39,7 +39,6 @@ impl AudioEngine {
         }
     }
 
-
     pub fn current_intensity(&self) -> f32 {
         f32::from_bits(self.intensity_bits.load(Ordering::Relaxed))
     }

@@ -43,6 +43,7 @@ pub struct WaylandAppState {
 }
 
 impl WaylandAppState {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         registry_state: RegistryState,
         compositor_state: CompositorState,

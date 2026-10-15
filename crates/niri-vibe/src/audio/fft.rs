@@ -82,7 +82,6 @@ impl BassAnalyzer {
             count += 1;
         }
 
-
         let raw_rms = if count > 0 {
             (sum_energy / count as f32).sqrt()
         } else {

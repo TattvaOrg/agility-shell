@@ -76,11 +76,12 @@ impl BassAnalyzer {
 
         let mut sum_energy = 0.0;
         let mut count = 0;
-        for i in start_bin..=end_bin {
-            let magnitude = buffer[i].norm();
+        for item in &buffer[start_bin..=end_bin] {
+            let magnitude = item.norm();
             sum_energy += magnitude * magnitude;
             count += 1;
         }
+
 
         let raw_rms = if count > 0 {
             (sum_energy / count as f32).sqrt()

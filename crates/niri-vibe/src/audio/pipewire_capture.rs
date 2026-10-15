@@ -25,6 +25,12 @@ struct StreamUserData {
     samples_ring: Arc<Mutex<Vec<f32>>>,
 }
 
+impl Default for AudioEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AudioEngine {
     pub fn new() -> Self {
         Self {
@@ -32,6 +38,7 @@ impl AudioEngine {
             running: Arc::new(AtomicBool::new(true)),
         }
     }
+
 
     pub fn current_intensity(&self) -> f32 {
         f32::from_bits(self.intensity_bits.load(Ordering::Relaxed))

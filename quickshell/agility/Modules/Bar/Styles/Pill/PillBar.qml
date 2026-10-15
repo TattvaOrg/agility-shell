@@ -44,15 +44,26 @@ Item {
     Rectangle {
         id: pillContainer
 
+        readonly property real minPillWidth: Math.max(leftGroup.implicitWidth + centerGroup.implicitWidth + rightGroup.implicitWidth + (Constants.sizeLg * 4), 480)
+        readonly property real targetPillWidth: Math.round(root.width * (SettingsService.pillBarWidthPercent / 100))
+        readonly property bool isFullWidth: SettingsService.pillBarWidthPercent >= 100
+
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         height: root.baseBarHeight
-        width: Math.max(contentRow.implicitWidth + (Constants.sizeLg * 2), 480)
+        width: Math.max(minPillWidth, Math.min(root.width - (isFullWidth ? 0 : Constants.sizeMd * 2), targetPillWidth))
         implicitWidth: width
-        radius: height / 2
+        radius: isFullWidth ? Constants.sizeSm : height / 2
         color: Theme.bg
         border.color: Theme.borderSecondary
         border.width: 1
+
+        Behavior on width {
+            NumberAnimation {
+                duration: Constants.animFast
+                easing.type: Easing.OutQuad
+            }
+        }
 
         layer.enabled: true
         layer.effect: DropShadow {
@@ -67,78 +78,115 @@ Item {
         RowLayout {
             id: contentRow
 
-            anchors.centerIn: parent
+            readonly property bool isDistributed: SettingsService.pillWidgetLayout === "distributed"
+
+            anchors.fill: isDistributed ? parent : undefined
+            anchors.centerIn: isDistributed ? undefined : parent
+            anchors.leftMargin: isDistributed ? Constants.sizeLg : 0
+            anchors.rightMargin: isDistributed ? Constants.sizeLg : 0
             spacing: Constants.sizeSm
 
             // Left Navigation (Material 3 Dashboard, Compositor Workspaces)
-            MinflairButton {
-                id: minflairBtn
+            RowLayout {
+                id: leftGroup
+                spacing: Constants.sizeSm
                 Layout.alignment: Qt.AlignVCenter
+
+                MinflairButton {
+                    id: minflairBtn
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Workspaces {
+                    id: workspacesWidget
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: true
+                }
+
+                // Subtle Visual Divider
+                Rectangle {
+                    width: 1
+                    height: 16
+                    color: Theme.borderSecondary
+                    Layout.alignment: Qt.AlignVCenter
+                    opacity: 0.6
+                }
             }
 
-            Workspaces {
-                id: workspacesWidget
-                Layout.alignment: Qt.AlignVCenter
-                visible: true
-            }
-
-            // Subtle Visual Divider
-            Rectangle {
-                width: 1
-                height: 16
-                color: Theme.borderSecondary
-                Layout.alignment: Qt.AlignVCenter
-                opacity: 0.6
+            // Expanding spacer between Left and Center
+            Item {
+                Layout.fillWidth: contentRow.isDistributed
+                Layout.minimumWidth: 0
+                visible: contentRow.isDistributed
             }
 
             // Center (Clock & Live Playing Media)
-            ClockButton {
-                id: clockBtn
+            RowLayout {
+                id: centerGroup
+                spacing: Constants.sizeSm
                 Layout.alignment: Qt.AlignVCenter
+
+                ClockButton {
+                    id: clockBtn
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                MediaButton {
+                    id: mediaBtn
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
 
-            MediaButton {
-                id: mediaBtn
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            // Subtle Visual Divider
-            Rectangle {
-                width: 1
-                height: 16
-                color: Theme.borderSecondary
-                Layout.alignment: Qt.AlignVCenter
-                opacity: 0.6
+            // Expanding spacer between Center and Right
+            Item {
+                Layout.fillWidth: contentRow.isDistributed
+                Layout.minimumWidth: 0
+                visible: contentRow.isDistributed
             }
 
             // Right Quick Controls (Recording, Tray, QuickSettings, Notifications, Power)
-            RecordingIndicator {
-                id: recIndicator
+            RowLayout {
+                id: rightGroup
+                spacing: Constants.sizeSm
                 Layout.alignment: Qt.AlignVCenter
-                visible: RecorderService.running
-            }
 
-            SystemTrayGroup {
-                id: systemTray
-                Layout.alignment: Qt.AlignVCenter
-            }
+                // Subtle Visual Divider
+                Rectangle {
+                    width: 1
+                    height: 16
+                    color: Theme.borderSecondary
+                    Layout.alignment: Qt.AlignVCenter
+                    opacity: 0.6
+                }
 
-            ControlCenterButton {
-                id: ccBtn
-                Layout.alignment: Qt.AlignVCenter
-                controlCenterWidget: root.controlCenterWidget
-            }
+                RecordingIndicator {
+                    id: recIndicator
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: RecorderService.running
+                }
 
-            NotificationsButton {
-                id: notifBtn
-                Layout.alignment: Qt.AlignVCenter
-                notificationsCenterWidget: root.notificationsCenterWidget
-                notificationService: root.notificationService
-            }
+                SystemTrayGroup {
+                    id: systemTray
+                    Layout.alignment: Qt.AlignVCenter
+                }
 
-            PowerButton {
-                id: powerBtn
-                Layout.alignment: Qt.AlignVCenter
+                ControlCenterButton {
+                    id: ccBtn
+                    Layout.alignment: Qt.AlignVCenter
+                    controlCenterWidget: root.controlCenterWidget
+                }
+
+                NotificationsButton {
+                    id: notifBtn
+                    Layout.alignment: Qt.AlignVCenter
+                    notificationsCenterWidget: root.notificationsCenterWidget
+                    notificationService: root.notificationService
+                }
+
+                PowerButton {
+                    id: powerBtn
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
         }
     }

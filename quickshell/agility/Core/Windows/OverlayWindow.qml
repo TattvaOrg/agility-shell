@@ -41,7 +41,7 @@ PanelWindow {
     property bool windowFocusable: true
     // Determine the active style mode cleanly
     readonly property string activeStyle: {
-        if (SettingsService.barIslandMode && !positionAtBottom)
+        if ((SettingsService.barIslandMode || (SettingsService.barPillMode && SettingsService.pillPopupStyle === "top")) && !positionAtBottom)
             return "island";
 
         return "floating";

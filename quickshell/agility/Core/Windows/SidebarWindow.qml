@@ -17,7 +17,7 @@ Item {
     property int flareHeight: Constants.size2Xl + 4
     property int flareWidth: Constants.size2Xl + 4
     property bool alignTop: false
-    property int topOffset: (SettingsService.barStyle === "convex" ? 48 : 24)
+    property int topOffset: (SettingsService.barStyle === "convex" || (SettingsService.barPillMode && SettingsService.pillPopupStyle === "sided") ? 48 : 24)
     readonly property int verticalPadding: flareHeight + contentPadding
     default property alias content: innerLayout.data
     property int _screenHeight: 1080

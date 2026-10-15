@@ -8,6 +8,7 @@ import qs.Core
 import qs.Core.Services
 import qs.Modules.Bar
 import qs.Modules.Bar.Components
+import qs.Modules.Bar.Styles.Convex
 
 PanelWindow {
     id: root
@@ -25,7 +26,9 @@ PanelWindow {
     readonly property bool usesFloatingPopups: styleData.usesFloatingPopups
     readonly property bool isPill: styleData.isPill
     readonly property QtObject activeHost: SettingsService.barIslandMode ? barStrip : null
-    readonly property bool needsFocus: (activeHost && activeHost.isOpen && activeHost.needsFocus)
+    readonly property bool isSidedPill: SettingsService.barPillMode && SettingsService.pillPopupStyle === "sided"
+    readonly property bool sidedNeedsFocus: isSidedPill && AppState.isFocusWidgetOpen && (pillPanelsLoader.item && pillPanelsLoader.item.hasAnyDrawerOpen)
+    readonly property bool needsFocus: (activeHost && activeHost.isOpen && activeHost.needsFocus) || sidedNeedsFocus
 
     function triggerStyleSwitch() {
         if (!root.isShellReady || !SettingsService.settingsLoaded) {
@@ -83,6 +86,11 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    onNeedsFocusChanged: {
+        if (sidedNeedsFocus && pillPanelsLoader.item && pillPanelsLoader.item.bottomDrawer) {
+            pillPanelsLoader.item.bottomDrawer.activateCurrentItem();
+        }
+    }
     color: "transparent"
     Component.onCompleted: {
         activeBarStyle = SettingsService.barStyle;
@@ -127,6 +135,8 @@ PanelWindow {
                 if (activeHost && activeHost.isOpen)
                     activeHost.close();
 
+                if (root.isSidedPill && AppState.activeWidget !== "")
+                    AppState.activeWidget = "";
             }
         }
     }
@@ -315,6 +325,22 @@ PanelWindow {
         anchors.fill: parent
         layer.enabled: false
 
+        Loader {
+            id: pillPanelsLoader
+
+            anchors.fill: parent
+            active: root.isSidedPill
+            visible: active
+            z: 20
+            sourceComponent: Component {
+                ConvexPanels {
+                    barHeight: root.currentBarHeight
+                    bezelSize: 0
+                    notificationService: root.notificationService
+                }
+            }
+        }
+
         MouseArea {
             id: dismissArea
 
@@ -381,6 +407,16 @@ PanelWindow {
             y: isActive ? (root.activeHost.isOpen ? 0 : root.activeHost.blockY) : 0
             width: isActive ? (root.activeHost.isOpen ? root.width : root.activeHost.blockWidth) : 0
             height: isActive ? (root.activeHost.isOpen ? root.height : root.activeHost.blockHeight) : 0
+        }
+
+        // Sided Pill Panels Overlay (Full Screen for Clicks/Focus when Sided Pill has open panel)
+        Region {
+            property bool isActive: root.isSidedPill && pillPanelsLoader.item && (pillPanelsLoader.item.hasAnyPanelOpen || pillPanelsLoader.item.isConvexCenterOpen)
+
+            x: 0
+            y: 0
+            width: isActive ? root.width : 0
+            height: isActive ? root.height : 0
         }
 
     }

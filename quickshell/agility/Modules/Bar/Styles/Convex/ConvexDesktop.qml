@@ -39,6 +39,11 @@ PanelWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     focusable: needsFocus
+    onNeedsFocusChanged: {
+        if (needsFocus && convexPanels && convexPanels.bottomDrawer) {
+            convexPanels.bottomDrawer.activateCurrentItem();
+        }
+    }
     color: "transparent"
     Component.onCompleted: {
         activeBarStyle = SettingsService.barStyle;

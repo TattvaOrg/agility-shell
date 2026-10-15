@@ -17,6 +17,7 @@ Item {
     property alias controlCenterWidget: rightHost.controlCenterWidget
     property alias notificationsCenterWidget: rightHost.notificationsCenterWidget
     property alias activeTrayMenu: rightHost.activeTrayMenu
+    property alias bottomDrawer: bottomDrawer
     readonly property bool hasAnySidebarOpen: (sidebarDashboard && (sidebarDashboard.isOpen || sidebarDashboard._visible)) || (rightHost && (rightHost.isOpen || rightHost._visible))
     readonly property bool hasAnyDrawerOpen: bottomDrawer && (bottomDrawer.isOpen || bottomDrawer._visible)
     readonly property bool hasAnyPanelOpen: hasAnyDrawerOpen || hasAnySidebarOpen

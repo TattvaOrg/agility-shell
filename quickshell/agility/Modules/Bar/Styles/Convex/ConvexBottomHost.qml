@@ -79,6 +79,36 @@ Item {
             AppState.closeAllWidgets();
     }
 
+    function grabItemFocus() {
+        if (!loader.item)
+            return ;
+
+        if (loader.item.initialFocusItem) {
+            if (loader.item.initialFocusItem.textField)
+                loader.item.initialFocusItem.textField.forceActiveFocus();
+            else
+                loader.item.initialFocusItem.forceActiveFocus();
+        } else if (typeof loader.item.forceActiveFocus === "function") {
+            loader.item.forceActiveFocus();
+        }
+    }
+
+    Timer {
+        id: drawerFocusTimer
+
+        interval: 35
+        repeat: false
+        onTriggered: root.grabItemFocus()
+    }
+
+    Timer {
+        id: drawerFocusTimer2
+
+        interval: 80
+        repeat: false
+        onTriggered: root.grabItemFocus()
+    }
+
     function activateCurrentItem() {
         if (!loader.item)
             return ;
@@ -101,14 +131,10 @@ Item {
         if (typeof loader.item.resetScreenCapture === "function")
             loader.item.resetScreenCapture();
 
-        Qt.callLater(() => {
-            if (loader.item) {
-                if (loader.item.initialFocusItem)
-                    loader.item.initialFocusItem.forceActiveFocus();
-                else if (typeof loader.item.forceActiveFocus === "function")
-                    loader.item.forceActiveFocus();
-            }
-        });
+        grabItemFocus();
+        Qt.callLater(grabItemFocus);
+        drawerFocusTimer.restart();
+        drawerFocusTimer2.restart();
     }
 
     width: Math.round(smoothWidth)
@@ -188,7 +214,7 @@ Item {
         clip: true
         width: Math.round(currentWidth)
         height: Math.round(currentHeight)
-        Keys.forwardTo: (loader.item && loader.item.initialFocusItem) ? [loader.item.initialFocusItem] : []
+        Keys.forwardTo: (loader.item && loader.item.initialFocusItem) ? (loader.item.initialFocusItem.textField ? [loader.item.initialFocusItem.textField, loader.item.initialFocusItem] : [loader.item.initialFocusItem]) : []
         Keys.enabled: root.isOpen
         Keys.onEscapePressed: {
             root.close();

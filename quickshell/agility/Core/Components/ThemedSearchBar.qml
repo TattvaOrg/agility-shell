@@ -20,6 +20,16 @@ FocusScope {
     signal searchRequested(string text)
     signal accepted()
 
+    function forceFocus() {
+        searchInput.forceActiveFocus();
+    }
+
+    onActiveFocusChanged: {
+        if (activeFocus && !searchInput.activeFocus) {
+            searchInput.forceActiveFocus();
+        }
+    }
+
     Keys.forwardTo: [searchInput]
     Layout.fillWidth: true
     Layout.preferredHeight: preferredHeight

@@ -34,15 +34,6 @@ Rectangle {
             Layout.alignment: Qt.AlignVCenter
         }
 
-        BarButton {
-            id: appMenuBtn
-
-            widgetId: "launcher"
-            icon: "apps"
-            iconSize: Constants.sizeLg
-            Layout.alignment: Qt.AlignVCenter
-        }
-
         Workspaces {
             id: workspacesWidget
 

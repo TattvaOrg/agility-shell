@@ -1390,6 +1390,7 @@ dependencies = [
  "directories",
  "futures-util",
  "image",
+ "libc",
  "mpris",
  "pipewire",
  "pollster",

@@ -203,8 +203,12 @@ impl SurfaceRenderer {
     }
 
     pub fn render(&mut self, context: &RenderContext, uniforms: GlowUniforms) -> Result<()> {
-        if !self.configured || self.width == 0 || self.height == 0 {
+        if self.width == 0 || self.height == 0 {
             return Ok(());
+        }
+
+        if !self.configured {
+            self.configure(context, self.width, self.height);
         }
 
         context
@@ -213,11 +217,14 @@ impl SurfaceRenderer {
 
         let frame = match self.surface.get_current_texture() {
             Ok(f) => f,
-            Err(wgpu::SurfaceError::Lost) => {
+            Err(wgpu::SurfaceError::Lost) | Err(wgpu::SurfaceError::Outdated) => {
                 self.configure(context, self.width, self.height);
-                return Ok(());
+                match self.surface.get_current_texture() {
+                    Ok(f) => f,
+                    Err(_) => return Ok(()),
+                }
             }
-            Err(wgpu::SurfaceError::Outdated) => {
+            Err(wgpu::SurfaceError::Timeout) => {
                 return Ok(());
             }
             Err(e) => return Err(e.into()),
@@ -258,6 +265,47 @@ impl SurfaceRenderer {
         context.queue.submit(Some(encoder.finish()));
         frame.present();
 
+        Ok(())
+    }
+
+    pub fn clear(&mut self, context: &RenderContext) -> Result<()> {
+        if self.width == 0 || self.height == 0 {
+            return Ok(());
+        }
+        if !self.configured {
+            self.configure(context, self.width, self.height);
+        }
+        let frame = match self.surface.get_current_texture() {
+            Ok(f) => f,
+            Err(_) => return Ok(()),
+        };
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = context
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("glow-clear-encoder"),
+            });
+        {
+            let _rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("glow-clear-pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+        }
+        context.queue.submit(Some(encoder.finish()));
+        frame.present();
         Ok(())
     }
 }

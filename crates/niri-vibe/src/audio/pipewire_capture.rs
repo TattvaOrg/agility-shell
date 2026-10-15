@@ -111,7 +111,13 @@ fn run_pipewire_capture(
                 return;
             }
 
-            let _ = user_data.format.parse(param);
+            if let Ok(_info) = user_data.format.parse(param) {
+                info!(
+                    "PipeWire capture stream format: rate={}, channels={}",
+                    user_data.format.rate(),
+                    user_data.format.channels()
+                );
+            }
         })
         .process(|stream, user_data| {
             if let Some(mut buffer) = stream.dequeue_buffer() {
@@ -120,33 +126,78 @@ fn run_pipewire_capture(
                     return;
                 }
 
-                let data = &mut datas[0];
-                let n_channels = user_data.format.channels().max(1);
-                let n_samples = data.chunk().size() / (mem::size_of::<f32>() as u32);
-
-                if let Some(samples) = data.data() {
-                    let mut downmixed = Vec::with_capacity((n_samples / n_channels) as usize);
-                    let sample_count = n_samples / n_channels;
-
-                    for i in 0..sample_count {
-                        let mut sum = 0.0f32;
-                        for c in 0..n_channels {
-                            let idx = ((i * n_channels + c) as usize) * mem::size_of::<f32>();
-                            if idx + mem::size_of::<f32>() <= samples.len() {
-                                let slice = &samples[idx..idx + mem::size_of::<f32>()];
-                                if let Ok(bytes) = slice.try_into() {
-                                    sum += f32::from_le_bytes(bytes);
-                                }
+                if datas.len() >= 2 {
+                    // Planar audio: datas[0] is Left, datas[1] is Right
+                    let chunk0_size = datas[0].chunk().size() as usize;
+                    let chunk1_size = datas[1].chunk().size() as usize;
+                    let (first, rest) = datas.split_at_mut(1);
+                    if let (Some(ch0), Some(ch1)) = (first[0].data(), rest[0].data()) {
+                        let sample_bytes = mem::size_of::<f32>();
+                        let len0 = if chunk0_size > 0 {
+                            chunk0_size.min(ch0.len())
+                        } else {
+                            ch0.len()
+                        };
+                        let len1 = if chunk1_size > 0 {
+                            chunk1_size.min(ch1.len())
+                        } else {
+                            ch1.len()
+                        };
+                        let n_floats = len0.min(len1) / sample_bytes;
+                        let mut downmixed = Vec::with_capacity(n_floats);
+                        for i in 0..n_floats {
+                            let off = i * sample_bytes;
+                            if off + 4 <= ch0.len() && off + 4 <= ch1.len() {
+                                let s0 = f32::from_le_bytes(
+                                    ch0[off..off + 4].try_into().unwrap_or([0; 4]),
+                                );
+                                let s1 = f32::from_le_bytes(
+                                    ch1[off..off + 4].try_into().unwrap_or([0; 4]),
+                                );
+                                downmixed.push((s0 + s1) * 0.5);
                             }
                         }
-                        downmixed.push(sum / n_channels as f32);
+                        if let Ok(mut ring) = user_data.samples_ring.lock() {
+                            ring.extend(downmixed);
+                            if ring.len() > BUFFER_SIZE * 4 {
+                                let excess = ring.len() - BUFFER_SIZE * 2;
+                                ring.drain(0..excess);
+                            }
+                        }
                     }
-
-                    if let Ok(mut ring) = user_data.samples_ring.lock() {
-                        ring.extend(downmixed);
-                        if ring.len() > BUFFER_SIZE * 4 {
-                            let excess = ring.len() - BUFFER_SIZE * 2;
-                            ring.drain(0..excess);
+                } else if !datas.is_empty() {
+                    // Interleaved audio: datas[0] contains L, R, L, R...
+                    let chunk_size = datas[0].chunk().size() as usize;
+                    if let Some(samples) = datas[0].data() {
+                        let sample_bytes = mem::size_of::<f32>();
+                        let total_bytes = if chunk_size > 0 {
+                            chunk_size.min(samples.len())
+                        } else {
+                            samples.len()
+                        };
+                        let n_channels = user_data.format.channels().max(1) as usize;
+                        let total_floats = total_bytes / sample_bytes;
+                        let frames = total_floats / n_channels;
+                        let mut downmixed = Vec::with_capacity(frames);
+                        for f in 0..frames {
+                            let mut sum = 0.0f32;
+                            for c in 0..n_channels {
+                                let off = (f * n_channels + c) * sample_bytes;
+                                if off + 4 <= samples.len() {
+                                    let s = f32::from_le_bytes(
+                                        samples[off..off + 4].try_into().unwrap_or([0; 4]),
+                                    );
+                                    sum += s;
+                                }
+                            }
+                            downmixed.push(sum / n_channels as f32);
+                        }
+                        if let Ok(mut ring) = user_data.samples_ring.lock() {
+                            ring.extend(downmixed);
+                            if ring.len() > BUFFER_SIZE * 4 {
+                                let excess = ring.len() - BUFFER_SIZE * 2;
+                                ring.drain(0..excess);
+                            }
                         }
                     }
                 }
@@ -157,6 +208,7 @@ fn run_pipewire_capture(
     let mut audio_info = spa::param::audio::AudioInfoRaw::new();
     audio_info.set_format(spa::param::audio::AudioFormat::F32LE);
     audio_info.set_rate(SAMPLE_RATE as u32);
+    audio_info.set_channels(2);
 
     let obj = pw::spa::pod::Object {
         type_: pw::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),

@@ -117,8 +117,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let t_core = clamp(dist / core_depth, 0.0, 1.0);
     let core = pow(1.0 - t_core, 1.5) * 0.90;
 
-    // Composite total luminescence scaled by real-time bass intensity
-    let total_lum = (bloom + core) * clamp(uniforms.intensity, 0.0, 1.0);
+    // Composite total luminescence scaled by real-time bass intensity with ambient aesthetic floor
+    let active_lum = clamp(0.18 + uniforms.intensity * 0.82, 0.0, 1.0);
+    let total_lum = (bloom + core) * active_lum;
     let alpha = clamp(total_lum, 0.0, 1.0);
 
     // Premultiplied alpha output for compositor composition

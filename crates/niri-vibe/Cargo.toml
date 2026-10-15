@@ -17,6 +17,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 image = { workspace = true }
+libc = { workspace = true }
 
 smithay-client-toolkit = { version = "0.19.2", default-features = false, features = ["calloop"] }
 wayland-client = { version = "0.31", features = ["system"] }

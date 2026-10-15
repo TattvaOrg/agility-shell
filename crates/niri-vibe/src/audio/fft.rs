@@ -69,15 +69,15 @@ impl BassAnalyzer {
         // Frequency bin calculation:
         // bin_freq = k * sample_rate / fft_size
         // With 48000Hz and 2048 bins, bin_width is 23.4375 Hz.
-        // 20Hz - 80Hz corresponds roughly to bins 1..=4.
+        // 20Hz - 200Hz captures sub-bass, kick drums, and browser media basslines.
         let bin_width = self.sample_rate / (self.fft_size as f32);
         let start_bin = ((20.0 / bin_width).floor() as usize).max(1);
-        let end_bin = ((80.0 / bin_width).ceil() as usize).min(self.fft_size / 2);
+        let end_bin = ((200.0 / bin_width).ceil() as usize).min(self.fft_size / 2);
 
         let mut sum_energy = 0.0;
         let mut count = 0;
         for item in &buffer[start_bin..=end_bin] {
-            let magnitude = item.norm();
+            let magnitude = item.norm() / (self.fft_size as f32);
             sum_energy += magnitude * magnitude;
             count += 1;
         }
@@ -88,8 +88,8 @@ impl BassAnalyzer {
             0.0
         };
 
-        // Normalize and scale: multiply by 0.8 as specified
-        let raw_bass = (raw_rms * 2.5 * 0.8).clamp(0.0, 1.0);
+        // Scale normalized RMS with responsive gain for browser audio & music
+        let raw_bass = (raw_rms * 16.0 * 0.8).clamp(0.0, 1.0);
 
         // Attack & Decay smoothing:
         // Snappy attack: 40ms time constant

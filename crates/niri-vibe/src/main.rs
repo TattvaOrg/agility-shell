@@ -36,6 +36,10 @@ use wayland_client::{globals::registry_queue_init, Connection};
     about = "Production-ready Lumn ambient edge glow effect for Niri and Wayland"
 )]
 struct Cli {
+    /// Toggle edge glow visibility on/off in running daemon
+    #[arg(short, long)]
+    toggle: bool,
+
     /// Path to custom configuration file
     #[arg(short, long)]
     config: Option<PathBuf>,
@@ -61,6 +65,33 @@ struct Cli {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    let pid_file = std::env::var("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .join("niri-vibe.pid");
+
+    if cli.toggle {
+        if let Ok(content) = std::fs::read_to_string(&pid_file) {
+            if let Ok(pid) = content.trim().parse::<i32>() {
+                unsafe {
+                    if libc::kill(pid, libc::SIGUSR1) == 0 {
+                        println!("Toggled niri-vibe ambient glow (PID {pid})");
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        // Fallback: send signal via pkill or systemctl
+        let _ = std::process::Command::new("pkill")
+            .args(["-USR1", "-x", "niri-vibe"])
+            .status();
+        let _ = std::process::Command::new("systemctl")
+            .args(["--user", "kill", "-s", "USR1", "niri-vibe.service"])
+            .status();
+        println!("Sent toggle signal to niri-vibe");
+        return Ok(());
+    }
+
     // Initialize structured logging with RUST_LOG filter support
     let default_filter = "niri_vibe=info,warn,error";
     tracing_subscriber::registry()
@@ -73,6 +104,8 @@ async fn main() -> Result<()> {
         env!("CARGO_PKG_VERSION"),
         std::process::id()
     );
+
+    let _ = std::fs::write(&pid_file, std::process::id().to_string());
 
     // 1. Load or initialize configuration
     let mut config = Config::load_or_create(cli.config.as_deref())?;
@@ -123,6 +156,18 @@ async fn main() -> Result<()> {
     let render_context = Arc::new(RenderContext::new()?);
     let display_ptr = wayland_conn.backend().display_ptr() as *mut std::ffi::c_void;
 
+    let is_visible = Arc::new(AtomicBool::new(true));
+    let vis_clone = Arc::clone(&is_visible);
+    tokio::spawn(async move {
+        use tokio::signal::unix::{signal, SignalKind};
+        if let Ok(mut sigusr1) = signal(SignalKind::user_defined1()) {
+            while sigusr1.recv().await.is_some() {
+                let prev = vis_clone.fetch_xor(true, Ordering::SeqCst);
+                info!("Toggled niri-vibe visibility via SIGUSR1: now {}", !prev);
+            }
+        }
+    });
+
     // 8. Create unified Wayland app state
     let mut app_state = wayland::WaylandAppState::new(
         registry_state,
@@ -135,6 +180,7 @@ async fn main() -> Result<()> {
         Arc::clone(&audio_engine),
         Arc::clone(&mpris_manager),
         is_locked,
+        Arc::clone(&is_visible),
     );
 
     // Instantiate layer surfaces for all existing outputs discovered during initial roundtrip
@@ -143,6 +189,10 @@ async fn main() -> Result<()> {
     for output in initial_outputs {
         app_state.new_output(&wayland_conn, &qh, output);
     }
+
+    // Perform initial roundtrip to process all layer surface commits and receive configures
+    let _ = event_queue.roundtrip(&mut app_state);
+    let _ = wayland_conn.flush();
 
     // Set up graceful shutdown signal handler (SIGINT / SIGTERM)
     let shutdown_signal = Arc::new(AtomicBool::new(false));
@@ -163,24 +213,32 @@ async fn main() -> Result<()> {
 
     // 9. Main Wayland and Render Loop
     while !shutdown_signal.load(Ordering::Relaxed) && !app_state.exit {
-        // Dispatch pending Wayland protocol events without blocking indefinitely
-        event_queue
-            .dispatch_pending(&mut app_state)
-            .context("Error dispatching Wayland event queue")?;
+        let _ = wayland_conn.flush();
 
-        // Render ambient edge glow frame across all connected outputs
+        if let Some(guard) = wayland_conn.prepare_read() {
+            let _ = guard.read();
+        }
+
+        let _ = event_queue.dispatch_pending(&mut app_state);
+
         app_state.render_frame();
 
-        // Throttle to configured FPS cap to maintain <5% CPU usage
+        // Throttle to configured FPS cap (or sleep longer when hidden to use 0.0% CPU)
+        let is_vis = is_visible.load(Ordering::Relaxed);
+        let target_duration = if is_vis {
+            frame_duration
+        } else {
+            Duration::from_millis(80)
+        };
+
         let elapsed = last_frame.elapsed();
-        if elapsed < frame_duration {
-            std::thread::sleep(frame_duration - elapsed);
+        if elapsed < target_duration {
+            tokio::time::sleep(target_duration - elapsed).await;
         }
         last_frame = Instant::now();
-
-        // Flush outgoing Wayland requests
-        let _ = wayland_conn.flush();
     }
+
+    let _ = std::fs::remove_file(&pid_file);
 
     // Clean teardown
     audio_engine.stop();

@@ -26,7 +26,21 @@ impl MonitorSurface {
         layer_shell: &LayerShell,
         render_context: &RenderContext,
         display_ptr: *mut std::ffi::c_void,
+        output_state: &smithay_client_toolkit::output::OutputState,
     ) -> anyhow::Result<Self> {
+        let (mut width, mut height) = (1366, 768);
+        let mut scale_factor = 1;
+        if let Some(info) = output_state.info(output) {
+            scale_factor = info.scale_factor.max(1);
+            if let Some(mode) = info.modes.iter().find(|m| m.current) {
+                width = mode.dimensions.0 as u32;
+                height = mode.dimensions.1 as u32;
+            } else if let Some(mode) = info.modes.first() {
+                width = mode.dimensions.0 as u32;
+                height = mode.dimensions.1 as u32;
+            }
+        }
+
         // 1. Create Wayland surface
         let surface = compositor.create_surface(qh);
 
@@ -46,22 +60,26 @@ impl MonitorSurface {
 
         // 4. Anchor to all four edges for fullscreen ambient edge coverage
         layer_surface.set_anchor(Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT);
+        layer_surface.set_size(width, height);
         layer_surface.set_exclusive_zone(0);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.commit();
 
-        // 5. Create wgpu surface renderer
+        // 5. Create wgpu surface renderer and configure immediately
         let surface_ptr = layer_surface.wl_surface().id().as_ptr() as *mut std::ffi::c_void;
         let wgpu_surface = render_context.create_surface_for_wayland(display_ptr, surface_ptr)?;
-        let renderer = SurfaceRenderer::new(render_context, wgpu_surface, 1920, 1080);
+        let mut renderer = SurfaceRenderer::new(render_context, wgpu_surface, width, height);
+        let physical_w = width * (scale_factor as u32);
+        let physical_h = height * (scale_factor as u32);
+        renderer.configure(render_context, physical_w, physical_h);
 
         Ok(Self {
             output: output.clone(),
             layer_surface,
             renderer,
-            width: 1920,
-            height: 1080,
-            scale_factor: 1,
+            width,
+            height,
+            scale_factor,
         })
     }
 

@@ -17,7 +17,7 @@ use smithay_client_toolkit::{
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use wayland_client::{
     protocol::{wl_output, wl_surface},
@@ -38,6 +38,8 @@ pub struct WaylandAppState {
     pub audio_engine: Arc<AudioEngine>,
     pub mpris_manager: Arc<MprisManager>,
     pub is_locked: Arc<AtomicBool>,
+    pub is_visible: Arc<AtomicBool>,
+    pub was_visible: bool,
     pub start_time: Instant,
     pub exit: bool,
 }
@@ -55,6 +57,7 @@ impl WaylandAppState {
         audio_engine: Arc<AudioEngine>,
         mpris_manager: Arc<MprisManager>,
         is_locked: Arc<AtomicBool>,
+        is_visible: Arc<AtomicBool>,
     ) -> Self {
         Self {
             registry_state,
@@ -68,12 +71,27 @@ impl WaylandAppState {
             audio_engine,
             mpris_manager,
             is_locked,
+            is_visible,
+            was_visible: true,
             start_time: Instant::now(),
             exit: false,
         }
     }
 
     pub fn render_frame(&mut self) {
+        let visible = self.is_visible.load(Ordering::Relaxed);
+        if !visible {
+            if self.was_visible {
+                for surface in &mut self.surfaces {
+                    let _ = surface.renderer.clear(&self.render_context);
+                    surface.layer_surface.wl_surface().commit();
+                }
+                self.was_visible = false;
+            }
+            return;
+        }
+        self.was_visible = true;
+
         let time = self.start_time.elapsed().as_secs_f32();
         let bass_intensity = self.audio_engine.current_intensity();
         let palette = self.mpris_manager.current_palette();
@@ -111,8 +129,9 @@ impl WaylandAppState {
             };
 
             if let Err(e) = surface.renderer.render(&self.render_context, uniforms) {
-                debug!("Surface render notice: {:?}", e);
+                tracing::debug!("Surface render notice: {:?}", e);
             }
+            surface.layer_surface.wl_surface().commit();
         }
     }
 }
@@ -181,6 +200,9 @@ impl OutputHandler for WaylandAppState {
         qh: &QueueHandle<Self>,
         output: wl_output::WlOutput,
     ) {
+        if self.surfaces.iter().any(|s| s.output == output) {
+            return;
+        }
         info!("Discovered new Wayland output: {:?}", output.id());
         match MonitorSurface::new(
             qh,
@@ -189,6 +211,7 @@ impl OutputHandler for WaylandAppState {
             &self.layer_shell,
             &self.render_context,
             self.display_ptr,
+            &self.output_state,
         ) {
             Ok(surf) => {
                 self.surfaces.push(surf);
@@ -223,7 +246,8 @@ impl OutputHandler for WaylandAppState {
 
 impl LayerShellHandler for WaylandAppState {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, layer: &LayerSurface) {
-        self.surfaces.retain(|s| &s.layer_surface != layer);
+        self.surfaces
+            .retain(|s| s.layer_surface.wl_surface() != layer.wl_surface());
     }
 
     fn configure(
@@ -234,9 +258,25 @@ impl LayerShellHandler for WaylandAppState {
         configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
-        let (width, height) = configure.new_size;
+        let (mut width, mut height) = configure.new_size;
         for s in &mut self.surfaces {
-            if &s.layer_surface == layer {
+            if s.layer_surface.wl_surface() == layer.wl_surface() {
+                if width == 0 || height == 0 {
+                    if let Some(info) = self.output_state.info(&s.output) {
+                        if let Some(mode) = info.modes.iter().find(|m| m.current) {
+                            width = mode.dimensions.0 as u32;
+                            height = mode.dimensions.1 as u32;
+                        }
+                    }
+                    if width == 0 || height == 0 {
+                        width = s.width.max(1366);
+                        height = s.height.max(768);
+                    }
+                }
+                info!(
+                    "Wayland layer surface configured by compositor: {}x{}",
+                    width, height
+                );
                 s.resize(&self.render_context, width, height);
                 s.layer_surface.commit();
                 break;

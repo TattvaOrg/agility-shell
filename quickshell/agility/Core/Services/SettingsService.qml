@@ -30,6 +30,8 @@ Item {
     property bool barConvexMode: barStyle === "convex"
     property bool barPillMode: barStyle === "pill"
     property string islandRightMode: "auto"
+    property int pillBarWidthPercent: 60
+    property string pillPopupStyle: "center"
     readonly property int barWidgetHeight: 28
     property bool edgeLightingEnabled: true
     property string edgeLightingColorMode: "album_art"
@@ -181,6 +183,16 @@ Item {
             saveSettings();
 
     }
+    onPillBarWidthPercentChanged: {
+        if (settingsLoaded)
+            saveSettings();
+
+    }
+    onPillPopupStyleChanged: {
+        if (settingsLoaded)
+            saveSettings();
+
+    }
     onEdgeLightingEnabledChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingColorModeChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingCustomColorChanged: { if (settingsLoaded) saveSettings(); }
@@ -237,6 +249,8 @@ Item {
                 "cursorSize": settingsService.cursorSize,
                 "barStyle": settingsService.barStyle,
                 "islandRightMode": settingsService.islandRightMode,
+                "pillBarWidthPercent": settingsService.pillBarWidthPercent,
+                "pillPopupStyle": settingsService.pillPopupStyle,
                 "actionShortcuts": settingsService.actionShortcuts,
                 "customShortcuts": settingsService.customShortcuts,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
@@ -403,6 +417,17 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                         }
                         if (prefs.islandRightMode !== undefined)
                             settingsService.islandRightMode = prefs.islandRightMode;
+
+                        if (prefs.pillBarWidthPercent !== undefined) {
+                            let pbw = parseInt(prefs.pillBarWidthPercent);
+                            if (!isNaN(pbw) && pbw >= 30 && pbw <= 100)
+                                settingsService.pillBarWidthPercent = pbw;
+                        }
+
+                        if (prefs.pillPopupStyle !== undefined) {
+                            if (prefs.pillPopupStyle === "sided" || prefs.pillPopupStyle === "top" || prefs.pillPopupStyle === "center")
+                                settingsService.pillPopupStyle = prefs.pillPopupStyle;
+                        }
 
                         if (prefs.actionShortcuts !== undefined)
                             settingsService.actionShortcuts = prefs.actionShortcuts;

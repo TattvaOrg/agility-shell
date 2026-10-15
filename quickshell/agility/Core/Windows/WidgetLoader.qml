@@ -14,7 +14,8 @@ Item {
     property bool _isInternalActive: false
     readonly property bool isBarOverlayHandled: AppState.isBarOverlayWidget(widgetId)
     readonly property bool isIslandHandled: !DisplayProfileService.gameModeActive && SettingsService.barIslandMode && isBarOverlayHandled
-    readonly property bool isConvexHandled: !DisplayProfileService.gameModeActive && SettingsService.barConvexMode && isBarOverlayHandled
+    readonly property bool isSidedPillHandled: SettingsService.barPillMode && SettingsService.pillPopupStyle === "sided" && (widgetId !== "music") && isBarOverlayHandled
+    readonly property bool isConvexHandled: !DisplayProfileService.gameModeActive && ((SettingsService.barConvexMode && isBarOverlayHandled) || isSidedPillHandled)
     readonly property bool isGamingHandled: DisplayProfileService.gameModeActive && isBarOverlayHandled
     readonly property bool shouldLoadWindow: enabled && !isIslandHandled && !isConvexHandled && !isGamingHandled
     readonly property bool _isActive: shouldLoadWindow && (exclusive ? AppState.isWidgetOpen(widgetId) : _isInternalActive)

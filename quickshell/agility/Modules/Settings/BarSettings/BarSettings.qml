@@ -62,6 +62,49 @@ AppContainer {
 
     }
 
+    // PILL MODE SETTINGS
+    AppGroup {
+        title: "Pill Bar Customization"
+        icon: "tune"
+        visible: SettingsService.barPillMode
+
+        SettingSegmented {
+            label: "Popup Style"
+            description: "Choose how options and menus open (Sided, Top, or Center)"
+            model: [{
+                "text": "Sided",
+                "value": "sided"
+            }, {
+                "text": "Top",
+                "value": "top"
+            }, {
+                "text": "Center",
+                "value": "center"
+            }]
+            currentValue: SettingsService.pillPopupStyle
+            onActivated: (value) => {
+                SettingsService.pillPopupStyle = value;
+            }
+        }
+
+        Divider {
+        }
+
+        ThemedSlider {
+            label: "Bar Width"
+            from: 30
+            to: 100
+            stepSize: 1
+            value: SettingsService.pillBarWidthPercent
+            suffix: "%"
+            decimals: 0
+            onMoved: (val) => {
+                SettingsService.pillBarWidthPercent = Math.round(val);
+            }
+        }
+
+    }
+
     AppGroup {
         title: "Clock Format"
         icon: "clock"

@@ -204,7 +204,7 @@ Item {
         positionAtLeft: false
         backgroundColor: Theme.bg
         alignTop: root.displayedWidgetId.startsWith("systemTray_")
-        topOffset: SettingsService.barConvexMode ? 80 : Constants.size4Xl
+        topOffset: (SettingsService.barConvexMode || (SettingsService.barPillMode && SettingsService.pillPopupStyle === "sided")) ? 80 : Constants.size4Xl
         preferredWidth: 0
         preferredHeight: 0
         // Exact original dimensions per widget

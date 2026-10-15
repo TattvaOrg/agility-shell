@@ -70,7 +70,6 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: (root.isOpen && root.windowFocusable) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    focusable: false
     exclusionMode: ExclusionMode.Ignore
     visible: _windowVisible || forceVisible || (styleLoader.item && styleLoader.item.isHandover)
     onIsOpenChanged: {

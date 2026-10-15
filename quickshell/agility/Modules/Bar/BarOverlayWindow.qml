@@ -84,7 +84,7 @@ PanelWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
-    focusable: needsFocus
+    focusable: false
     Component.onCompleted: {
         activeBarStyle = SettingsService.barStyle;
     }
@@ -135,7 +135,7 @@ PanelWindow {
     HyprlandFocusGrab {
         id: surfaceFocusGrab
 
-        active: root.focusable
+        active: Boolean(Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE")) && root.needsFocus
         windows: [root]
         onCleared: {
             slurpCheckProcess.running = true;

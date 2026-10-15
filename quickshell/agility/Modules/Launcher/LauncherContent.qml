@@ -380,12 +380,7 @@ Item {
             return root.filterApps(text);
         }
         customSize: Constants.sizeMd
-        Keys.priority: Keys.BeforeItem
-        Keys.onPressed: function(event) {
-            root.handleKeyPress(event, true);
-        }
-        textField.Keys.priority: Keys.BeforeItem
-        textField.Keys.onPressed: function(event) {
+        onKeyPressed: function(event) {
             root.handleKeyPress(event, true);
         }
     }

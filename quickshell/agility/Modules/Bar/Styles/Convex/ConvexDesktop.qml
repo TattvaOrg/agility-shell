@@ -38,7 +38,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    focusable: needsFocus
+    focusable: false
     onNeedsFocusChanged: {
         if (needsFocus && convexPanels && convexPanels.bottomDrawer) {
             convexPanels.bottomDrawer.activateCurrentItem();
@@ -91,7 +91,7 @@ PanelWindow {
     HyprlandFocusGrab {
         id: surfaceFocusGrab
 
-        active: root.focusable
+        active: Boolean(Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE")) && root.needsFocus
         windows: [root]
         onCleared: {
             slurpCheckProcess.running = true;

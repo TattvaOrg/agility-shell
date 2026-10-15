@@ -20,9 +20,9 @@ import qs.Modules.Settings.WindowSettings
 AppWindow {
     id: root
 
-    property var pageComponents: [personalizationComp, barSettingsComp, effectsComp, windowComp, integrationsComp, mouseComp, inputAndClipboardComp, systemInfoComp, wallpaperComp]
+    property var pageComponents: [personalizationComp, barSettingsComp, effectsComp, windowComp, integrationsComp, mouseComp, inputAndClipboardComp, systemInfoComp, wallpaperComp, barAppletsComp]
     property int activeTab: 0
-    readonly property var navOrder: [0, 8, 1, 2, 3, 5, 6, 4, 7]
+    readonly property var navOrder: [0, 8, 1, 9, 2, 3, 5, 6, 4, 7]
     readonly property var tabMetadata: ({
         "0": {
             "title": "Appearance",
@@ -67,6 +67,11 @@ AppWindow {
         "8": {
             "title": "Wallpaper",
             "subtitle": "Screen crop preview, scaling modes, transitions, and shuffle",
+            "category": "DESKTOP"
+        },
+        "9": {
+            "title": "Bar Applets",
+            "subtitle": "Active window, media visualizer, weather, battery, and status pills",
             "category": "DESKTOP"
         }
     })
@@ -244,6 +249,15 @@ AppWindow {
         id: wallpaperComp
 
         WallpaperSettings {
+            anchors.fill: parent
+        }
+
+    }
+
+    Component {
+        id: barAppletsComp
+
+        BarAppletsSettings {
             anchors.fill: parent
         }
 

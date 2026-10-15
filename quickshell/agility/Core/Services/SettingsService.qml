@@ -34,6 +34,19 @@ Item {
     property string pillPopupStyle: "center"
     property string pillWidgetLayout: "distributed"
     property bool barAutoHide: false
+    property string barGlassMode: "solid"
+    property int barGlassOpacity: 85
+    property bool appletActiveWindow: true
+    property string appletActiveWindowAction: "maximize"
+    property bool appletDynamicMedia: true
+    property bool appletMediaVisualizer: true
+    property bool appletWeather: true
+    property string appletWeatherUnit: "C"
+    property bool appletBattery: true
+    property bool appletBatteryShowTime: true
+    property bool appletNetwork: false
+    property bool appletDnd: false
+    property bool dndEnabled: false
     readonly property int barWidgetHeight: 28
     property bool edgeLightingEnabled: true
     property string edgeLightingColorMode: "album_art"
@@ -205,6 +218,19 @@ Item {
             saveSettings();
 
     }
+    onBarGlassModeChanged: { if (settingsLoaded) saveSettings(); }
+    onBarGlassOpacityChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletActiveWindowChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletActiveWindowActionChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletDynamicMediaChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletMediaVisualizerChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletWeatherChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletWeatherUnitChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletBatteryChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletBatteryShowTimeChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletNetworkChanged: { if (settingsLoaded) saveSettings(); }
+    onAppletDndChanged: { if (settingsLoaded) saveSettings(); }
+    onDndEnabledChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingEnabledChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingColorModeChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingCustomColorChanged: { if (settingsLoaded) saveSettings(); }
@@ -265,6 +291,19 @@ Item {
                 "pillPopupStyle": settingsService.pillPopupStyle,
                 "pillWidgetLayout": settingsService.pillWidgetLayout,
                 "barAutoHide": settingsService.barAutoHide,
+                "barGlassMode": settingsService.barGlassMode,
+                "barGlassOpacity": settingsService.barGlassOpacity,
+                "appletActiveWindow": settingsService.appletActiveWindow,
+                "appletActiveWindowAction": settingsService.appletActiveWindowAction,
+                "appletDynamicMedia": settingsService.appletDynamicMedia,
+                "appletMediaVisualizer": settingsService.appletMediaVisualizer,
+                "appletWeather": settingsService.appletWeather,
+                "appletWeatherUnit": settingsService.appletWeatherUnit,
+                "appletBattery": settingsService.appletBattery,
+                "appletBatteryShowTime": settingsService.appletBatteryShowTime,
+                "appletNetwork": settingsService.appletNetwork,
+                "appletDnd": settingsService.appletDnd,
+                "dndEnabled": settingsService.dndEnabled,
                 "actionShortcuts": settingsService.actionShortcuts,
                 "customShortcuts": settingsService.customShortcuts,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
@@ -450,6 +489,33 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.barAutoHide !== undefined)
                             settingsService.barAutoHide = Boolean(prefs.barAutoHide);
+
+                        if (prefs.barGlassMode !== undefined)
+                            settingsService.barGlassMode = prefs.barGlassMode;
+                        if (prefs.barGlassOpacity !== undefined)
+                            settingsService.barGlassOpacity = prefs.barGlassOpacity;
+                        if (prefs.appletActiveWindow !== undefined)
+                            settingsService.appletActiveWindow = prefs.appletActiveWindow;
+                        if (prefs.appletActiveWindowAction !== undefined)
+                            settingsService.appletActiveWindowAction = prefs.appletActiveWindowAction;
+                        if (prefs.appletDynamicMedia !== undefined)
+                            settingsService.appletDynamicMedia = prefs.appletDynamicMedia;
+                        if (prefs.appletMediaVisualizer !== undefined)
+                            settingsService.appletMediaVisualizer = prefs.appletMediaVisualizer;
+                        if (prefs.appletWeather !== undefined)
+                            settingsService.appletWeather = prefs.appletWeather;
+                        if (prefs.appletWeatherUnit !== undefined)
+                            settingsService.appletWeatherUnit = prefs.appletWeatherUnit;
+                        if (prefs.appletBattery !== undefined)
+                            settingsService.appletBattery = prefs.appletBattery;
+                        if (prefs.appletBatteryShowTime !== undefined)
+                            settingsService.appletBatteryShowTime = prefs.appletBatteryShowTime;
+                        if (prefs.appletNetwork !== undefined)
+                            settingsService.appletNetwork = prefs.appletNetwork;
+                        if (prefs.appletDnd !== undefined)
+                            settingsService.appletDnd = prefs.appletDnd;
+                        if (prefs.dndEnabled !== undefined)
+                            settingsService.dndEnabled = prefs.dndEnabled;
 
                         if (prefs.actionShortcuts !== undefined)
                             settingsService.actionShortcuts = prefs.actionShortcuts;

@@ -29,6 +29,10 @@ Item {
     property real activeNotificationHeight: 0
     readonly property bool isNiri: Quickshell.env("NIRI_SOCKET") !== undefined || Quickshell.env("XDG_CURRENT_DESKTOP") === "niri"
     property bool hasActiveWindow: false
+    property string niriActiveTitle: ""
+    property string niriActiveAppId: ""
+    readonly property string activeWindowTitle: isNiri ? niriActiveTitle : (Hyprland.activeWindow ? (Hyprland.activeWindow.title || "") : "")
+    readonly property string activeWindowClass: isNiri ? niriActiveAppId : (Hyprland.activeWindow ? (Hyprland.activeWindow.class || Hyprland.activeWindow.initialClass || "") : "")
     readonly property bool hasWindowOnScreen: isNiri ? hasActiveWindow : Boolean(Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.toplevelCount > 0)
     readonly property var focusWidgets: ["launcher", "clipboard", "wallpaper", "screenshot", "powerMenu"]
     readonly property var standaloneWindows: ["minflair_settings", "minflair_keybinds", "packagemanager"]
@@ -40,7 +44,7 @@ Item {
         if (!id)
             return false;
 
-        return id === "dashboard" || id === "controlCenter" || id === "notificationsCenter" || id === "music" || id === "clock" || id.startsWith("systemTray_");
+        return id === "dashboard" || id === "controlCenter" || id === "notificationsCenter" || id === "music" || id === "clock" || id === "weather" || id.startsWith("systemTray_");
     }
 
     function isFocusWidget(id) {
@@ -231,14 +235,44 @@ Item {
         }
     }
 
+    Process {
+        id: niriFocusedWindowProc
+
+        command: ["niri", "msg", "-j", "focused-window"]
+
+        stdout: SplitParser {
+            onRead: (data) => {
+                if (!data)
+                    return;
+                try {
+                    let win = JSON.parse(data.trim());
+                    if (win && win.id !== undefined) {
+                        appState.niriActiveTitle = win.title || "";
+                        appState.niriActiveAppId = win.app_id || "";
+                    } else {
+                        appState.niriActiveTitle = "";
+                        appState.niriActiveAppId = "";
+                    }
+                } catch (e) {
+                    appState.niriActiveTitle = "";
+                    appState.niriActiveAppId = "";
+                }
+            }
+        }
+    }
+
     Timer {
         id: niriDebounceTimer
 
         interval: 50
         repeat: false
         onTriggered: {
-            if (appState.isNiri && !niriQueryProc.running)
-                niriQueryProc.running = true;
+            if (appState.isNiri) {
+                if (!niriQueryProc.running)
+                    niriQueryProc.running = true;
+                if (!niriFocusedWindowProc.running)
+                    niriFocusedWindowProc.running = true;
+            }
         }
     }
 
@@ -252,12 +286,15 @@ Item {
         onTriggered: {
             if (!niriQueryProc.running)
                 niriQueryProc.running = true;
+            if (!niriFocusedWindowProc.running)
+                niriFocusedWindowProc.running = true;
         }
     }
 
     Component.onCompleted: {
         if (appState.isNiri) {
             niriQueryProc.running = true;
+            niriFocusedWindowProc.running = true;
             niriEventStreamProc.running = true;
         }
     }

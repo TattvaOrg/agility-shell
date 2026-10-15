@@ -10,7 +10,7 @@ Item {
     property alias server: notificationServer
     property alias activeList: activeListModel
     property alias historyList: historyListModel
-    property bool dndEnabled: false
+    property bool dndEnabled: SettingsService.dndEnabled
     property int unreadCount: historyListModel.count
     property var notificationObjects: ({
     })

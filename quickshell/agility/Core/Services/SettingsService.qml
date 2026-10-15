@@ -35,9 +35,9 @@ Item {
     property string edgeLightingColorMode: "album_art"
     property color edgeLightingCustomColor: Theme.accent
     property real edgeLightingSpeed: 1.0
-    property real edgeLightingLength: 25.0
-    property real edgeLightingThickness: 12.0
-    property real edgeLightingGlow: 16.0
+    property real edgeLightingLength: 60.0
+    property real edgeLightingThickness: 8.0
+    property real edgeLightingGlow: 20.0
     property bool edgeLightingAudioOnly: false
     property string edgeLightingDirection: "clockwise"
     property var actionShortcuts: [

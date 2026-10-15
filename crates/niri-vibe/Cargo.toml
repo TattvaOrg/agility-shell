@@ -1,0 +1,37 @@
+[package]
+name = "niri-vibe"
+version = "0.1.0"
+edition = "2021"
+authors = ["TattvaOrg"]
+license = "GPL-3.0-or-later"
+description = "Production-ready Lumn ambient edge glow effect for Niri and Wayland"
+
+[dependencies]
+tokio = { workspace = true }
+zbus = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+image = { workspace = true }
+libc = { workspace = true }
+
+smithay-client-toolkit = { version = "0.19.2", default-features = false, features = ["calloop"] }
+wayland-client = { version = "0.31", features = ["system"] }
+wayland-backend = { version = "0.3", features = ["client_system"] }
+wayland-protocols = { version = "0.32", features = ["client"] }
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+raw-window-handle = "0.6"
+wgpu = "0.20"
+futures-util = "0.3"
+pipewire = "0.9"
+
+rustfft = "6.4"
+mpris = "2.1"
+toml = "0.8"
+bytemuck = { version = "1.16", features = ["derive"] }
+pollster = "0.3"
+directories = "5.0"

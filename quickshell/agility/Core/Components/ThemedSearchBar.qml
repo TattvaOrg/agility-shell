@@ -19,7 +19,19 @@ FocusScope {
 
     signal searchRequested(string text)
     signal accepted()
+    signal keyPressed(var event)
 
+    function forceFocus() {
+        searchInput.forceActiveFocus();
+    }
+
+    onActiveFocusChanged: {
+        if (activeFocus && !searchInput.activeFocus) {
+            searchInput.forceActiveFocus();
+        }
+    }
+
+    Keys.priority: Keys.BeforeItem
     Keys.forwardTo: [searchInput]
     Layout.fillWidth: true
     Layout.preferredHeight: preferredHeight
@@ -64,6 +76,10 @@ FocusScope {
             color: Theme.fg
             selectByMouse: true
             background: null
+            Keys.priority: Keys.BeforeItem
+            Keys.onPressed: function(event) {
+                root.keyPressed(event);
+            }
             onTextChanged: root.searchRequested(text)
             onAccepted: root.accepted()
         }

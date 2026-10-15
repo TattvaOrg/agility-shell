@@ -19,6 +19,7 @@ Item {
     property var filteredApps: []
     property alias initialFocusItem: searchField
     property int maxVisibleItems: 8
+    Keys.forwardTo: (searchField && searchField.textField) ? [searchField.textField, searchField, appsView] : [appsView]
     readonly property bool isSearching: searchField.text.trim() !== ""
     readonly property int currentResultsCount: root.filteredApps ? root.filteredApps.length : 0
     readonly property int targetVisibleItems: {
@@ -87,7 +88,10 @@ Item {
                 event.accepted = true;
             } else if (appsView.count > 0) {
                 appsView.expandedIndex = -1;
-                appsView.currentIndex = Math.min(appsView.count - 1, appsView.currentIndex + 1);
+                if (appsView.currentIndex >= appsView.count - 1)
+                    appsView.currentIndex = 0;
+                else
+                    appsView.currentIndex = appsView.currentIndex + 1;
                 event.accepted = true;
             }
         } else if (event.key === Qt.Key_Up) {
@@ -96,7 +100,10 @@ Item {
                 event.accepted = true;
             } else if (appsView.count > 0) {
                 appsView.expandedIndex = -1;
-                appsView.currentIndex = Math.max(0, appsView.currentIndex - 1);
+                if (appsView.currentIndex <= 0)
+                    appsView.currentIndex = appsView.count - 1;
+                else
+                    appsView.currentIndex = appsView.currentIndex - 1;
                 event.accepted = true;
             }
         } else if (event.key === Qt.Key_Right) {
@@ -152,6 +159,30 @@ Item {
             root.widget.isOpen = false;
     }
 
+    function ensureSearchFocus() {
+        if (searchField) {
+            searchField.forceActiveFocus();
+            if (searchField.textField)
+                searchField.textField.forceActiveFocus();
+        }
+    }
+
+    Timer {
+        id: focusTimer1
+
+        interval: 30
+        repeat: false
+        onTriggered: root.ensureSearchFocus()
+    }
+
+    Timer {
+        id: focusTimer2
+
+        interval: 80
+        repeat: false
+        onTriggered: root.ensureSearchFocus()
+    }
+
     function resetLauncher() {
         if (appsView)
             appsView.expandedIndex = -1;
@@ -163,14 +194,10 @@ Item {
         } else {
             loadAppsProc.running = true;
         }
-        searchField.forceActiveFocus();
-        if (searchField.textField) {
-            searchField.textField.forceActiveFocus();
-        }
-        Qt.callLater(function() {
-            if (searchField && searchField.textField)
-                searchField.textField.forceActiveFocus();
-        });
+        ensureSearchFocus();
+        Qt.callLater(ensureSearchFocus);
+        focusTimer1.restart();
+        focusTimer2.restart();
     }
 
     implicitWidth: preferredContentWidth
@@ -243,6 +270,12 @@ Item {
                 id: appsView
 
                 property int expandedIndex: -1
+
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0) {
+                        appsView.positionViewAtIndex(currentIndex, ListView.Contain);
+                    }
+                }
 
                 onExpandedIndexChanged: {
                     if (expandedIndex >= 0)
@@ -347,7 +380,7 @@ Item {
             return root.filterApps(text);
         }
         customSize: Constants.sizeMd
-        textField.Keys.onPressed: function(event) {
+        onKeyPressed: function(event) {
             root.handleKeyPress(event, true);
         }
     }

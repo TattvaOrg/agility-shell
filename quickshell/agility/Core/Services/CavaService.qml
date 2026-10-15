@@ -8,7 +8,7 @@ Item {
     id: root
 
     property var cavaData: []
-    readonly property bool isCavaActive: MprisService.isPlaying && SystemInfoService.powerProfile !== "power-saver"
+    readonly property bool isCavaActive: (MprisService.isPlaying || SettingsService.edgeLightingEnabled) && SystemInfoService.powerProfile !== "power-saver"
 
     Timer {
         id: watchdog

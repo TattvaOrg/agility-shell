@@ -1,0 +1,19 @@
+[Unit]
+Description=niri-vibe: Ambient edge glow effect for Niri and Wayland
+Documentation=https://github.com/TattvaOrg/agility-shell/tree/main/crates/niri-vibe
+PartOf=graphical-session.target
+After=graphical-session.target pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/niri-vibe
+Restart=on-failure
+RestartSec=2
+Slice=session.slice
+
+# Resource safety constraints
+CPUQuota=15%
+MemoryMax=256M
+
+[Install]
+WantedBy=graphical-session.target

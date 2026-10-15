@@ -30,18 +30,16 @@ Item {
     readonly property bool shouldGlow: SettingsService.edgeLightingEnabled && (!SettingsService.edgeLightingAudioOnly || isAudioActive) && fsTransitionProg > 0.01
 
     // Smoothed beat with snappy punch (40ms attack) and velvety decay (280ms)
-    property real smoothedBeat: 0.0
-
-    Binding on smoothedBeat {
-        value: root.isAudioActive ? root.rawBeatEnergy : 0.0
-    }
+    readonly property real targetBeat: root.isAudioActive ? root.rawBeatEnergy : 0.0
+    property real smoothedBeat: targetBeat
 
     Behavior on smoothedBeat {
         NumberAnimation {
-            duration: root.rawBeatEnergy > root.smoothedBeat ? 40 : 280
-            easing.type: root.rawBeatEnergy > root.smoothedBeat ? Easing.OutQuad : Easing.OutCubic
+            duration: root.targetBeat > root.smoothedBeat ? 40 : 280
+            easing.type: root.targetBeat > root.smoothedBeat ? Easing.OutQuad : Easing.OutCubic
         }
     }
+
 
     // Ethereal idle breathing cycle for calm ambient mood when audio is idle/paused
     property real idlePhase: 0.0

@@ -33,6 +33,20 @@ AppContainer {
             }
         }
 
+        Divider {
+            visible: SettingsService.barIslandMode || SettingsService.barPillMode
+        }
+
+        SettingToggle {
+            visible: SettingsService.barIslandMode || SettingsService.barPillMode
+            label: "Auto-hide Bar"
+            description: "Smoothly slide the bar out of view when a window is open, reveal when hovered or screen is empty"
+            checked: SettingsService.barAutoHide
+            onCheckedChanged: {
+                SettingsService.barAutoHide = checked;
+            }
+        }
+
     }
 
     // ISLAND MODE WIDGETS

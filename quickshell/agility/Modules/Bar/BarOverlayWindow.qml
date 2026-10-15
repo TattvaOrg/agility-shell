@@ -84,7 +84,6 @@ PanelWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
-    focusable: false
     Component.onCompleted: {
         activeBarStyle = SettingsService.barStyle;
     }

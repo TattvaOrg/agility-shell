@@ -852,6 +852,13 @@ seed_user_configuration() {
             info "Migrated startup command in existing niri.kdl while preserving all custom keybindings."
         fi
     fi
+
+    # Clean up obsolete quickshell runtime code tree in user config to avoid shadowing system-wide /usr/share/agility-shell
+    if [[ -d "$USER_CONFIG/quickshell" ]]; then
+        info "Cleaning obsolete local quickshell code tree from $USER_CONFIG/quickshell..."
+        rm -rf "$USER_CONFIG/quickshell"
+    fi
+
     success "User configuration initialized."
 }
 

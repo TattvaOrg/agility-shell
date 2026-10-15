@@ -97,7 +97,6 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    focusable: false
     color: "transparent"
     visible: SettingsService.settingsLoaded && DisplayProfileService.gameModeActive && root.hasAnyOpen
     onIsLauncherChanged: {

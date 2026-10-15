@@ -38,7 +38,6 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: needsFocus ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    focusable: false
     onNeedsFocusChanged: {
         if (needsFocus && convexPanels && convexPanels.bottomDrawer) {
             convexPanels.bottomDrawer.activateCurrentItem();

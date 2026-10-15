@@ -288,9 +288,5 @@ class node_shell_qml toneNeutral
 Contributions are always welcome! Please check the issues tab, follow our descriptive branching workflow, and submit a pull request.
 
 Special thanks and attributions to:
-- **[Minflair](https://github.com/t4lentles5/minflair)** by [@t4lentles5](https://github.com/t4lentles5): The modular Quickshell QML frontend architecture, UI modules (Convex, Island, and Gaming bars, Control Center, App Launcher, Screen Capture, Wallpaper Selector, Package Manager, Settings), and vector SVG assets are derived from Minflair under the **GNU General Public License v3.0 (GPL-3.0)**.
-- **[caffyne-shell](https://github.com/caffyne-org/caffyne-shell)**: For foundational ideas and inspiration.
-- **`@its-darsh`**: Fabric framework.
-- **`@Axenide`**: Backend client design.
-- **`@linkfrg`**: Ignis runtime inspiration.
-- **`@amansxcalibur`**: UI code snippets.
+- **[Minflair](https://github.com/t4lentles5/minflair)** : The modular Quickshell QML frontend architecture to use as a Agility's new rust + qml releses.
+- **[caffyne-shell](https://github.com/caffyne-org/caffyne-shell)**: For foundational ideas and inspiration and python based desktop shell (Agility's older versions).

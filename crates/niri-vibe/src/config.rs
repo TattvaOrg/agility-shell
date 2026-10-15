@@ -38,7 +38,6 @@ pub struct GeneralConfig {
     pub fps_cap: u32,
 }
 
-
 fn default_intensity() -> f32 {
     0.7
 }
@@ -101,7 +100,10 @@ impl Config {
             proj_dirs.config_dir().join("config.toml")
         } else {
             let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-            PathBuf::from(home).join(".config").join("niri-vibe").join("config.toml")
+            PathBuf::from(home)
+                .join(".config")
+                .join("niri-vibe")
+                .join("config.toml")
         }
     }
 
@@ -117,12 +119,18 @@ impl Config {
             match toml::from_str::<Config>(&content) {
                 Ok(cfg) => Ok(cfg),
                 Err(err) => {
-                    warn!("Failed to parse config file {:?}: {}. Using default configuration.", path, err);
+                    warn!(
+                        "Failed to parse config file {:?}: {}. Using default configuration.",
+                        path, err
+                    );
                     Ok(Config::default())
                 }
             }
         } else {
-            info!("Configuration file not found. Creating default at {:?}", path);
+            info!(
+                "Configuration file not found. Creating default at {:?}",
+                path
+            );
             let default_cfg = Config::default();
             if let Some(parent) = path.parent() {
                 let _ = fs::create_dir_all(parent);

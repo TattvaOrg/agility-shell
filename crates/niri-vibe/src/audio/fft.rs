@@ -2,7 +2,6 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f32::consts::PI;
 use std::time::Instant;
 
-
 pub struct BassAnalyzer {
     planner: FftPlanner<f32>,
     fft_size: usize,

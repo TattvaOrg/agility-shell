@@ -70,10 +70,11 @@ impl RenderContext {
         ));
 
         let surface = unsafe {
-            self.instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                raw_display_handle,
-                raw_window_handle,
-            })?
+            self.instance
+                .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                    raw_display_handle,
+                    raw_window_handle,
+                })?
         };
 
         Ok(surface)
@@ -108,20 +109,24 @@ impl SurfaceRenderer {
             direction: 1.0,
         };
 
-        let uniform_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("surface-glow-uniform-buffer"),
-            contents: bytemuck::cast_slice(&[initial_uniforms]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+        let uniform_buffer = context
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("surface-glow-uniform-buffer"),
+                contents: bytemuck::cast_slice(&[initial_uniforms]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
 
-        let bind_group = context.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("surface-glow-bind-group"),
-            layout: &context.pipeline.bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
-        });
+        let bind_group = context
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("surface-glow-bind-group"),
+                layout: &context.pipeline.bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform_buffer.as_entire_binding(),
+                }],
+            });
 
         Self {
             surface,
@@ -149,9 +154,15 @@ impl SurfaceRenderer {
         };
 
         // Prefer PreMultiplied alpha for transparent desktop overlay
-        let alpha_mode = if surface_caps.alpha_modes.contains(&wgpu::CompositeAlphaMode::PreMultiplied) {
+        let alpha_mode = if surface_caps
+            .alpha_modes
+            .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
+        {
             wgpu::CompositeAlphaMode::PreMultiplied
-        } else if surface_caps.alpha_modes.contains(&wgpu::CompositeAlphaMode::Auto) {
+        } else if surface_caps
+            .alpha_modes
+            .contains(&wgpu::CompositeAlphaMode::Auto)
+        {
             wgpu::CompositeAlphaMode::Auto
         } else {
             surface_caps.alpha_modes[0]
@@ -177,7 +188,9 @@ impl SurfaceRenderer {
             return Ok(());
         }
 
-        context.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        context
+            .queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         let frame = match self.surface.get_current_texture() {
             Ok(f) => f,
@@ -191,11 +204,15 @@ impl SurfaceRenderer {
             Err(e) => return Err(e.into()),
         };
 
-        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("glow-render-encoder"),
-        });
+        let mut encoder = context
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("glow-render-encoder"),
+            });
 
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

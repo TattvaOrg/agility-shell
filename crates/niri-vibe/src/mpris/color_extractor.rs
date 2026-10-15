@@ -104,7 +104,7 @@ pub struct DualPalette {
 impl Default for DualPalette {
     fn default() -> Self {
         Self {
-            primary: ColorRgba::new(1.0, 0.23, 0.188, 1.0),   // vibrant red
+            primary: ColorRgba::new(1.0, 0.23, 0.188, 1.0), // vibrant red
             secondary: ColorRgba::new(0.92, 0.45, 0.72, 1.0), // harmonizing pink/magenta
         }
     }
@@ -165,7 +165,6 @@ pub fn extract_palette_from_image(path: &Path) -> Option<DualPalette> {
         let col = ColorRgba::new(r, g, b, 1.0);
         let (_, _s, l) = col.to_hsl();
 
-
         // Discard extreme blacks or whites unless monochrome
         if l > 0.08 && l < 0.94 {
             pixels.push(col);
@@ -178,9 +177,7 @@ pub fn extract_palette_from_image(path: &Path) -> Option<DualPalette> {
 
     // Run k-means with 5 clusters
     let k = 5.min(pixels.len());
-    let mut centroids: Vec<ColorRgba> = (0..k)
-        .map(|i| pixels[(i * pixels.len()) / k])
-        .collect();
+    let mut centroids: Vec<ColorRgba> = (0..k).map(|i| pixels[(i * pixels.len()) / k]).collect();
 
     let mut cluster_assignments = vec![0usize; pixels.len()];
 
@@ -214,12 +211,8 @@ pub fn extract_palette_from_image(path: &Path) -> Option<DualPalette> {
 
         for (c_idx, (sr, sg, sb, count)) in sums.into_iter().enumerate() {
             if count > 0 {
-                centroids[c_idx] = ColorRgba::new(
-                    sr / count as f32,
-                    sg / count as f32,
-                    sb / count as f32,
-                    1.0,
-                );
+                centroids[c_idx] =
+                    ColorRgba::new(sr / count as f32, sg / count as f32, sb / count as f32, 1.0);
             }
         }
     }
@@ -241,18 +234,11 @@ pub fn extract_palette_from_image(path: &Path) -> Option<DualPalette> {
 
     // Boost saturation and brightness slightly if too muddy
     let (h, s, l) = best_color.to_hsl();
-    let primary = ColorRgba::from_hsl(
-        h,
-        s.max(0.65),
-        l.clamp(0.40, 0.65),
-    );
+    let primary = ColorRgba::from_hsl(h, s.max(0.65), l.clamp(0.40, 0.65));
 
     // Complementary secondary color (golden angle shift +0.42 for organic harmony)
-    let secondary = ColorRgba::from_hsl(
-        (h + 0.42) % 1.0,
-        s.max(0.70),
-        (l + 0.08).clamp(0.45, 0.70),
-    );
+    let secondary =
+        ColorRgba::from_hsl((h + 0.42) % 1.0, s.max(0.70), (l + 0.08).clamp(0.45, 0.70));
 
     Some(DualPalette { primary, secondary })
 }

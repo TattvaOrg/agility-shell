@@ -16,9 +16,7 @@ use lock::LockListener;
 use mpris::MprisManager;
 use render::RenderContext;
 use smithay_client_toolkit::{
-    compositor::CompositorState,
-    output::OutputState,
-    registry::RegistryState,
+    compositor::CompositorState, output::OutputState, registry::RegistryState,
     shell::wlr_layer::LayerShell,
 };
 use std::path::PathBuf;
@@ -148,7 +146,10 @@ async fn main() -> Result<()> {
         sig_clone.store(true, Ordering::SeqCst);
     });
 
-    info!("niri-vibe successfully initialized. Starting render & event loop at {} FPS cap...", config.general.fps_cap);
+    info!(
+        "niri-vibe successfully initialized. Starting render & event loop at {} FPS cap...",
+        config.general.fps_cap
+    );
 
     let frame_duration = Duration::from_secs_f32(1.0 / config.general.fps_cap as f32);
     let mut last_frame = Instant::now();

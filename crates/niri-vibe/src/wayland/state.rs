@@ -97,13 +97,15 @@ impl WaylandAppState {
 
             let uniforms = GlowUniforms {
                 resolution: [physical_w as f32, physical_h as f32],
-                thickness: self.config.glow.thickness_px as f32 * surface.scale_factor.max(1) as f32,
+                thickness: self.config.glow.thickness_px as f32
+                    * surface.scale_factor.max(1) as f32,
                 intensity: active_intensity,
                 primary_color: palette.primary.to_array(),
                 secondary_color: palette.secondary.to_array(),
                 time,
                 speed: self.config.glow.speed,
-                corner_radius: self.config.glow.corner_radius_px as f32 * surface.scale_factor.max(1) as f32,
+                corner_radius: self.config.glow.corner_radius_px as f32
+                    * surface.scale_factor.max(1) as f32,
                 direction: direction_mult,
             };
 
@@ -191,7 +193,10 @@ impl OutputHandler for WaylandAppState {
                 self.surfaces.push(surf);
             }
             Err(e) => {
-                error!("Failed to create layer surface for output {:?}: {e:#}", output.id());
+                error!(
+                    "Failed to create layer surface for output {:?}: {e:#}",
+                    output.id()
+                );
             }
         }
     }
@@ -247,8 +252,9 @@ impl ProvidesRegistryState for WaylandAppState {
     registry_handlers![OutputState];
 }
 
-
-impl wayland_client::Dispatch<wayland_client::protocol::wl_region::WlRegion, ()> for WaylandAppState {
+impl wayland_client::Dispatch<wayland_client::protocol::wl_region::WlRegion, ()>
+    for WaylandAppState
+{
     fn event(
         _state: &mut Self,
         _proxy: &wayland_client::protocol::wl_region::WlRegion,
@@ -264,4 +270,3 @@ delegate_compositor!(WaylandAppState);
 delegate_output!(WaylandAppState);
 delegate_layer!(WaylandAppState);
 delegate_registry!(WaylandAppState);
-

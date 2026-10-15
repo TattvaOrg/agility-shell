@@ -9,7 +9,6 @@ use std::thread;
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
-
 pub struct MprisManager {
     animator: Arc<Mutex<PaletteAnimator>>,
     is_playing: Arc<AtomicBool>,
@@ -19,7 +18,12 @@ pub struct MprisManager {
 impl MprisManager {
     pub fn new(solid_color: [f32; 4], mode: &str) -> Self {
         let initial_palette = if mode == "solid" {
-            let primary = ColorRgba::new(solid_color[0], solid_color[1], solid_color[2], solid_color[3]);
+            let primary = ColorRgba::new(
+                solid_color[0],
+                solid_color[1],
+                solid_color[2],
+                solid_color[3],
+            );
             let (h, s, l) = primary.to_hsl();
             let secondary = ColorRgba::from_hsl((h + 0.42) % 1.0, s, l);
             DualPalette { primary, secondary }
@@ -53,7 +57,12 @@ impl MprisManager {
 
             if color_mode == "solid" {
                 info!("Color mode is 'solid'; using configured solid accent color.");
-                let primary = ColorRgba::new(solid_color[0], solid_color[1], solid_color[2], solid_color[3]);
+                let primary = ColorRgba::new(
+                    solid_color[0],
+                    solid_color[1],
+                    solid_color[2],
+                    solid_color[3],
+                );
                 let (h, s, l) = primary.to_hsl();
                 let secondary = ColorRgba::from_hsl((h + 0.42) % 1.0, s, l);
                 let target = DualPalette { primary, secondary };
@@ -86,13 +95,14 @@ impl MprisManager {
                                     last_art_url = art_url.to_string();
                                     debug!("Detected new album art URL: {}", art_url);
 
-                                    let local_path: Option<PathBuf> = if let Some(stripped) = art_url.strip_prefix("file://") {
-                                        Some(PathBuf::from(stripped))
-                                    } else if Path::new(art_url).exists() {
-                                        Some(PathBuf::from(art_url))
-                                    } else {
-                                        None
-                                    };
+                                    let local_path: Option<PathBuf> =
+                                        if let Some(stripped) = art_url.strip_prefix("file://") {
+                                            Some(PathBuf::from(stripped))
+                                        } else if Path::new(art_url).exists() {
+                                            Some(PathBuf::from(art_url))
+                                        } else {
+                                            None
+                                        };
 
                                     if let Some(ref path) = local_path {
                                         if let Some(palette) = extract_palette_from_image(path) {

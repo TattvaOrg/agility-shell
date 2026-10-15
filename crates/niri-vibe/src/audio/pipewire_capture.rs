@@ -12,7 +12,6 @@ use std::thread;
 use std::time::Duration;
 use tracing::{info, warn};
 
-
 pub const SAMPLE_RATE: f32 = 48000.0;
 pub const BUFFER_SIZE: usize = 2048;
 
@@ -45,7 +44,11 @@ impl AudioEngine {
         thread::spawn(move || {
             info!("Starting PipeWire audio capture engine (48kHz, 2048 samples)...");
 
-            if let Err(e) = run_pipewire_capture(Arc::clone(&intensity_bits), Arc::clone(&running), idle_breathing) {
+            if let Err(e) = run_pipewire_capture(
+                Arc::clone(&intensity_bits),
+                Arc::clone(&running),
+                idle_breathing,
+            ) {
                 warn!("PipeWire capture failed or unavailable ({e:#}). Falling back to ethereal idle breathing mode.");
                 run_fallback_breathing_loop(intensity_bits, running, idle_breathing);
             }
@@ -205,7 +208,6 @@ fn run_pipewire_capture(
     while running.load(Ordering::Relaxed) {
         mainloop.loop_().iterate(Duration::from_millis(10));
     }
-
 
     Ok(())
 }

@@ -9,7 +9,6 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{protocol::wl_output, Proxy, QueueHandle};
 
-
 pub struct MonitorSurface {
     pub output: wl_output::WlOutput,
     pub layer_surface: LayerSurface,

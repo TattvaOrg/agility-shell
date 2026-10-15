@@ -19,7 +19,7 @@ Item {
     readonly property bool isAudioActive: MprisService.isPlaying || AudioService.isSinkInputActive
     readonly property bool shouldGlow: SettingsService.edgeLightingEnabled && (!SettingsService.edgeLightingAudioOnly || isAudioActive) && fsTransitionProg > 0.01
 
-    // Bass / Beat energy from Cava sub-bass bars (bars 0..3)
+    // Sub-bass beat detection from Cava spectrum (bars 0..3)
     readonly property real rawBeatEnergy: {
         let data = CavaService.cavaData;
         if (!data || data.length < 4)
@@ -28,7 +28,7 @@ Item {
         return Math.min(1.0, sum / 320.0);
     }
 
-    // Smoothed beat with snappy attack (40ms) and organic decay (300ms)
+    // Smoothed beat with snappy punch (40ms attack) and velvety decay (280ms)
     property real smoothedBeat: 0.0
 
     Binding on smoothedBeat {
@@ -37,23 +37,23 @@ Item {
 
     Behavior on smoothedBeat {
         NumberAnimation {
-            duration: root.rawBeatEnergy > root.smoothedBeat ? 40 : 300
+            duration: root.rawBeatEnergy > root.smoothedBeat ? 40 : 280
             easing.type: root.rawBeatEnergy > root.smoothedBeat ? Easing.OutQuad : Easing.OutCubic
         }
     }
 
-    // Idle breathing oscillation to keep ambient glow living when music is quiet/paused
+    // Ethereal idle breathing cycle for calm ambient mood when audio is idle/paused
     property real idlePhase: 0.0
     NumberAnimation {
         target: root
         property: "idlePhase"
         from: 0.0
         to: 6.2831853
-        duration: 5500
+        duration: 5200
         loops: Animation.Infinite
         running: root.shouldGlow
     }
-    readonly property real idleGlow: Math.sin(idlePhase) * 0.06
+    readonly property real idleGlow: Math.sin(idlePhase) * 0.08
 
     // Primary & Complementary palette derivation (Lumn dual-tone style)
     readonly property color primaryColor: {
@@ -134,6 +134,7 @@ Item {
         id: gradientSource
         anchors.fill: parent
         visible: false
+        layer.enabled: true
 
         Item {
             anchors.centerIn: parent
@@ -174,6 +175,7 @@ Item {
         id: rimShapeContainer
         anchors.fill: parent
         visible: false
+        layer.enabled: true
 
         Shape {
             id: rimShape
@@ -223,6 +225,7 @@ Item {
         id: maskedRim
         anchors.fill: parent
         visible: false
+        layer.enabled: true
 
         GE.OpacityMask {
             anchors.fill: parent
@@ -232,38 +235,42 @@ Item {
     }
 
     // Pass 1: Atmospheric Inward Bloom Diffusion (Lumn Ambient Radiance)
+    // Fixed blurMax (48) prevents runtime shader re-compilation/re-allocation
     MultiEffect {
         anchors.fill: parent
         source: maskedRim
         visible: SettingsService.edgeLightingGlow > 0
         blurEnabled: true
-        blur: Math.min(1.0, root.dynamicGlowSpread / 32.0)
-        blurMax: Math.round(root.dynamicGlowSpread * 1.6)
-        brightness: 0.16 + (root.smoothedBeat * 0.35) + root.idleGlow
-        contrast: 0.12
-        opacity: 0.78 + (root.smoothedBeat * 0.22)
+        blurMax: 48
+        blur: Math.min(1.0, root.dynamicGlowSpread / 48.0)
+        brightness: 0.18 + (root.smoothedBeat * 0.38) + root.idleGlow
+        contrast: 0.14 + (root.smoothedBeat * 0.10)
+        saturation: 0.12 + (root.smoothedBeat * 0.20)
+        opacity: 0.80 + (root.smoothedBeat * 0.20)
     }
 
     // Pass 2: Concentrated Core Aura (Luminous Band along Bezel Rim)
+    // Fixed blurMax (16) provides steady high-FPS bloom without stutter
     MultiEffect {
         anchors.fill: parent
         source: maskedRim
         blurEnabled: true
-        blur: 0.18
-        blurMax: Math.round(8 + (root.smoothedBeat * 6))
-        brightness: 0.22 + (root.smoothedBeat * 0.25)
-        contrast: 0.08
-        opacity: 0.88 + (root.smoothedBeat * 0.12)
+        blurMax: 16
+        blur: Math.min(1.0, (8.0 + (root.smoothedBeat * 6.0)) / 16.0)
+        brightness: 0.24 + (root.smoothedBeat * 0.28)
+        contrast: 0.10
+        saturation: 0.15
+        opacity: 0.90 + (root.smoothedBeat * 0.10)
     }
 
-    // Pass 3: Precision Luminous Edge (Crisp Definition)
+    // Pass 3: Precision Luminous Edge (Crisp Definition along Bezel Seam)
     MultiEffect {
         anchors.fill: parent
         source: maskedRim
         blurEnabled: true
-        blur: 0.05
-        blurMax: 3
-        brightness: 0.15 + (root.smoothedBeat * 0.15)
-        opacity: 0.95
+        blurMax: 4
+        blur: 0.20
+        brightness: 0.18 + (root.smoothedBeat * 0.18)
+        opacity: 0.96
     }
 }

@@ -1,5 +1,7 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Io
 import qs.Core
 import qs.Core.Services
 pragma Singleton
@@ -25,6 +27,9 @@ Item {
     property bool hasActiveNotification: false
     property real activeNotificationWidth: 0
     property real activeNotificationHeight: 0
+    readonly property bool isNiri: Quickshell.env("NIRI_SOCKET") !== undefined || Quickshell.env("XDG_CURRENT_DESKTOP") === "niri"
+    property bool hasActiveWindow: false
+    readonly property bool hasWindowOnScreen: isNiri ? hasActiveWindow : Boolean(Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.toplevelCount > 0)
     readonly property var focusWidgets: ["launcher", "clipboard", "wallpaper", "screenshot", "powerMenu"]
     readonly property var standaloneWindows: ["minflair_settings", "minflair_keybinds", "packagemanager"]
 
@@ -178,5 +183,82 @@ Item {
     }
     onOpenWidget: (widgetId) => {
         openWidgetInternal(widgetId);
+    }
+
+    // ─── Niri IPC Engine for Window Presence Tracking ───
+    Process {
+        id: niriQueryProc
+
+        command: ["niri", "msg", "-j", "workspaces"]
+
+        stdout: SplitParser {
+            onRead: (data) => {
+                if (!data)
+                    return;
+                try {
+                    let list = JSON.parse(data.trim());
+                    if (!Array.isArray(list))
+                        return;
+
+                    let hasWin = false;
+                    for (let i = 0; i < list.length; i++) {
+                        let ws = list[i];
+                        if (ws.is_active || ws.is_focused) {
+                            if (ws.active_window_id !== null && ws.active_window_id !== undefined)
+                                hasWin = true;
+                        }
+                    }
+                    appState.hasActiveWindow = hasWin;
+                } catch (e) {
+                }
+            }
+        }
+    }
+
+    Process {
+        id: niriEventStreamProc
+
+        command: ["niri", "msg", "event-stream"]
+
+        stdout: SplitParser {
+            onRead: (line) => {
+                if (!line)
+                    return;
+                if (line.includes("Workspace") || line.includes("Window")) {
+                    niriDebounceTimer.restart();
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: niriDebounceTimer
+
+        interval: 50
+        repeat: false
+        onTriggered: {
+            if (appState.isNiri && !niriQueryProc.running)
+                niriQueryProc.running = true;
+        }
+    }
+
+    Timer {
+        id: niriPollTimer
+
+        interval: 2000
+        repeat: true
+        running: appState.isNiri
+        triggeredOnStart: true
+        onTriggered: {
+            if (!niriQueryProc.running)
+                niriQueryProc.running = true;
+        }
+    }
+
+    Component.onCompleted: {
+        if (appState.isNiri) {
+            niriQueryProc.running = true;
+            niriEventStreamProc.running = true;
+        }
     }
 }

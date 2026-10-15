@@ -33,6 +33,7 @@ Item {
     property int pillBarWidthPercent: 60
     property string pillPopupStyle: "center"
     property string pillWidgetLayout: "distributed"
+    property bool barAutoHide: false
     readonly property int barWidgetHeight: 28
     property bool edgeLightingEnabled: true
     property string edgeLightingColorMode: "album_art"
@@ -199,6 +200,11 @@ Item {
             saveSettings();
 
     }
+    onBarAutoHideChanged: {
+        if (settingsLoaded)
+            saveSettings();
+
+    }
     onEdgeLightingEnabledChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingColorModeChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingCustomColorChanged: { if (settingsLoaded) saveSettings(); }
@@ -258,6 +264,7 @@ Item {
                 "pillBarWidthPercent": settingsService.pillBarWidthPercent,
                 "pillPopupStyle": settingsService.pillPopupStyle,
                 "pillWidgetLayout": settingsService.pillWidgetLayout,
+                "barAutoHide": settingsService.barAutoHide,
                 "actionShortcuts": settingsService.actionShortcuts,
                 "customShortcuts": settingsService.customShortcuts,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
@@ -440,6 +447,9 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                             if (prefs.pillWidgetLayout === "distributed" || prefs.pillWidgetLayout === "centered")
                                 settingsService.pillWidgetLayout = prefs.pillWidgetLayout;
                         }
+
+                        if (prefs.barAutoHide !== undefined)
+                            settingsService.barAutoHide = Boolean(prefs.barAutoHide);
 
                         if (prefs.actionShortcuts !== undefined)
                             settingsService.actionShortcuts = prefs.actionShortcuts;

@@ -30,7 +30,87 @@ PanelWindow {
     readonly property bool sidedNeedsFocus: isSidedPill && AppState.isFocusWidgetOpen && (pillPanelsLoader.item && pillPanelsLoader.item.hasAnyDrawerOpen)
     readonly property bool needsFocus: (activeHost && activeHost.isOpen && activeHost.needsFocus) || sidedNeedsFocus
 
+    // Auto-hide configuration & states
+    readonly property real barHiddenY: -(barStrip.height + barStrip.y + 16)
+    readonly property bool autoHideEnabled: SettingsService.barAutoHide && (root.isPill || SettingsService.barIslandMode)
+    readonly property bool hasAnyOpenWidget: AppState.isFocusWidgetOpen
+        || AppState.activeWidget !== ""
+        || AppState.activeWidgetsList.length > 0
+        || (root.activeHost && (root.activeHost.isOpen || root.activeHost.isOccupied))
+        || (pillPanelsLoader.item && (pillPanelsLoader.item.hasAnyPanelOpen || pillPanelsLoader.item.isConvexCenterOpen))
+        || AppState.activeTrayItem !== null
+        || AppState.hasActiveNotification
+    property bool isHoverRevealed: (barHoverHandler.hovered || topEdgeHoverHandler.hovered)
+    readonly property bool shouldBarHide: autoHideEnabled && AppState.hasWindowOnScreen && !hasAnyOpenWidget && !isHoverRevealed
+    readonly property bool isBarHidden: barTranslate.y <= (barHiddenY + 4)
+
+    onShouldBarHideChanged: {
+        if (shouldBarHide) {
+            hideDebounceTimer.restart();
+        } else {
+            hideDebounceTimer.stop();
+            barSlideUpAnim.stop();
+            barSlideDownAnim.restart();
+        }
+    }
+
+    Timer {
+        id: hideDebounceTimer
+
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (root.shouldBarHide) {
+                barSlideDownAnim.stop();
+                barSlideUpAnim.restart();
+            }
+        }
+    }
+
+    ParallelAnimation {
+        id: barSlideUpAnim
+
+        NumberAnimation {
+            target: barTranslate
+            property: "y"
+            to: root.barHiddenY
+            duration: Constants.animNormal
+            easing.type: Easing.OutCubic
+        }
+
+        NumberAnimation {
+            target: barStrip
+            property: "opacity"
+            to: 0
+            duration: Constants.animNormal
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    ParallelAnimation {
+        id: barSlideDownAnim
+
+        NumberAnimation {
+            target: barTranslate
+            property: "y"
+            to: 0
+            duration: Constants.animNormal
+            easing.type: Easing.OutCubic
+        }
+
+        NumberAnimation {
+            target: barStrip
+            property: "opacity"
+            to: 1
+            duration: Constants.animNormal
+            easing.type: Easing.OutCubic
+        }
+    }
+
     function triggerStyleSwitch() {
+        barSlideUpAnim.stop();
+        barSlideDownAnim.stop();
+        hideDebounceTimer.stop();
         if (!root.isShellReady || !SettingsService.settingsLoaded) {
             root.activeBarStyle = SettingsService.barStyle;
             return ;
@@ -112,6 +192,9 @@ PanelWindow {
                 barExitOnlyAnim.stop();
                 barStyleSwitchAnim.stop();
                 barEntranceAnim.stop();
+                barSlideUpAnim.stop();
+                barSlideDownAnim.stop();
+                hideDebounceTimer.stop();
                 barStrip.opacity = 1;
                 barTranslate.y = 0;
                 barStrip.scale = 1;
@@ -379,6 +462,41 @@ PanelWindow {
             ]
         }
 
+        // Top edge reveal trigger (active only when bar is auto-hidden)
+        Item {
+            id: topEdgeTrigger
+
+            anchors.top: parent.top
+            x: root.isPill ? (barStrip.x + barStrip.centerX) : barStrip.x
+            width: root.isPill ? barStrip.centerWidth : barStrip.width
+            height: 4
+            visible: root.autoHideEnabled && root.isBarHidden
+            z: 99
+
+            HoverHandler {
+                id: topEdgeHoverHandler
+                enabled: parent.visible
+            }
+        }
+
+        // Bar hover tracker (matches visible pill/island capsule bounds)
+        Item {
+            id: barHoverTracker
+
+            x: root.isPill ? (barStrip.x + barStrip.centerX) : barStrip.x
+            y: Math.max(0, barStrip.y + barTranslate.y)
+            width: root.isPill ? barStrip.centerWidth : barStrip.width
+            height: barStrip.height
+            visible: !root.isBarHidden
+            z: 40
+
+            HoverHandler {
+                id: barHoverHandler
+                enabled: root.autoHideEnabled && parent.visible
+                margin: 4
+            }
+        }
+
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowColor: Theme.shadow
@@ -391,12 +509,20 @@ PanelWindow {
     }
 
     mask: Region {
-        // Center (Island)
+        // Center (Island or Pill)
         Region {
-            x: root.isPill ? (barStrip.x + barStrip.centerX - 16) : (barStrip.x - 16)
-            y: Math.max(0, barStrip.y - 24)
-            width: root.isPill ? (barStrip.centerWidth + 32) : (barStrip.width + 32)
-            height: barStrip.height + 40
+            x: root.isPill ? (barStrip.x + barStrip.centerX) : barStrip.x
+            y: Math.max(0, barStrip.y + barTranslate.y)
+            width: root.isPill ? barStrip.centerWidth : barStrip.width
+            height: Math.max(0, barStrip.height + Math.min(0, barStrip.y + barTranslate.y))
+        }
+
+        // Top edge trigger when bar is hidden under auto-hide
+        Region {
+            x: (root.autoHideEnabled && root.isBarHidden) ? (root.isPill ? (barStrip.x + barStrip.centerX) : barStrip.x) : 0
+            y: 0
+            width: (root.autoHideEnabled && root.isBarHidden) ? (root.isPill ? barStrip.centerWidth : barStrip.width) : 0
+            height: (root.autoHideEnabled && root.isBarHidden) ? 4 : 0
         }
 
         // Expandable Host Overlay

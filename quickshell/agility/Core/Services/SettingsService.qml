@@ -32,6 +32,7 @@ Item {
     property string islandRightMode: "auto"
     property int pillBarWidthPercent: 60
     property string pillPopupStyle: "center"
+    property string pillWidgetLayout: "distributed"
     readonly property int barWidgetHeight: 28
     property bool edgeLightingEnabled: true
     property string edgeLightingColorMode: "album_art"
@@ -193,6 +194,11 @@ Item {
             saveSettings();
 
     }
+    onPillWidgetLayoutChanged: {
+        if (settingsLoaded)
+            saveSettings();
+
+    }
     onEdgeLightingEnabledChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingColorModeChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingCustomColorChanged: { if (settingsLoaded) saveSettings(); }
@@ -251,6 +257,7 @@ Item {
                 "islandRightMode": settingsService.islandRightMode,
                 "pillBarWidthPercent": settingsService.pillBarWidthPercent,
                 "pillPopupStyle": settingsService.pillPopupStyle,
+                "pillWidgetLayout": settingsService.pillWidgetLayout,
                 "actionShortcuts": settingsService.actionShortcuts,
                 "customShortcuts": settingsService.customShortcuts,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
@@ -427,6 +434,11 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                         if (prefs.pillPopupStyle !== undefined) {
                             if (prefs.pillPopupStyle === "sided" || prefs.pillPopupStyle === "top" || prefs.pillPopupStyle === "center")
                                 settingsService.pillPopupStyle = prefs.pillPopupStyle;
+                        }
+
+                        if (prefs.pillWidgetLayout !== undefined) {
+                            if (prefs.pillWidgetLayout === "distributed" || prefs.pillWidgetLayout === "centered")
+                                settingsService.pillWidgetLayout = prefs.pillWidgetLayout;
                         }
 
                         if (prefs.actionShortcuts !== undefined)

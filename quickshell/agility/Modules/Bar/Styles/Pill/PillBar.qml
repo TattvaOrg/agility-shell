@@ -78,9 +78,12 @@ Item {
         RowLayout {
             id: contentRow
 
-            anchors.fill: parent
-            anchors.leftMargin: Constants.sizeLg
-            anchors.rightMargin: Constants.sizeLg
+            readonly property bool isDistributed: SettingsService.pillWidgetLayout === "distributed"
+
+            anchors.fill: isDistributed ? parent : undefined
+            anchors.centerIn: isDistributed ? undefined : parent
+            anchors.leftMargin: isDistributed ? Constants.sizeLg : 0
+            anchors.rightMargin: isDistributed ? Constants.sizeLg : 0
             spacing: Constants.sizeSm
 
             // Left Navigation (Material 3 Dashboard, Compositor Workspaces)
@@ -112,8 +115,9 @@ Item {
 
             // Expanding spacer between Left and Center
             Item {
-                Layout.fillWidth: true
+                Layout.fillWidth: contentRow.isDistributed
                 Layout.minimumWidth: 0
+                visible: contentRow.isDistributed
             }
 
             // Center (Clock & Live Playing Media)
@@ -135,8 +139,9 @@ Item {
 
             // Expanding spacer between Center and Right
             Item {
-                Layout.fillWidth: true
+                Layout.fillWidth: contentRow.isDistributed
                 Layout.minimumWidth: 0
+                visible: contentRow.isDistributed
             }
 
             // Right Quick Controls (Recording, Tray, QuickSettings, Notifications, Power)

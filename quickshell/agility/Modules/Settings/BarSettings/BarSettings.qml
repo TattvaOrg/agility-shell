@@ -90,6 +90,25 @@ AppContainer {
         Divider {
         }
 
+        SettingSegmented {
+            label: "Widget Layout"
+            description: "Choose how widgets are arranged across the bar"
+            model: [{
+                "text": "Distributed",
+                "value": "distributed"
+            }, {
+                "text": "Centered",
+                "value": "centered"
+            }]
+            currentValue: SettingsService.pillWidgetLayout
+            onActivated: (value) => {
+                SettingsService.pillWidgetLayout = value;
+            }
+        }
+
+        Divider {
+        }
+
         ThemedSlider {
             label: "Bar Width"
             from: 30

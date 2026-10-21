@@ -38,6 +38,23 @@ AppContainer {
     }
 
     AppGroup {
+        title: "Sound Effects"
+        icon: "volume"
+
+        SettingToggle {
+            label: "System Sound Effects"
+            description: "Play audio feedback for startup, popups, battery plug/unplug, notifications, and shell events"
+            checked: SettingsService.soundEffectsEnabled
+            onCheckedChanged: {
+                SettingsService.soundEffectsEnabled = checked;
+                if (checked) {
+                    SoundService.play("confirm");
+                }
+            }
+        }
+    }
+
+    AppGroup {
         title: "Compositor Effects"
         icon: "hyprland"
 

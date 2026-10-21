@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Core
 import qs.Core.Components
 import qs.Core.Services
@@ -80,8 +81,74 @@ AppWindow {
     widgetId: "minflair_settings"
     windowTitle: "Minflair Settings"
     contentPadding: 0
+
+    implicitWidth: {
+        if (SettingsService.settingsWindowMode === "full")
+            return Quickshell.screens[0] ? Quickshell.screens[0].width : 1920;
+        if (SettingsService.settingsWindowMode === "boxed")
+            return SettingsService.settingsBoxedWidth;
+        return Quickshell.screens[0] ? Math.round(Quickshell.screens[0].width * 0.5) : 960;
+    }
+    implicitHeight: {
+        if (SettingsService.settingsWindowMode === "full")
+            return Quickshell.screens[0] ? Quickshell.screens[0].height : 1080;
+        if (SettingsService.settingsWindowMode === "boxed")
+            return SettingsService.settingsBoxedHeight;
+        return Quickshell.screens[0] ? Math.round(Quickshell.screens[0].height * 0.85) : 720;
+    }
+
+    Process {
+        id: niriWindowAdjustProc
+        property string actionCmd: ""
+        command: ["sh", "-c", actionCmd]
+    }
+
+    Timer {
+        id: applyWindowPresentationTimer
+        interval: 120
+        repeat: false
+        onTriggered: {
+            if (!root.isOpen)
+                return;
+
+            if (SettingsService.settingsWindowMode === "boxed") {
+                niriWindowAdjustProc.actionCmd = "niri msg action move-window-to-floating 2>/dev/null; niri msg action set-window-width " + SettingsService.settingsBoxedWidth + " 2>/dev/null; niri msg action set-window-height " + SettingsService.settingsBoxedHeight + " 2>/dev/null; niri msg action center-window 2>/dev/null";
+                niriWindowAdjustProc.running = false;
+                niriWindowAdjustProc.running = true;
+            } else if (SettingsService.settingsWindowMode === "full") {
+                niriWindowAdjustProc.actionCmd = "niri msg action move-window-to-tiling 2>/dev/null; niri msg action set-column-width '100%' 2>/dev/null; niri msg action maximize-column 2>/dev/null";
+                niriWindowAdjustProc.running = false;
+                niriWindowAdjustProc.running = true;
+            } else {
+                niriWindowAdjustProc.actionCmd = "niri msg action move-window-to-tiling 2>/dev/null; niri msg action set-column-width '50%' 2>/dev/null";
+                niriWindowAdjustProc.running = false;
+                niriWindowAdjustProc.running = true;
+            }
+        }
+    }
+
+    Connections {
+        target: SettingsService
+        function onSettingsWindowModeChanged() {
+            if (root.isOpen)
+                applyWindowPresentationTimer.restart();
+
+        }
+        function onSettingsBoxedWidthChanged() {
+            if (root.isOpen && SettingsService.settingsWindowMode === "boxed")
+                applyWindowPresentationTimer.restart();
+
+        }
+        function onSettingsBoxedHeightChanged() {
+            if (root.isOpen && SettingsService.settingsWindowMode === "boxed")
+                applyWindowPresentationTimer.restart();
+
+        }
+    }
+
     onIsOpenChanged: {
         if (isOpen) {
+            applyWindowPresentationTimer.restart();
             if (AppState.pendingSettingsTab !== -1) {
                 activeTab = AppState.pendingSettingsTab;
                 AppState.pendingSettingsTab = -1;

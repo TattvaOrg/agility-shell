@@ -9,7 +9,11 @@ Item {
     id: root
 
     property bool enableShadow: true
-    property color color: Theme.bg
+    property color color: {
+        if (SettingsService.barGlassMode === "solid")
+            return (SettingsService.barSolidTone === "white") ? Theme.solidWhiteBarBg : Qt.rgba(0.04, 0.04, 0.05, 1.0);
+        return Theme.bg;
+    }
     property color borderColor: "transparent"
     property real borderWidth: 0
     property real flareWidth: Constants.sizeLg + 2

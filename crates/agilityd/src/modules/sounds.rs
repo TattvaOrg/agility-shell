@@ -99,6 +99,22 @@ impl SoundService {
             return Some(candidate);
         }
 
+        // Fallback user directory search
+        if let Ok(home) = std::env::var("HOME") {
+            let user_cfg = PathBuf::from(&home)
+                .join(".config/agility-shell/sounds")
+                .join(&wav);
+            if user_cfg.is_file() {
+                return Some(user_cfg);
+            }
+            let user_share = PathBuf::from(&home)
+                .join(".local/share/agility-shell/sounds")
+                .join(&wav);
+            if user_share.is_file() {
+                return Some(user_share);
+            }
+        }
+
         // Fallback relative search
         let fallback = PathBuf::from("sounds").join(&wav);
         if fallback.is_file() {

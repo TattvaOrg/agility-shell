@@ -35,8 +35,8 @@ Rectangle {
     clip: true
 
     radius: height / 2
-    color: isHovered ? Theme.bgSecondary : "transparent"
-    border.color: isHovered ? Theme.borderSecondary : "transparent"
+    color: isHovered ? Theme.barBgSecondary : "transparent"
+    border.color: isHovered ? Theme.barBorder : "transparent"
     border.width: 1
     scale: isPressed ? 0.96 : (isHovered ? 1.02 : 1)
 
@@ -133,7 +133,7 @@ Rectangle {
             icon: "download"
             iconSize: 12
             flat: true
-            iconColor: Theme.accent
+            iconColor: Theme.isLightBar ? Theme.barFg : Theme.accent
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -141,7 +141,7 @@ Rectangle {
             text: root.downSpeedText
             customSize: 10
             font.weight: Font.Medium
-            color: root.isHovered ? Theme.fg : Theme.muted
+            color: root.isHovered ? Theme.barFg : Theme.barMuted
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -149,7 +149,7 @@ Rectangle {
             icon: "arrow-up-duotone"
             iconSize: 11
             flat: true
-            iconColor: Theme.muted
+            iconColor: Theme.barMuted
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -157,7 +157,7 @@ Rectangle {
             text: root.upSpeedText
             customSize: 10
             font.weight: Font.Medium
-            color: root.isHovered ? Theme.fg : Theme.muted
+            color: root.isHovered ? Theme.barFg : Theme.barMuted
             Layout.alignment: Qt.AlignVCenter
         }
     }

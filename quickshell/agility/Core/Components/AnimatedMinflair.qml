@@ -8,7 +8,7 @@ Item {
     id: root
 
     property int iconSize: Math.round((Constants.size2Xl + 4) * (SettingsService.barWidgetHeight / 28.0))
-    property color iconColor: Theme.accent
+    property color iconColor: Theme.isLightBar ? Theme.barFg : Theme.accent
     readonly property int scaledIconSize: Math.max(16, Math.round(iconSize * SettingsService.fontScale))
     property bool enableIntroAnim: true
     property bool enableIntervalAnim: true
@@ -21,6 +21,14 @@ Item {
     readonly property string hexagonPath: "M 12 3 C 12.8 3 13.6 3.4 14.1 4.2 L 19.5 10.8 C 20.1 11.5 20.1 12.5 19.5 13.2 L 14.1 19.8 C 13.6 20.6 12.8 21 12 21 C 11.2 21 10.4 20.6 9.9 19.8 L 4.5 13.2 C 3.9 12.5 3.9 11.5 4.5 10.8 L 9.9 4.2 C 10.4 3.4 11.2 3 12 3 Z"
     readonly property string archPath: "M 6 12 C 6 8.69 8.69 6 12 6 C 15.31 6 18 8.69 18 12 L 18 18 C 18 19.1 17.1 20 16 20 L 8 20 C 6.9 20 6 19.1 6 18 Z"
     readonly property string gemPath: "M 8.5 3 L 15.5 3 C 16.3 3 17.1 3.3 17.7 3.9 L 20.1 6.3 C 20.7 6.9 21 7.7 21 8.5 L 21 15.5 C 21 16.3 20.7 17.1 20.1 17.7 L 17.7 20.1 C 17.1 20.7 16.3 21 15.5 21 L 8.5 21 C 7.7 21 6.9 20.7 6.3 20.1 L 3.9 17.7 C 3.3 17.1 3 16.3 3 15.5 L 3 8.5 C 3 7.7 3.3 6.9 3.9 6.3 L 6.3 3.9 C 6.9 3.3 7.7 3 8.5 3 Z"
+    readonly property string cloverPath: "M 12 7 C 12 4.24 9.76 2 7 2 C 4.24 2 2 4.24 2 7 C 2 9.76 4.24 12 7 12 C 4.24 12 2 14.24 2 17 C 2 19.76 4.24 22 7 22 C 9.76 22 12 19.76 12 17 C 12 19.76 14.24 22 17 22 C 19.76 22 22 19.76 22 17 C 22 14.24 19.76 12 17 12 C 19.76 12 22 9.76 22 7 C 22 4.24 19.76 2 17 2 C 14.24 2 12 4.24 12 7 Z"
+    readonly property string star8Path: "M 12 2 L 13.8 7.6 L 19.1 4.9 L 16.4 10.2 L 22 12 L 16.4 13.8 L 19.1 19.1 L 13.8 16.4 L 12 22 L 10.2 16.4 L 4.9 19.1 L 7.6 13.8 L 2 12 L 7.6 10.2 L 4.9 4.9 L 10.2 7.6 Z"
+    readonly property string star4Path: "M 12 2 L 14.5 9.5 L 22 12 L 14.5 14.5 L 12 22 L 9.5 14.5 L 2 12 L 9.5 9.5 Z"
+    readonly property string diamondPath: "M 10.6 2.6 C 11.4 1.8 12.6 1.8 13.4 2.6 L 21.4 10.6 C 22.2 11.4 22.2 12.6 21.4 13.4 L 13.4 21.4 C 12.6 22.2 11.4 22.2 10.6 21.4 L 2.6 13.4 C 1.8 12.6 1.8 11.4 2.6 10.6 Z"
+    readonly property string heartPath: "M 12 21.35 C 11.65 21.35 11.3 21.22 11.03 20.97 C 6.52 16.88 2 12.78 2 8.5 C 2 5.42 4.42 3 7.5 3 C 9.24 3 10.91 3.81 12 5.09 C 13.09 3.81 14.76 3 16.5 3 C 19.58 3 22 5.42 22 8.5 C 22 12.78 17.48 16.88 12.97 20.97 C 12.7 21.22 12.35 21.35 12 21.35 Z"
+    readonly property string shieldPath: "M 12 2 C 16.5 3.5 19.5 3.5 20.5 4 C 20.8 7.5 20.8 12.5 18.5 16.8 C 16.8 19.8 13.8 21.5 12 22 C 10.2 21.5 7.2 19.8 5.5 16.8 C 3.2 12.5 3.2 7.5 3.5 4 C 4.5 3.5 7.5 3.5 12 2 Z"
+    readonly property string teardropPath: "M 12 2.5 C 12 2.5 19 10.8 19 15 C 19 18.87 15.87 22 12 22 C 8.13 22 5 18.87 5 15 C 5 10.8 12 2.5 12 2.5 Z"
+    readonly property string trianglePath: "M 10.27 3.5 C 11.04 2.17 12.96 2.17 13.73 3.5 L 21.36 16.71 C 22.13 18.04 21.17 19.71 19.63 19.71 L 4.37 19.71 C 2.83 19.71 1.87 18.04 2.64 16.71 Z"
 
     function getShapePath(name) {
         switch (name) {
@@ -36,6 +44,22 @@ Item {
             return archPath;
         case "gem":
             return gemPath;
+        case "clover":
+            return cloverPath;
+        case "star8":
+            return star8Path;
+        case "star4":
+            return star4Path;
+        case "diamond":
+            return diamondPath;
+        case "heart":
+            return heartPath;
+        case "shield":
+            return shieldPath;
+        case "teardrop":
+            return teardropPath;
+        case "triangle":
+            return trianglePath;
         case "dashboard":
         default:
             return m3DashboardPath;

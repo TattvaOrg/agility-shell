@@ -44,7 +44,7 @@ Item {
                 }
                 font.bold: true
                 customSize: Constants.size4Xl - 4
-                color: Theme.fg
+                color: Theme.barFg
             }
 
             ColumnLayout {
@@ -53,7 +53,7 @@ Item {
 
                 Rectangle {
                     visible: !SettingsService.clock24h
-                    color: Theme.bgSecondary
+                    color: Theme.barBgSecondary
                     radius: Constants.sizeXs - 2
                     Layout.preferredWidth: apText.implicitWidth + 10
                     Layout.preferredHeight: Constants.sizeLg + 2
@@ -65,7 +65,7 @@ Item {
                         text: root.now.getHours() >= 12 ? "PM" : "AM"
                         font.bold: true
                         customSize: Constants.sizeXs - 2
-                        color: Theme.accent
+                        color: Theme.isLightBar ? Theme.barFg : Theme.accent
                     }
 
                 }
@@ -74,7 +74,7 @@ Item {
                     text: Qt.formatDateTime(root.now, ":ss")
                     customSize: Constants.sizeMd
                     font.bold: true
-                    color: Theme.muted
+                    color: Theme.barMuted
                 }
 
             }
@@ -92,7 +92,7 @@ Item {
                 Layout.rightMargin: Constants.size2Xs
                 icon: isDay ? "sun" : "moon-filled"
                 iconSize: 38
-                iconColor: Theme.accent
+                iconColor: Theme.isLightBar ? (isDay ? "#e58e00" : Theme.barFg) : Theme.accent
                 flat: true
             }
 
@@ -106,14 +106,14 @@ Item {
             SvgIcon {
                 icon: "calendar"
                 iconSize: 15
-                iconColor: Theme.accent
+                iconColor: Theme.isLightBar ? Theme.barFg : Theme.accent
                 flat: true
             }
 
             ThemedText {
                 text: Qt.formatDateTime(root.now, "dddd, MMMM d")
                 customSize: Constants.sizeSm
-                color: Theme.muted
+                color: Theme.barMuted
                 font.bold: true
                 Layout.fillWidth: true
                 elide: Text.ElideRight

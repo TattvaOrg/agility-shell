@@ -64,8 +64,8 @@ Rectangle {
     clip: true
 
     radius: height / 2
-    color: isHovered ? Theme.bgSecondary : "transparent"
-    border.color: isHovered ? Theme.borderSecondary : "transparent"
+    color: isHovered ? Theme.barBgSecondary : "transparent"
+    border.color: isHovered ? Theme.barBorder : "transparent"
     border.width: 1
     scale: isPressed ? 0.96 : (isHovered ? 1.02 : 1)
 
@@ -125,7 +125,7 @@ Rectangle {
             icon: root.resolveAppIcon(root.rawClass)
             iconSize: 14
             flat: true
-            iconColor: root.isHovered ? Theme.accent : Theme.fg
+            iconColor: root.isHovered ? Theme.accent : Theme.barFg
             Layout.alignment: Qt.AlignVCenter
 
             Behavior on iconColor {
@@ -147,7 +147,7 @@ Rectangle {
             }
             customSize: 11
             font.weight: Font.Medium
-            color: root.isHovered ? Theme.fg : Theme.muted
+            color: root.isHovered ? Theme.barFg : Theme.barMuted
             elide: Text.ElideRight
             Layout.maximumWidth: 160
             Layout.alignment: Qt.AlignVCenter

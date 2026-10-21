@@ -28,9 +28,12 @@ Item {
         id: lockManager
 
         onLockedChanged: {
-            if (locked)
+            if (locked) {
                 root.typedPassword = "";
-
+                SoundService.play("session-quit");
+            } else {
+                SoundService.play("confirm");
+            }
         }
 
         WlSessionLockSurface {

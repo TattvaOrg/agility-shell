@@ -35,6 +35,7 @@ Item {
     property string pillWidgetLayout: "distributed"
     property int pillBarThickness: 38
     property bool bluetoothOnStartup: false
+    property bool soundEffectsEnabled: true
 
     // Bar Icon customization
     property string barIconMode: "cycle" // "cycle", "single", "custom"
@@ -46,6 +47,7 @@ Item {
     property bool barAutoHide: false
     property bool barOpenOnHover: false
     property string barGlassMode: "solid"
+    property string barSolidTone: "black" // "black", "white"
     property int barGlassOpacity: 85
     property bool appletActiveWindow: true
     property string appletActiveWindowAction: "maximize"
@@ -85,6 +87,11 @@ Item {
         {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]}
     ]
     property var customShortcuts: []
+
+    // Settings Window Presentation
+    property string settingsWindowMode: "half" // "full", "half", "boxed"
+    property int settingsBoxedWidth: 960
+    property int settingsBoxedHeight: 680
 
     function syncShortcuts() {
         let payload = JSON.stringify({
@@ -308,6 +315,7 @@ Item {
                 "pillPopupStyle": settingsService.pillPopupStyle,
                 "pillWidgetLayout": settingsService.pillWidgetLayout,
                 "bluetoothOnStartup": settingsService.bluetoothOnStartup,
+                "soundEffectsEnabled": settingsService.soundEffectsEnabled,
                 "barIconMode": settingsService.barIconMode,
                 "barIconShape": settingsService.barIconShape,
                 "barIconCycleShapes": settingsService.barIconCycleShapes,
@@ -316,6 +324,7 @@ Item {
                 "barAutoHide": settingsService.barAutoHide,
                 "barOpenOnHover": settingsService.barOpenOnHover,
                 "barGlassMode": settingsService.barGlassMode,
+                "barSolidTone": settingsService.barSolidTone,
                 "barGlassOpacity": settingsService.barGlassOpacity,
                 "appletActiveWindow": settingsService.appletActiveWindow,
                 "appletActiveWindowAction": settingsService.appletActiveWindowAction,
@@ -330,6 +339,9 @@ Item {
                 "dndEnabled": settingsService.dndEnabled,
                 "actionShortcuts": settingsService.actionShortcuts,
                 "customShortcuts": settingsService.customShortcuts,
+                "settingsWindowMode": settingsService.settingsWindowMode,
+                "settingsBoxedWidth": settingsService.settingsBoxedWidth,
+                "settingsBoxedHeight": settingsService.settingsBoxedHeight,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
                 "edgeLightingColorMode": settingsService.edgeLightingColorMode,
                 "edgeLightingCustomColor": settingsService.edgeLightingCustomColor.toString(),
@@ -510,6 +522,9 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                         if (prefs.bluetoothOnStartup !== undefined)
                             settingsService.bluetoothOnStartup = Boolean(prefs.bluetoothOnStartup);
 
+                        if (prefs.soundEffectsEnabled !== undefined)
+                            settingsService.soundEffectsEnabled = Boolean(prefs.soundEffectsEnabled);
+
                         if (prefs.barIconMode !== undefined)
                             settingsService.barIconMode = prefs.barIconMode;
 
@@ -546,6 +561,8 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.barGlassMode !== undefined)
                             settingsService.barGlassMode = prefs.barGlassMode;
+                        if (prefs.barSolidTone !== undefined)
+                            settingsService.barSolidTone = prefs.barSolidTone;
                         if (prefs.barGlassOpacity !== undefined)
                             settingsService.barGlassOpacity = prefs.barGlassOpacity;
                         if (prefs.appletActiveWindow !== undefined)
@@ -576,6 +593,13 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.customShortcuts !== undefined)
                             settingsService.customShortcuts = prefs.customShortcuts;
+
+                        if (prefs.settingsWindowMode !== undefined)
+                            settingsService.settingsWindowMode = prefs.settingsWindowMode;
+                        if (prefs.settingsBoxedWidth !== undefined)
+                            settingsService.settingsBoxedWidth = prefs.settingsBoxedWidth;
+                        if (prefs.settingsBoxedHeight !== undefined)
+                            settingsService.settingsBoxedHeight = prefs.settingsBoxedHeight;
 
                         if (prefs.edgeLightingEnabled !== undefined)
                             settingsService.edgeLightingEnabled = prefs.edgeLightingEnabled;

@@ -161,11 +161,13 @@ Item {
             }]
             onActionTriggered: (index) => {
                 if (index === 1) {
+                    SoundService.play("session-quit");
                     let modelData = root.menuModel[root.pendingActionIndex];
                     actionProc.command = modelData.command;
                     actionProc.startDetached();
                     root.closeWidget();
                 } else {
+                    SoundService.play("confirm");
                     root.pendingActionIndex = -1;
                 }
             }

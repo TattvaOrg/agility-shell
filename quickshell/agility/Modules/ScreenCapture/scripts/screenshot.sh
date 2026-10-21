@@ -24,6 +24,10 @@ mkdir -p "$DIR"
 pkill -x slurp 2>/dev/null
 
 play_sound() {
+  if command -v agl &>/dev/null; then
+    agl sound play confirm >/dev/null 2>&1 &
+    return 0
+  fi
   local sound="/usr/share/sounds/freedesktop/stereo/screen-capture.oga"
   if [ -f "$sound" ]; then
     if command -v paplay &>/dev/null; then

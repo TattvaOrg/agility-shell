@@ -51,6 +51,7 @@ Item {
                         return h + ":" + m;
                     }
                     font.bold: true
+                    color: Theme.barFg
                     Layout.alignment: Qt.AlignVCenter
                 }
 
@@ -59,7 +60,7 @@ Item {
 
                     text: Qt.formatDateTime(SystemInfoService.currentTime, ":ss")
                     font.bold: true
-                    color: Theme.muted
+                    color: Theme.barMuted
                     visible: SettingsService.clockSeconds
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -69,7 +70,7 @@ Item {
 
                     text: SystemInfoService.currentTime.getHours() >= 12 ? "PM" : "AM"
                     font.bold: true
-                    color: Theme.accent
+                    color: Theme.isLightBar ? Theme.barFg : Theme.accent
                     visible: !SettingsService.clock24h
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -79,7 +80,7 @@ Item {
 
                     text: "•"
                     customSize: Constants.sizeXs - 2
-                    color: Theme.muted
+                    color: Theme.barMuted
                     visible: SettingsService.clockShowDate
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -88,7 +89,7 @@ Item {
                     id: dateText
 
                     text: Qt.formatDateTime(SystemInfoService.currentTime, "ddd, d MMM")
-                    color: Theme.muted
+                    color: Theme.barMuted
                     font.bold: true
                     visible: SettingsService.clockShowDate
                     Layout.alignment: Qt.AlignVCenter

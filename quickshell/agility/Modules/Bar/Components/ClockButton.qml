@@ -32,6 +32,7 @@ Rectangle {
                 return h + ":" + m;
             }
             font.bold: true
+            color: Theme.barFg
         }
 
         ThemedText {
@@ -39,6 +40,7 @@ Rectangle {
 
             text: Qt.formatDateTime(SystemInfoService.currentTime, ":ss")
             font.bold: true
+            color: Theme.barMuted
             opacity: SettingsService.clockSeconds ? 1 : 0
             Layout.preferredWidth: SettingsService.clockSeconds ? implicitWidth : 0
             clip: true
@@ -65,6 +67,7 @@ Rectangle {
 
             text: " " + (SystemInfoService.currentTime.getHours() >= 12 ? "PM" : "AM")
             font.bold: true
+            color: Theme.isLightBar ? Theme.barFg : Theme.accent
             visible: !SettingsService.clock24h
         }
 
@@ -87,6 +90,7 @@ Rectangle {
             Layout.preferredWidth: SettingsService.clockShowDate ? implicitWidth : 0
             clip: true
             customSize: Constants.sizeXs - 2
+            color: Theme.barMuted
 
             Behavior on Layout.preferredWidth {
                 NumberAnimation {
@@ -122,7 +126,8 @@ Rectangle {
             id: dateText
 
             text: Qt.formatDateTime(SystemInfoService.currentTime, "ddd, d MMM")
-            color: Theme.muted
+            color: Theme.barMuted
+            font.bold: true
             opacity: SettingsService.clockShowDate ? 1 : 0
             Layout.preferredWidth: SettingsService.clockShowDate ? implicitWidth : 0
             clip: true

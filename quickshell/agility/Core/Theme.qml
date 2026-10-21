@@ -39,6 +39,17 @@ QtObject {
     property color fg: themes[0].dark.fg
     property color muted: Qt.rgba(fg.r, fg.g, fg.b, 0.4)
     property color border: isDark ? Qt.rgba(fg.r, fg.g, fg.b, 0.1) : Qt.rgba(fg.r, fg.g, fg.b, 0.2)
+    property color borderSecondary: isDark ? Qt.rgba(fg.r, fg.g, fg.b, 0.08) : Qt.rgba(fg.r, fg.g, fg.b, 0.15)
+
+    // Smart Contrast for Bar (White Solid vs Dark/Theme Solid)
+    readonly property bool isBarSolidWhite: SettingsService.barGlassMode === "solid" && SettingsService.barSolidTone === "white"
+    readonly property bool isLightBar: isBarSolidWhite || !isDark
+    readonly property color solidWhiteBarBg: Qt.rgba(0.965, 0.965, 0.972, 1.0)
+    readonly property color barFg: isLightBar ? Qt.rgba(0.08, 0.08, 0.10, 1.0) : fg
+    readonly property color barMuted: isLightBar ? Qt.rgba(0.35, 0.35, 0.38, 1.0) : muted
+    readonly property color barBorder: isLightBar ? Qt.rgba(0.80, 0.80, 0.83, 0.7) : borderSecondary
+    readonly property color barBgSecondary: isLightBar ? Qt.rgba(0.0, 0.0, 0.0, 0.06) : bgSecondary
+    readonly property color barBgTertiary: isLightBar ? Qt.rgba(0.0, 0.0, 0.0, 0.10) : bgTertiary
     property color accent: themes[0].dark.accent
     property color accentComplementary: themes[0].dark.accentComplementary
     property color shadow: isDark ? Qt.rgba(0, 0, 0, 0.75) : Qt.rgba(0, 0, 0, 0.45)

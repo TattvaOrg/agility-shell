@@ -5,7 +5,7 @@ import qs.Modules.Bar
 BarButton {
     icon: "power"
     iconSize: Constants.sizeLg
-    iconColor: Theme.fg
+    iconColor: Theme.barFg
     hasBackground: true
     widgetId: "powerMenu"
 }

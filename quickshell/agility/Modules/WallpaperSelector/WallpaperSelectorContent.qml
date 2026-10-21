@@ -125,13 +125,17 @@ Item {
             wallView.currentIndex = -1;
     }
 
-    function setWallpaper(targetPath) {
+    function setWallpaper(targetPath, clickX, clickY) {
         if (!targetPath)
             return ;
 
         let parts = targetPath.split('/');
         let wallName = parts[parts.length - 1];
-        WallpaperManager.applyWallpaperWithSync(wallName, targetPath);
+        let posStr = "";
+        if (clickX !== undefined && clickY !== undefined) {
+            posStr = Math.round(clickX) + "," + Math.round(clickY);
+        }
+        WallpaperManager.applyWallpaperWithSync(wallName, targetPath, posStr);
         if (root.widget && root.widget.close !== undefined)
             root.widget.close();
         else if (root.widget && root.widget.isOpen !== undefined)
@@ -187,14 +191,21 @@ Item {
 
         property var lines: []
 
-        command: ["sh", "-c", "agl wallpaper list 2>/dev/null; find ~/.local/share/agility-shell/wallpapers ~/.config/agility-shell/wallpapers ~/Pictures/Wallpapers -maxdepth 1 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' \\) 2>/dev/null"]
+        command: {
+            if (HyprlandService.wpSourceMode === "custom" && HyprlandService.wpCustomFolderPath) {
+                let folder = HyprlandService.wpCustomFolderPath.replace(/^~/, "$HOME");
+                return ["sh", "-c", "find \"" + folder + "\" -maxdepth 1 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' \\) 2>/dev/null"];
+            } else {
+                return ["sh", "-c", "agl wallpaper list 2>/dev/null || find ~/.local/share/agility-shell/wallpapers ~/.config/agility-shell/wallpapers ~/Pictures/Wallpapers -maxdepth 1 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' \\) 2>/dev/null"];
+            }
+        }
         onExited: function(exitCode) {
-            let seen = {};
+            let seenNames = {};
             let uniqueLines = [];
             for (let i = 0; i < lines.length; i++) {
                 let item = lines[i];
-                if (!seen[item.rawPath]) {
-                    seen[item.rawPath] = true;
+                if (!seenNames[item.name]) {
+                    seenNames[item.name] = true;
                     uniqueLines.push(item);
                 }
             }
@@ -217,6 +228,7 @@ Item {
                 }
                 filterWallpapers(searchField.text);
             }
+            WallpaperManager.setWallpaperList(sortedLines);
             lines = [];
         }
 

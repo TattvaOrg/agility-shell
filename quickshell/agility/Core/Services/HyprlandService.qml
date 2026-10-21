@@ -22,6 +22,9 @@ Item {
     property int wpTransitionAngle: 30
     property string wpResizeMode: "crop"
     property string wpCropGravity: "center"
+    property string wpSourceMode: "default"
+    property string wpCustomFolderPath: ""
+    property bool wpClicksEnabled: false
     property bool hyprBlur: true
     property int hyprRounding: Constants.size3Xl
     property int hyprActiveOpacity: 100

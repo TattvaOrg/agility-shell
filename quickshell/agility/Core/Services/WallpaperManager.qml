@@ -20,17 +20,33 @@ QtObject {
     property bool enableTransitions: HyprlandService.wpEnableTransitions
     property bool autoShuffle: HyprlandService.wpAutoShuffle
     property int shuffleInterval: HyprlandService.wpShuffleInterval
+
+    property var wallpaperList: []
+    property int wallpaperListCount: wallpaperList.length
+
     property Process fastAwwwProc
     property Process wallpaperApplyProc
     property Process wallpaperSaveProc
     property Process wallpaperLoader
     property Process randomWallpaperProc
+    property Process listLoaderProc
     property Timer shuffleTimer
 
-    function applyWallpaperWithSync(wallpaperName, rawPath) {
+    function setWallpaperList(list) {
+        if (!list) return;
+        wallpaperList = list;
+    }
+
+    function reloadWallpaperList() {
+        listLoaderProc.lines = [];
+        listLoaderProc.running = false;
+        listLoaderProc.running = true;
+    }
+
+    function applyWallpaperWithSync(wallpaperName, rawPath, transitionPos) {
         currentWallpaper = wallpaperName;
         currentWallpaperPath = rawPath;
-        applyWallpaper(rawPath);
+        applyWallpaper(rawPath, "", transitionPos);
     }
 
     function reapplyCurrentWallpaper() {
@@ -39,11 +55,11 @@ QtObject {
             applyWallpaper(p);
     }
 
-    function applyWallpaperInstant(rawPath) {
-        applyWallpaper(rawPath);
+    function applyWallpaperInstant(rawPath, transitionPos) {
+        applyWallpaper(rawPath, "", transitionPos);
     }
 
-    function applyWallpaper(rawPath) {
+    function applyWallpaper(rawPath, forceTransitionType, transitionPos) {
         if (!rawPath)
             return;
         if (HyprlandService.wpAutoShuffle) {
@@ -51,27 +67,75 @@ QtObject {
             SettingsService.saveSettings();
         }
 
-        // Fast path: Immediately apply wallpaper with awww directly (< 250ms visual switch)
+        let chosenType = forceTransitionType || ((enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) ? transitionType : "grow");
+        let pos = transitionPos || transitionPos;
+        if (!pos) {
+            pos = (enableTransitions && HyprlandService.wpTransitionPos) ? HyprlandService.wpTransitionPos : "center";
+        }
+
+        // Fast path: Immediately apply wallpaper with awww directly (< 30ms visual switch)
         fastAwwwProc.running = false;
-        fastAwwwProc.command = [
+        let awwwArgs = [
             "awww", "img", rawPath,
-            "--resize", "crop",
+            "--resize", (resizeMode || "crop"),
             "--filter", "Bilinear",
-            "--transition-type", (enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) ? transitionType : "grow",
-            "--transition-duration", "0.2",
-            "--transition-step", "180",
-            "--transition-fps", "60"
+            "--transition-type", chosenType,
+            "--transition-bezier", ".54,0,.34,.99",
+            "--transition-duration", "0.25",
+            "--transition-step", (transitionStep ? String(transitionStep) : "180"),
+            "--transition-fps", (transitionFps ? String(transitionFps) : "60")
         ];
+        if (pos) {
+            if (pos.indexOf(',') !== -1) {
+                awwwArgs.push("--invert-y");
+            }
+            awwwArgs.push("--transition-pos", pos);
+        }
+        if (chosenType === "wipe" || chosenType === "wave") {
+            awwwArgs.push("--transition-angle", String(transitionAngle || 30));
+        }
+        fastAwwwProc.command = awwwArgs;
         fastAwwwProc.startDetached();
 
-        // Daemon sync: extracts palette, generates blur, writes cache
+        // Daemon sync: extracts palette, generates blur, writes cache without double-running awww
         wallpaperApplyProc.running = false;
-        let cmd = ["agl", "wallpaper", rawPath, "--duration", "0.2"];
-        if (enableTransitions && SystemInfoService.powerProfile !== "power-saver" && transitionType) {
-            cmd.push("--transition", transitionType);
-        }
+        let cmd = ["agl", "wallpaper", rawPath, "--skip-backend"];
         wallpaperApplyProc.command = cmd;
         wallpaperApplyProc.startDetached();
+    }
+
+    function cycleNextWallpaper(screenX, screenY, screenWidth, screenHeight) {
+        if (!wallpaperList || wallpaperList.length === 0) {
+            reloadWallpaperList();
+            randomWallpaperProc.running = false;
+            randomWallpaperProc.running = true;
+            return;
+        }
+
+        let cur = currentWallpaper ? currentWallpaper.trim() : "";
+        let curPath = currentWallpaperPath ? currentWallpaperPath.trim() : "";
+        let curIdx = -1;
+
+        for (let i = 0; i < wallpaperList.length; i++) {
+            if (wallpaperList[i].rawPath === curPath || wallpaperList[i].name === cur) {
+                curIdx = i;
+                break;
+            }
+        }
+
+        let nextIdx = (curIdx + 1) % wallpaperList.length;
+        let nextWall = wallpaperList[nextIdx];
+        if (!nextWall)
+            return;
+
+        currentWallpaper = nextWall.name;
+        currentWallpaperPath = nextWall.rawPath;
+
+        let posStr = (screenX !== undefined && screenY !== undefined)
+            ? (Math.round(screenX) + "," + Math.round(screenY))
+            : "center";
+
+        applyWallpaper(nextWall.rawPath, "grow", posStr);
     }
 
     function saveCurrentWallpaper(wallName) {
@@ -87,6 +151,7 @@ QtObject {
 
     Component.onCompleted: {
         wallpaperLoader.running = true;
+        reloadWallpaperList();
     }
 
     shuffleTimer: Timer {
@@ -106,6 +171,45 @@ QtObject {
     }
 
     wallpaperSaveProc: Process {
+    }
+
+    listLoaderProc: Process {
+        property var lines: []
+        command: ["agl", "wallpaper", "list"]
+        onExited: function(exitCode) {
+            let seen = {};
+            let uniqueList = [];
+            for (let i = 0; i < lines.length; i++) {
+                let item = lines[i];
+                if (!seen[item.name]) {
+                    seen[item.name] = true;
+                    uniqueList.push(item);
+                }
+            }
+            uniqueList.sort(function(a, b) {
+                return a.name.localeCompare(b.name);
+            });
+            root.wallpaperList = uniqueList;
+            lines = [];
+        }
+
+        stdout: SplitParser {
+            onRead: function(data) {
+                let linesArr = data.split('\n');
+                for (let i = 0; i < linesArr.length; i++) {
+                    let rawPath = linesArr[i].trim();
+                    if (rawPath !== "") {
+                        let parts = rawPath.split('/');
+                        let fileName = parts[parts.length - 1];
+                        listLoaderProc.lines.push({
+                            "filePath": "file://" + rawPath,
+                            "rawPath": rawPath,
+                            "name": fileName
+                        });
+                    }
+                }
+            }
+        }
     }
 
     randomWallpaperProc: Process {

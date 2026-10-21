@@ -49,11 +49,13 @@ fi
 
 info "Gracefully restarting Agility Shell Next-Gen..."
 
-# Terminate existing quickshell and agilityd instances safely
-killall -q -15 quickshell 2>/dev/null || true
+# Terminate existing agility quickshell and agilityd instances safely
+pkill -f "quickshell.*agility" 2>/dev/null || true
+pkill -f "agility.*shell.qml" 2>/dev/null || true
 killall -q -15 agilityd 2>/dev/null || true
 sleep 0.015
-killall -q -9 quickshell 2>/dev/null || true
+pkill -9 -f "quickshell.*agility" 2>/dev/null || true
+pkill -9 -f "agility.*shell.qml" 2>/dev/null || true
 killall -q -9 agilityd 2>/dev/null || true
 
 # Determine launcher or shell script

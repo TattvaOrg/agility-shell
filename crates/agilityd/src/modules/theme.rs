@@ -39,6 +39,22 @@ pub fn expand_tilde(path_str: &str) -> PathBuf {
     PathBuf::from(trimmed)
 }
 
+fn get_custom_wallpaper_dir() -> Option<PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+    let prefs_path = PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
+    let content = fs::read_to_string(&prefs_path).ok()?;
+    let val: serde_json::Value = serde_json::from_str(&content).ok()?;
+    if val.get("wpSourceMode").and_then(|v| v.as_str()) == Some("custom") {
+        if let Some(folder) = val.get("wpCustomFolderPath").and_then(|v| v.as_str()) {
+            let expanded = expand_tilde(folder);
+            if expanded.is_dir() {
+                return Some(expanded);
+            }
+        }
+    }
+    None
+}
+
 /// Resolve wallpaper path across common candidate search paths if not found directly.
 pub fn resolve_wallpaper_path(path_str: &str) -> Option<PathBuf> {
     let trimmed = path_str.trim();
@@ -53,6 +69,10 @@ pub fn resolve_wallpaper_path(path_str: &str) -> Option<PathBuf> {
 
     let file_name = direct.file_name()?.to_str()?;
     let mut search_dirs = Vec::new();
+
+    if let Some(custom_dir) = get_custom_wallpaper_dir() {
+        search_dirs.push(custom_dir);
+    }
 
     if let Ok(home) = std::env::var("HOME") {
         search_dirs.push(PathBuf::from(&home).join(".local/share/agility-shell/wallpapers"));
@@ -79,17 +99,22 @@ pub fn resolve_wallpaper_path(path_str: &str) -> Option<PathBuf> {
 /// Discover all available wallpaper image files across candidate directories.
 pub fn list_all_wallpapers() -> Vec<PathBuf> {
     let mut search_dirs = Vec::new();
-    if let Ok(home) = std::env::var("HOME") {
-        search_dirs.push(PathBuf::from(&home).join(".local/share/agility-shell/wallpapers"));
-        search_dirs.push(PathBuf::from(&home).join(".config/agility-shell/wallpapers"));
-        search_dirs.push(PathBuf::from(&home).join("Pictures/Wallpapers"));
-        search_dirs.push(PathBuf::from(&home).join("Pictures"));
+
+    if let Some(custom_dir) = get_custom_wallpaper_dir() {
+        search_dirs.push(custom_dir);
+    } else {
+        if let Ok(home) = std::env::var("HOME") {
+            search_dirs.push(PathBuf::from(&home).join(".local/share/agility-shell/wallpapers"));
+            search_dirs.push(PathBuf::from(&home).join(".config/agility-shell/wallpapers"));
+            search_dirs.push(PathBuf::from(&home).join("Pictures/Wallpapers"));
+            search_dirs.push(PathBuf::from(&home).join("Pictures"));
+        }
+        if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+            search_dirs.push(PathBuf::from(&data_home).join("agility-shell/wallpapers"));
+        }
+        search_dirs.push(PathBuf::from("/usr/share/agility-shell/wallpapers"));
+        search_dirs.push(PathBuf::from("wallpapers"));
     }
-    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
-        search_dirs.push(PathBuf::from(&data_home).join("agility-shell/wallpapers"));
-    }
-    search_dirs.push(PathBuf::from("/usr/share/agility-shell/wallpapers"));
-    search_dirs.push(PathBuf::from("wallpapers"));
 
     let mut found = Vec::new();
     let mut seen_names = std::collections::HashSet::new();
@@ -309,7 +334,9 @@ impl ThemeService {
         // 1. Instantly dispatch wallpaper setter (awww / swww) in < 5ms
         let t_type = transition_type.unwrap_or("grow");
         let t_dur = duration.unwrap_or(0.20);
-        Self::dispatch_wallpaper_backend(&abs_str, t_type, t_dur);
+        if t_type != "skip" {
+            Self::dispatch_wallpaper_backend(&abs_str, t_type, t_dur);
+        }
 
         // Immediate responsive token return with new wallpaper
         let mut tokens = self.tokens();
@@ -638,6 +665,8 @@ impl ThemeService {
                 .arg("Bilinear")
                 .arg("--transition-type")
                 .arg(transition_type)
+                .arg("--transition-bezier")
+                .arg(".54,0,.34,.99")
                 .arg("--transition-duration")
                 .arg(&dur_str)
                 .arg("--transition-step")

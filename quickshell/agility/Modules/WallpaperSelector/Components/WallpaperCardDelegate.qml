@@ -157,13 +157,14 @@ Item {
     }
 
     TapHandler {
-        onTapped: {
+        onTapped: (eventPoint) => {
             if (delegateRoot.targetView)
                 delegateRoot.targetView.currentIndex = delegateRoot.index;
 
             if (delegateRoot.selectorRoot) {
                 delegateRoot.selectorRoot.ensureVisible(delegateRoot.index);
-                delegateRoot.selectorRoot.setWallpaper(delegateRoot.rawPath);
+                let gPos = delegateRoot.mapToGlobal(eventPoint.position.x, eventPoint.position.y);
+                delegateRoot.selectorRoot.setWallpaper(delegateRoot.rawPath, gPos.x, gPos.y);
             }
         }
     }

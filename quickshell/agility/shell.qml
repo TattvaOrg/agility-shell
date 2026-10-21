@@ -135,4 +135,14 @@ ShellRoot {
         notificationService: globalNotificationService
     }
 
+    Timer {
+        id: startupSoundTimer
+        interval: 300
+        running: SettingsService.settingsLoaded
+        repeat: false
+        onTriggered: {
+            SoundService.play("session-start");
+        }
+    }
+
 }

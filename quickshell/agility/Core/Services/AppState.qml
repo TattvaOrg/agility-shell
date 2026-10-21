@@ -102,13 +102,19 @@ Item {
             let next = activeWidgetsList.slice();
             next.splice(idx, 1);
             activeWidgetsList = next;
+            SoundService.play("widget-removed");
         }
-        if (activeWidget === widgetId)
+        if (activeWidget === widgetId) {
             activeWidget = "";
+            SoundService.play("widget-removed");
+        }
 
     }
 
     function closeAllWidgets() {
+        if (activeWidget !== "" || activeWidgetsList.length > 0) {
+            SoundService.play("widget-removed");
+        }
         activeTrayItem = null;
         activeWidgetsList = [];
         activeWidget = "";
@@ -117,6 +123,12 @@ Item {
     function openWidgetInternal(widgetId) {
         if (!widgetId || isStandaloneWindow(widgetId))
             return ;
+
+        if (widgetId === "powerMenu") {
+            SoundService.play("session-quit");
+        } else {
+            SoundService.play("widget-placed");
+        }
 
         let slot = getSlot(widgetId);
         // Rule 1: Focus widgets close each other, but do NOT close bar widgets

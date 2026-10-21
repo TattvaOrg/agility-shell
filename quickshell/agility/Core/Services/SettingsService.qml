@@ -35,6 +35,7 @@ Item {
     property string pillWidgetLayout: "distributed"
     property int pillBarThickness: 38
     property bool bluetoothOnStartup: false
+    property bool soundEffectsEnabled: true
 
     // Bar Icon customization
     property string barIconMode: "cycle" // "cycle", "single", "custom"
@@ -308,6 +309,7 @@ Item {
                 "pillPopupStyle": settingsService.pillPopupStyle,
                 "pillWidgetLayout": settingsService.pillWidgetLayout,
                 "bluetoothOnStartup": settingsService.bluetoothOnStartup,
+                "soundEffectsEnabled": settingsService.soundEffectsEnabled,
                 "barIconMode": settingsService.barIconMode,
                 "barIconShape": settingsService.barIconShape,
                 "barIconCycleShapes": settingsService.barIconCycleShapes,
@@ -509,6 +511,9 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.bluetoothOnStartup !== undefined)
                             settingsService.bluetoothOnStartup = Boolean(prefs.bluetoothOnStartup);
+
+                        if (prefs.soundEffectsEnabled !== undefined)
+                            settingsService.soundEffectsEnabled = Boolean(prefs.soundEffectsEnabled);
 
                         if (prefs.barIconMode !== undefined)
                             settingsService.barIconMode = prefs.barIconMode;

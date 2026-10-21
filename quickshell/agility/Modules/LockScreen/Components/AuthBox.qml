@@ -28,9 +28,10 @@ Item {
         forceFocus();
     }
     onAuthFailedChanged: {
-        if (authFailed)
+        if (authFailed) {
             passwordInput.text = "";
-
+            SoundService.play("error");
+        }
     }
     implicitWidth: 380
     implicitHeight: contentLayout.implicitHeight + (Constants.sizeXl * 2)

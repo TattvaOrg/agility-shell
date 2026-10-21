@@ -52,6 +52,7 @@ Item {
             "notifData": nd
         });
         if (!dndEnabled) {
+            SoundService.play("notification");
             activeListModel.insert(0, {
                 "id": timestamp,
                 "notifData": nd
@@ -352,16 +353,19 @@ Item {
                     if (_prevStatus === "Discharging") {
                         summary = "Battery";
                         body = "Charger connected";
+                        SoundService.play("battery-charge");
                     }
                 } else if (status === "Discharging") {
                     if (_prevStatus === "Charging" || _prevStatus === "Full" || _prevStatus === "Not charging") {
                         summary = "Battery";
                         body = "Charger disconnected";
+                        SoundService.play("battery-warning");
                     }
                 } else if (status === "Full" || status === "Not charging") {
                     if (!_notifiedFull && status === "Full" && level >= 95) {
                         summary = "Battery";
                         body = "Battery fully charged";
+                        SoundService.play("confirm");
                         _notifiedFull = true;
                     }
                 }
@@ -389,8 +393,10 @@ Item {
                     threshold = 10;
                 else if (level <= 20 && _prevLevel > 20)
                     threshold = 20;
-                if (threshold > 0)
+                if (threshold > 0) {
+                    SoundService.play("battery-low");
                     root.notify("Low Battery", "Battery level: " + level + "%", "", "System", NotificationUrgency.Critical);
+                }
 
             }
             _prevLevel = level;
@@ -418,6 +424,9 @@ Item {
                 return ;
 
             notification.tracked = true;
+            if (!root.dndEnabled || notification.urgency === 2) {
+                SoundService.play("notification");
+            }
             notification.closed.connect((reason) => {
                 let nd = root.notificationObjects[notification.id];
                 if (nd && nd.notification !== notification)

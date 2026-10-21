@@ -99,7 +99,8 @@ impl ConnectivityService {
 
         // Enforce Bluetooth off by default on startup unless explicitly enabled in user options
         let home = std::env::var("HOME").unwrap_or_default();
-        let prefs_path = std::path::PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
+        let prefs_path =
+            std::path::PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
         let bt_startup = if let Ok(data) = std::fs::read_to_string(&prefs_path) {
             serde_json::from_str::<serde_json::Value>(&data)
                 .ok()

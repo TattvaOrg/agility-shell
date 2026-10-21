@@ -31,12 +31,15 @@ Item {
             loader.active = true;
             if (loader.status === Loader.Ready && loader.item)
                 loader.item.isOpen = true;
-
+            if (AppState.isStandaloneWindow(widgetId))
+                SoundService.play("widget-placed");
         } else {
             if (loader.item)
                 loader.item.isOpen = false;
 
             _isClosing = true;
+            if (AppState.isStandaloneWindow(widgetId))
+                SoundService.play("widget-removed");
         }
     }
 

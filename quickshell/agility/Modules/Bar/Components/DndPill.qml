@@ -68,7 +68,7 @@ Rectangle {
         icon: root.isDnd ? "bell-slash-duotone" : "bell"
         iconSize: 14
         flat: true
-        iconColor: root.isDnd ? Theme.accent : (root.isHovered ? Theme.barFg : Theme.barMuted)
+        iconColor: root.isDnd ? (Theme.isLightBar ? Theme.barFg : Theme.accent) : (root.isHovered ? Theme.barFg : Theme.barMuted)
 
         Behavior on iconColor {
             ColorAnimation {

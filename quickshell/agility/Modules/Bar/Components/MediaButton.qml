@@ -167,7 +167,7 @@ Rectangle {
             text: "-"
             customSize: Constants.sizeMd
             font.bold: false
-            color: Theme.isBarSolidWhite ? Theme.barMuted : Theme.accent
+            color: Theme.isLightBar ? Theme.barMuted : Theme.accent
         }
 
         ThemedText {
@@ -192,7 +192,7 @@ Rectangle {
                 width: 18
                 height: 18
                 radius: 9
-                color: prevHover.hovered ? Theme.bgSecondary : "transparent"
+                color: prevHover.hovered ? Theme.barBgSecondary : "transparent"
                 Layout.alignment: Qt.AlignVCenter
 
                 SvgIcon {
@@ -200,7 +200,7 @@ Rectangle {
                     icon: "player-previous"
                     iconSize: 10
                     flat: true
-                    iconColor: prevHover.hovered ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
+                    iconColor: prevHover.hovered ? (Theme.isLightBar ? Theme.barFg : Theme.accent) : Theme.barFg
                 }
 
                 HoverHandler { id: prevHover; cursorShape: Qt.PointingHandCursor }
@@ -219,7 +219,7 @@ Rectangle {
                     icon: MprisService.isPlaying ? "player-pause" : "player-play"
                     iconSize: 10
                     flat: true
-                    iconColor: playHover.hovered ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
+                    iconColor: playHover.hovered ? (Theme.isLightBar ? Theme.barFg : Theme.accent) : Theme.barFg
                 }
 
                 HoverHandler { id: playHover; cursorShape: Qt.PointingHandCursor }
@@ -238,7 +238,7 @@ Rectangle {
                     icon: "player-next"
                     iconSize: 10
                     flat: true
-                    iconColor: nextHover.hovered ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
+                    iconColor: nextHover.hovered ? (Theme.isLightBar ? Theme.barFg : Theme.accent) : Theme.barFg
                 }
 
                 HoverHandler { id: nextHover; cursorShape: Qt.PointingHandCursor }

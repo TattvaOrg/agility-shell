@@ -26,7 +26,7 @@ Item {
         radius: root.radius
         color: {
             if (SettingsService.barGlassMode === "solid")
-                return (SettingsService.barSolidTone === "white") ? Qt.rgba(1.0, 1.0, 1.0, 1.0) : Qt.rgba(0.04, 0.04, 0.05, 1.0);
+                return (SettingsService.barSolidTone === "white") ? Theme.solidWhiteBarBg : Qt.rgba(0.04, 0.04, 0.05, 1.0);
             return Theme.bg;
         }
         antialiasing: true

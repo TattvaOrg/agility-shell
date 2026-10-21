@@ -8,7 +8,7 @@ Item {
     id: root
 
     property int iconSize: Math.round((Constants.size2Xl + 4) * (SettingsService.barWidgetHeight / 28.0))
-    property color iconColor: Theme.isBarSolidWhite ? Theme.barFg : Theme.accent
+    property color iconColor: Theme.isLightBar ? Theme.barFg : Theme.accent
     readonly property int scaledIconSize: Math.max(16, Math.round(iconSize * SettingsService.fontScale))
     property bool enableIntroAnim: true
     property bool enableIntervalAnim: true

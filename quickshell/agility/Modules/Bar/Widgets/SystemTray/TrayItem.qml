@@ -28,7 +28,7 @@ Rectangle {
     Layout.preferredWidth: implicitWidth
     Layout.preferredHeight: implicitHeight
     Layout.alignment: Qt.AlignVCenter
-    color: isActive ? (Theme.isBarSolidWhite ? Theme.barBgTertiary : Theme.bgAccent) : (isHovered ? Theme.barBgSecondary : "transparent")
+    color: isActive ? (Theme.isLightBar ? Theme.barBgTertiary : Theme.bgAccent) : (isHovered ? Theme.barBgSecondary : "transparent")
     radius: height / 2
     scale: isPressed ? 0.92 : (isHovered ? 1.05 : 1)
 
@@ -77,7 +77,7 @@ Rectangle {
 
             return false;
         }
-        iconColor: itemRoot.isActive ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
+        iconColor: itemRoot.isActive ? (Theme.isLightBar ? Theme.barFg : Theme.accent) : Theme.barFg
         flat: true
         icon: {
             if (!itemRoot.trayItem)

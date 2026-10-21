@@ -43,11 +43,13 @@ QtObject {
 
     // Smart Contrast for Bar (White Solid vs Dark/Theme Solid)
     readonly property bool isBarSolidWhite: SettingsService.barGlassMode === "solid" && SettingsService.barSolidTone === "white"
-    readonly property color barFg: isBarSolidWhite ? Qt.rgba(0.08, 0.08, 0.10, 1.0) : fg
-    readonly property color barMuted: isBarSolidWhite ? Qt.rgba(0.38, 0.38, 0.42, 1.0) : muted
-    readonly property color barBorder: isBarSolidWhite ? Qt.rgba(0.85, 0.85, 0.88, 1.0) : borderSecondary
-    readonly property color barBgSecondary: isBarSolidWhite ? Qt.rgba(0.92, 0.92, 0.95, 0.9) : bgSecondary
-    readonly property color barBgTertiary: isBarSolidWhite ? Qt.rgba(0.86, 0.86, 0.90, 0.9) : bgTertiary
+    readonly property bool isLightBar: isBarSolidWhite || !isDark
+    readonly property color solidWhiteBarBg: Qt.rgba(0.965, 0.965, 0.972, 1.0)
+    readonly property color barFg: isLightBar ? Qt.rgba(0.08, 0.08, 0.10, 1.0) : fg
+    readonly property color barMuted: isLightBar ? Qt.rgba(0.35, 0.35, 0.38, 1.0) : muted
+    readonly property color barBorder: isLightBar ? Qt.rgba(0.80, 0.80, 0.83, 0.7) : borderSecondary
+    readonly property color barBgSecondary: isLightBar ? Qt.rgba(0.0, 0.0, 0.0, 0.06) : bgSecondary
+    readonly property color barBgTertiary: isLightBar ? Qt.rgba(0.0, 0.0, 0.0, 0.10) : bgTertiary
     property color accent: themes[0].dark.accent
     property color accentComplementary: themes[0].dark.accentComplementary
     property color shadow: isDark ? Qt.rgba(0, 0, 0, 0.75) : Qt.rgba(0, 0, 0, 0.45)

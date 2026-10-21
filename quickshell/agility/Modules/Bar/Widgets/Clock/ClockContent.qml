@@ -65,7 +65,7 @@ Item {
                         text: root.now.getHours() >= 12 ? "PM" : "AM"
                         font.bold: true
                         customSize: Constants.sizeXs - 2
-                        color: Theme.isBarSolidWhite ? Theme.barFg : Theme.accent
+                        color: Theme.isLightBar ? Theme.barFg : Theme.accent
                     }
 
                 }
@@ -92,7 +92,7 @@ Item {
                 Layout.rightMargin: Constants.size2Xs
                 icon: isDay ? "sun" : "moon-filled"
                 iconSize: 38
-                iconColor: Theme.accent
+                iconColor: Theme.isLightBar ? (isDay ? "#e58e00" : Theme.barFg) : Theme.accent
                 flat: true
             }
 
@@ -106,7 +106,7 @@ Item {
             SvgIcon {
                 icon: "calendar"
                 iconSize: 15
-                iconColor: Theme.accent
+                iconColor: Theme.isLightBar ? Theme.barFg : Theme.accent
                 flat: true
             }
 

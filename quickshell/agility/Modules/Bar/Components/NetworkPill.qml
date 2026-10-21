@@ -133,7 +133,7 @@ Rectangle {
             icon: "download"
             iconSize: 12
             flat: true
-            iconColor: Theme.accent
+            iconColor: Theme.isLightBar ? Theme.barFg : Theme.accent
             Layout.alignment: Qt.AlignVCenter
         }
 

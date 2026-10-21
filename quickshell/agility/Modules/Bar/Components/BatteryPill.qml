@@ -121,7 +121,7 @@ Rectangle {
             flat: true
             iconColor: {
                 if (root.isCharging)
-                    return Theme.accent;
+                    return Theme.isLightBar ? Theme.barFg : Theme.accent;
                 if (root.level <= 15)
                     return Theme.error;
                 if (root.level <= 30)

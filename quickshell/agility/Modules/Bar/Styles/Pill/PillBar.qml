@@ -74,8 +74,8 @@ Item {
 
         Gradient {
             id: gradientDef
-            GradientStop { position: 0.0; color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, pillContainer.bgAlpha * 0.95) }
-            GradientStop { position: 1.0; color: Qt.rgba(Theme.bgSecondary.r, Theme.bgSecondary.g, Theme.bgSecondary.b, pillContainer.bgAlpha * 0.7) }
+            GradientStop { position: 0.0; color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, ((pillContainer.bgAlpha !== undefined) ? pillContainer.bgAlpha : 1.0) * 0.95) }
+            GradientStop { position: 1.0; color: Qt.rgba(Theme.bgSecondary.r, Theme.bgSecondary.g, Theme.bgSecondary.b, ((pillContainer.bgAlpha !== undefined) ? pillContainer.bgAlpha : 1.0) * 0.7) }
         }
 
         Behavior on width {

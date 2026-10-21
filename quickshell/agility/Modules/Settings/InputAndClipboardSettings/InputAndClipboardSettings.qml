@@ -113,31 +113,14 @@ AppContainer {
                     RowLayout {
                         spacing: Constants.sizeSm
 
-                        Rectangle {
-                            implicitWidth: Math.max(100, keyInput.implicitWidth + 24)
-                            implicitHeight: 28
-                            color: Theme.bgSecondary
-                            radius: Constants.sizeXs
-                            border.color: keyInput.activeFocus ? Theme.accent : Theme.borderSecondary
-                            border.width: 1
-
-                            TextInput {
-                                id: keyInput
-                                anchors.centerIn: parent
-                                text: modelData.key
-                                font.family: Constants.fontFamily
-                                font.pixelSize: Math.round(11 * SettingsService.fontScale)
-                                font.bold: true
-                                color: Theme.accent
-                                selectByMouse: true
-                                onEditingFinished: {
-                                    let newKey = text.trim();
-                                    if (newKey !== "" && newKey !== modelData.key) {
-                                        let updated = JSON.parse(JSON.stringify(SettingsService.actionShortcuts));
-                                        updated[index].key = newKey;
-                                        SettingsService.actionShortcuts = updated;
-                                        SettingsService.saveSettings();
-                                    }
+                        KeyRecordPill {
+                            keyText: modelData.key
+                            onKeyRecorded: (newKey) => {
+                                if (newKey !== "" && newKey !== modelData.key) {
+                                    let updated = JSON.parse(JSON.stringify(SettingsService.actionShortcuts));
+                                    updated[index].key = newKey;
+                                    SettingsService.actionShortcuts = updated;
+                                    SettingsService.saveSettings();
                                 }
                             }
                         }
@@ -175,31 +158,14 @@ AppContainer {
                     RowLayout {
                         spacing: Constants.sizeSm
 
-                        Rectangle {
-                            implicitWidth: Math.max(100, customKeyInput.implicitWidth + 24)
-                            implicitHeight: 28
-                            color: Theme.bgSecondary
-                            radius: Constants.sizeXs
-                            border.color: customKeyInput.activeFocus ? Theme.accent : Theme.borderSecondary
-                            border.width: 1
-
-                            TextInput {
-                                id: customKeyInput
-                                anchors.centerIn: parent
-                                text: modelData.key
-                                font.family: Constants.fontFamily
-                                font.pixelSize: Math.round(11 * SettingsService.fontScale)
-                                font.bold: true
-                                color: Theme.accent
-                                selectByMouse: true
-                                onEditingFinished: {
-                                    let newKey = text.trim();
-                                    if (newKey !== "" && newKey !== modelData.key) {
-                                        let updated = JSON.parse(JSON.stringify(SettingsService.customShortcuts));
-                                        updated[index].key = newKey;
-                                        SettingsService.customShortcuts = updated;
-                                        SettingsService.saveSettings();
-                                    }
+                        KeyRecordPill {
+                            keyText: modelData.key
+                            onKeyRecorded: (newKey) => {
+                                if (newKey !== "" && newKey !== modelData.key) {
+                                    let updated = JSON.parse(JSON.stringify(SettingsService.customShortcuts));
+                                    updated[index].key = newKey;
+                                    SettingsService.customShortcuts = updated;
+                                    SettingsService.saveSettings();
                                 }
                             }
                         }
@@ -223,78 +189,142 @@ AppContainer {
             }
         }
 
-        // Add New Custom Shortcut Form
-        ColumnLayout {
+        // Add New Custom Shortcut Form Card
+        Rectangle {
             Layout.fillWidth: true
-            spacing: Constants.sizeSm
-            Layout.topMargin: Constants.sizeXs
+            Layout.topMargin: Constants.sizeSm
+            radius: Constants.sizeSm
+            color: Theme.isDark ? Qt.rgba(Theme.bgSecondary.r, Theme.bgSecondary.g, Theme.bgSecondary.b, 0.6) : Theme.bgSecondary
+            border.color: Theme.borderSecondary
+            border.width: 1
+            implicitHeight: addFormLayout.implicitHeight + (Constants.sizeMd * 2)
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Constants.sizeSm
+            ColumnLayout {
+                id: addFormLayout
+                anchors.fill: parent
+                anchors.margins: Constants.sizeMd
+                spacing: Constants.sizeMd
 
-                ThemedTextField {
-                    id: newShortcutName
-                    placeholderText: "Shortcut Name (e.g. Terminal)"
+                RowLayout {
                     Layout.fillWidth: true
-                }
+                    spacing: Constants.sizeXs
 
-                ThemedTextField {
-                    id: newShortcutKey
-                    placeholderText: "Key (e.g. Mod+Return)"
-                    Layout.preferredWidth: 160
-                }
-            }
+                    SvgIcon {
+                        icon: "keyboard"
+                        iconSize: Constants.sizeSm
+                        iconColor: Theme.accent
+                        flat: true
+                    }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Constants.sizeSm
-
-                ThemedTextField {
-                    id: newShortcutCmd
-                    placeholderText: "Command to execute (e.g. alacritty)"
-                    Layout.fillWidth: true
-                }
-
-                Button {
-                    id: addShortcutBtn
-                    text: "+ Add Shortcut"
-                    font.family: Constants.fontFamily
-                    font.pixelSize: Math.round(Constants.sizeSm * SettingsService.fontScale)
-                    font.weight: Font.Medium
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitHeight: 34
-                    contentItem: ThemedText {
-                        text: addShortcutBtn.text
-                        font.family: Constants.fontFamily
-                        font.pixelSize: Math.round(11 * SettingsService.fontScale)
+                    ThemedText {
+                        text: "Add New Custom Shortcut"
                         font.weight: Font.DemiBold
-                        color: Theme.accent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                        customSize: Constants.sizeSm
+                        color: Theme.fg
                     }
-                    background: Rectangle {
-                        color: addShortcutBtn.hovered ? Theme.bgSecondary : Theme.bg
-                        border.color: Theme.accent
-                        border.width: 1
-                        radius: Constants.sizeXs
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Constants.sizeSm
+
+                    ThemedTextField {
+                        id: newShortcutName
+                        label: "Shortcut Name"
+                        placeholderText: "e.g. Terminal, Browser, File Manager"
+                        showSubmitHint: false
+                        Layout.fillWidth: true
                     }
-                    onClicked: {
-                        let name = newShortcutName.text.trim();
-                        let key = newShortcutKey.text.trim();
-                        let cmd = newShortcutCmd.text.trim();
-                        if (name !== "" && key !== "" && cmd !== "") {
-                            let updated = JSON.parse(JSON.stringify(SettingsService.customShortcuts));
-                            updated.push({
-                                "name": name,
-                                "key": key,
-                                "command": cmd
-                            });
-                            SettingsService.customShortcuts = updated;
-                            SettingsService.saveSettings();
-                            newShortcutName.text = "";
-                            newShortcutKey.text = "";
-                            newShortcutCmd.text = "";
+
+                    ColumnLayout {
+                        spacing: Constants.sizeXs
+                        Layout.preferredWidth: 220
+
+                        ThemedText {
+                            text: "Shortcut Key"
+                            font.bold: true
+                            color: Theme.fg
+                            customSize: Constants.sizeSm
+                        }
+
+                        KeyRecordPill {
+                            id: newShortcutKeyPill
+                            placeholder: "Click to record key..."
+                            Layout.fillWidth: true
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Constants.sizeSm
+
+                    ThemedTextField {
+                        id: newShortcutCmd
+                        label: "Command to Execute"
+                        placeholderText: "e.g. alacritty, firefox, thunar"
+                        showSubmitHint: false
+                        Layout.fillWidth: true
+                    }
+
+                    ColumnLayout {
+                        spacing: Constants.sizeXs
+                        Layout.alignment: Qt.AlignBottom
+
+                        Item {
+                            implicitHeight: Constants.sizeSm + 4
+                            visible: true
+                        }
+
+                        Button {
+                            id: addShortcutBtn
+                            text: "+ Add Shortcut"
+                            enabled: newShortcutName.text.trim() !== "" && newShortcutKeyPill.keyText.trim() !== "" && newShortcutCmd.text.trim() !== ""
+                            opacity: enabled ? 1.0 : 0.5
+                            font.family: Constants.fontFamily
+                            font.pixelSize: Math.round(Constants.sizeSm * SettingsService.fontScale)
+                            font.weight: Font.Medium
+                            implicitHeight: 34
+                            implicitWidth: 140
+                            contentItem: ThemedText {
+                                text: addShortcutBtn.text
+                                font.family: Constants.fontFamily
+                                font.pixelSize: Math.round(11 * SettingsService.fontScale)
+                                font.weight: Font.DemiBold
+                                color: addShortcutBtn.enabled ? (addShortcutBtn.hovered ? Theme.bg : Theme.accent) : Theme.muted
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            background: Rectangle {
+                                color: addShortcutBtn.enabled && addShortcutBtn.hovered ? Theme.accent : Theme.bg
+                                border.color: addShortcutBtn.enabled ? Theme.accent : Theme.borderSecondary
+                                border.width: 1
+                                radius: Constants.sizeXs
+
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Constants.animFast
+                                    }
+                                }
+                            }
+                            onClicked: {
+                                let name = newShortcutName.text.trim();
+                                let key = newShortcutKeyPill.keyText.trim();
+                                let cmd = newShortcutCmd.text.trim();
+                                if (name !== "" && key !== "" && cmd !== "") {
+                                    let updated = JSON.parse(JSON.stringify(SettingsService.customShortcuts));
+                                    updated.push({
+                                        "name": name,
+                                        "key": key,
+                                        "command": cmd
+                                    });
+                                    SettingsService.customShortcuts = updated;
+                                    SettingsService.saveSettings();
+                                    newShortcutName.text = "";
+                                    newShortcutKeyPill.keyText = "";
+                                    newShortcutCmd.text = "";
+                                }
+                            }
                         }
                     }
                 }

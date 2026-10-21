@@ -166,7 +166,7 @@ Item {
                     radius: DisplayProfileService.gameModeActive ? 0 : height / 2
                     color: {
                         if (wsSlot.isActive)
-                            return Theme.accent;
+                            return Theme.isBarSolidWhite ? Theme.barFg : Theme.accent;
 
                         if (wsSlot.hasWindows)
                             return wsSlot.isHovered ? Qt.rgba(Theme.barFg.r, Theme.barFg.g, Theme.barFg.b, 0.95) : Qt.rgba(Theme.barFg.r, Theme.barFg.g, Theme.barFg.b, 0.65);

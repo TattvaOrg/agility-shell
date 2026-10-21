@@ -88,6 +88,11 @@ Item {
     ]
     property var customShortcuts: []
 
+    // Settings Window Presentation
+    property string settingsWindowMode: "half" // "full", "half", "boxed"
+    property int settingsBoxedWidth: 960
+    property int settingsBoxedHeight: 680
+
     function syncShortcuts() {
         let payload = JSON.stringify({
             "actionShortcuts": settingsService.actionShortcuts,
@@ -334,6 +339,9 @@ Item {
                 "dndEnabled": settingsService.dndEnabled,
                 "actionShortcuts": settingsService.actionShortcuts,
                 "customShortcuts": settingsService.customShortcuts,
+                "settingsWindowMode": settingsService.settingsWindowMode,
+                "settingsBoxedWidth": settingsService.settingsBoxedWidth,
+                "settingsBoxedHeight": settingsService.settingsBoxedHeight,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
                 "edgeLightingColorMode": settingsService.edgeLightingColorMode,
                 "edgeLightingCustomColor": settingsService.edgeLightingCustomColor.toString(),
@@ -585,6 +593,13 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.customShortcuts !== undefined)
                             settingsService.customShortcuts = prefs.customShortcuts;
+
+                        if (prefs.settingsWindowMode !== undefined)
+                            settingsService.settingsWindowMode = prefs.settingsWindowMode;
+                        if (prefs.settingsBoxedWidth !== undefined)
+                            settingsService.settingsBoxedWidth = prefs.settingsBoxedWidth;
+                        if (prefs.settingsBoxedHeight !== undefined)
+                            settingsService.settingsBoxedHeight = prefs.settingsBoxedHeight;
 
                         if (prefs.edgeLightingEnabled !== undefined)
                             settingsService.edgeLightingEnabled = prefs.edgeLightingEnabled;

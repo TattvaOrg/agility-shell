@@ -154,6 +154,7 @@ Rectangle {
 
             visible: root.hasMedia && root.displayArtist !== ""
             text: root.displayArtist
+            color: Theme.barMuted
             elide: Text.ElideRight
             Layout.maximumWidth: root.displayTitle !== "" ? 100 : 200
             Layout.preferredWidth: Math.min(implicitWidth, Layout.maximumWidth)
@@ -166,7 +167,7 @@ Rectangle {
             text: "-"
             customSize: Constants.sizeMd
             font.bold: false
-            color: Theme.accent
+            color: Theme.isBarSolidWhite ? Theme.barMuted : Theme.accent
         }
 
         ThemedText {
@@ -174,6 +175,7 @@ Rectangle {
 
             visible: root.hasMedia && root.displayTitle !== ""
             text: root.displayTitle
+            color: Theme.barFg
             elide: Text.ElideRight
             Layout.maximumWidth: root.displayArtist !== "" ? 120 : 200
             Layout.preferredWidth: Math.min(implicitWidth, Layout.maximumWidth)
@@ -198,7 +200,7 @@ Rectangle {
                     icon: "player-previous"
                     iconSize: 10
                     flat: true
-                    iconColor: prevHover.hovered ? Theme.accent : Theme.fg
+                    iconColor: prevHover.hovered ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
                 }
 
                 HoverHandler { id: prevHover; cursorShape: Qt.PointingHandCursor }
@@ -209,7 +211,7 @@ Rectangle {
                 width: 18
                 height: 18
                 radius: 9
-                color: playHover.hovered ? Theme.bgSecondary : "transparent"
+                color: playHover.hovered ? Theme.barBgSecondary : "transparent"
                 Layout.alignment: Qt.AlignVCenter
 
                 SvgIcon {
@@ -217,7 +219,7 @@ Rectangle {
                     icon: MprisService.isPlaying ? "player-pause" : "player-play"
                     iconSize: 10
                     flat: true
-                    iconColor: playHover.hovered ? Theme.accent : Theme.fg
+                    iconColor: playHover.hovered ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
                 }
 
                 HoverHandler { id: playHover; cursorShape: Qt.PointingHandCursor }
@@ -228,7 +230,7 @@ Rectangle {
                 width: 18
                 height: 18
                 radius: 9
-                color: nextHover.hovered ? Theme.bgSecondary : "transparent"
+                color: nextHover.hovered ? Theme.barBgSecondary : "transparent"
                 Layout.alignment: Qt.AlignVCenter
 
                 SvgIcon {
@@ -236,7 +238,7 @@ Rectangle {
                     icon: "player-next"
                     iconSize: 10
                     flat: true
-                    iconColor: nextHover.hovered ? Theme.accent : Theme.fg
+                    iconColor: nextHover.hovered ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : Theme.barFg
                 }
 
                 HoverHandler { id: nextHover; cursorShape: Qt.PointingHandCursor }

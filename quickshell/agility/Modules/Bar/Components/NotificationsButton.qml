@@ -20,7 +20,7 @@ Rectangle {
     Layout.preferredHeight: implicitHeight
     Layout.preferredWidth: implicitWidth
     Layout.alignment: Qt.AlignVCenter
-    color: isActive ? Theme.bgAccent : (isHovered ? Theme.bgSecondary : "transparent")
+    color: isActive ? (Theme.isBarSolidWhite ? Theme.barBgTertiary : Theme.bgAccent) : (isHovered ? Theme.barBgSecondary : "transparent")
     radius: DisplayProfileService.gameModeActive ? 0 : height / 2
     visible: true
     scale: DisplayProfileService.gameModeActive ? 1 : (isPressed ? 0.92 : (isHovered ? 1.05 : 1))
@@ -30,7 +30,7 @@ Rectangle {
 
         anchors.centerIn: parent
         notificationService: root.notificationService
-        iconColor: root.isActive ? Theme.accent : ((notificationService && notificationService.dndEnabled) ? Theme.muted : Theme.fg)
+        iconColor: root.isActive ? (Theme.isBarSolidWhite ? Theme.barFg : Theme.accent) : ((notificationService && notificationService.dndEnabled) ? Theme.barMuted : Theme.barFg)
 
         Behavior on iconColor {
             ColorAnimation {

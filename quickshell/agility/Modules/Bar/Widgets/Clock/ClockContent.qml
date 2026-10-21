@@ -65,7 +65,7 @@ Item {
                         text: root.now.getHours() >= 12 ? "PM" : "AM"
                         font.bold: true
                         customSize: Constants.sizeXs - 2
-                        color: Theme.accent
+                        color: Theme.isBarSolidWhite ? Theme.barFg : Theme.accent
                     }
 
                 }

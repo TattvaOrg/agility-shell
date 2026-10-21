@@ -49,6 +49,69 @@ AppContainer {
     }
 
     AppGroup {
+        title: "Settings Window"
+        icon: "window"
+
+        SettingSegmented {
+            label: "Window Presentation"
+            description: "Choose how the Settings application opens on screen (Full Screen, Half Screen, or Centered Box)"
+            model: [{
+                "text": "Full Screen",
+                "value": "full"
+            }, {
+                "text": "Half Screen",
+                "value": "half"
+            }, {
+                "text": "Boxed",
+                "value": "boxed"
+            }]
+            currentValue: SettingsService.settingsWindowMode
+            onActivated: (value) => {
+                SettingsService.settingsWindowMode = value;
+                SettingsService.saveSettings();
+            }
+        }
+
+        Divider {
+            visible: SettingsService.settingsWindowMode === "boxed"
+        }
+
+        ThemedSlider {
+            visible: SettingsService.settingsWindowMode === "boxed"
+            label: "Box Width"
+            from: 640
+            to: 1400
+            stepSize: 20
+            value: SettingsService.settingsBoxedWidth
+            suffix: "px"
+            decimals: 0
+            onMoved: (val) => {
+                SettingsService.settingsBoxedWidth = Math.round(val);
+                SettingsService.saveSettings();
+            }
+        }
+
+        Divider {
+            visible: SettingsService.settingsWindowMode === "boxed"
+        }
+
+        ThemedSlider {
+            visible: SettingsService.settingsWindowMode === "boxed"
+            label: "Box Height"
+            from: 480
+            to: 950
+            stepSize: 20
+            value: SettingsService.settingsBoxedHeight
+            suffix: "px"
+            decimals: 0
+            onMoved: (val) => {
+                SettingsService.settingsBoxedHeight = Math.round(val);
+                SettingsService.saveSettings();
+            }
+        }
+    }
+
+    AppGroup {
         title: "Window Geometry & Tiling"
         icon: "window"
 

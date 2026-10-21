@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Core
@@ -148,6 +149,204 @@ AppContainer {
             }
         }
 
+        Divider {
+        }
+
+        ThemedSlider {
+            label: "Bar Thickness"
+            from: 26
+            to: 52
+            stepSize: 1
+            value: SettingsService.pillBarThickness
+            suffix: "px"
+            decimals: 0
+            onMoved: (val) => {
+                SettingsService.pillBarThickness = Math.round(val);
+            }
+        }
+
+    }
+
+    // BAR ICON (MATERIAL SHAPES & ANIMATIONS)
+    AppGroup {
+        title: "Bar Icon"
+        icon: "sparkles"
+
+        SettingSegmented {
+            label: "Icon Mode"
+            description: "Choose whether the bar icon stays on a single shape, cycles through Material shapes, or uses a custom SVG"
+            model: [{
+                "text": "Cycle Shapes",
+                "value": "cycle"
+            }, {
+                "text": "Single Shape",
+                "value": "single"
+            }, {
+                "text": "Custom SVG",
+                "value": "custom"
+            }]
+            currentValue: SettingsService.barIconMode
+            onActivated: (value) => {
+                SettingsService.barIconMode = value;
+            }
+        }
+
+        Divider {
+            visible: SettingsService.barIconMode === "single"
+        }
+
+        SettingSegmented {
+            visible: SettingsService.barIconMode === "single"
+            label: "Active Shape"
+            description: "Select which Material shape to display"
+            model: [{
+                "text": "Dashboard",
+                "value": "dashboard"
+            }, {
+                "text": "Sparkle",
+                "value": "sparkle"
+            }, {
+                "text": "Flower",
+                "value": "flower"
+            }, {
+                "text": "Scallop",
+                "value": "scallop"
+            }, {
+                "text": "Hexagon",
+                "value": "hexagon"
+            }, {
+                "text": "Arch",
+                "value": "arch"
+            }]
+            currentValue: SettingsService.barIconShape
+            onActivated: (value) => {
+                SettingsService.barIconShape = value;
+            }
+        }
+
+        Divider {
+            visible: SettingsService.barIconMode === "cycle"
+        }
+
+        ThemedSlider {
+            visible: SettingsService.barIconMode === "cycle"
+            label: "Cycle Interval"
+            from: 3
+            to: 60
+            stepSize: 1
+            value: SettingsService.barIconCycleInterval
+            suffix: "s"
+            decimals: 0
+            onMoved: (val) => {
+                SettingsService.barIconCycleInterval = Math.round(val);
+            }
+        }
+
+        Divider {
+            visible: SettingsService.barIconMode === "cycle"
+        }
+
+        ColumnLayout {
+            visible: SettingsService.barIconMode === "cycle"
+            Layout.fillWidth: true
+            spacing: Constants.sizeSm
+
+            ThemedText {
+                text: "Included Shapes in Rotation"
+                customSize: Constants.sizeSm
+                font.bold: true
+            }
+
+            ThemedText {
+                text: "Select one or multiple Material 3 shapes to include in the automatic morph cycle"
+                color: Theme.muted
+                customSize: Constants.sizeXs + 2
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: Constants.sizeSm
+
+                Repeater {
+                    model: [
+                        { id: "dashboard", label: "Dashboard" },
+                        { id: "sparkle", label: "Sparkle" },
+                        { id: "flower", label: "Flower" },
+                        { id: "scallop", label: "Scallop" },
+                        { id: "hexagon", label: "Hexagon" },
+                        { id: "arch", label: "Arch" },
+                        { id: "gem", label: "Gem" }
+                    ]
+
+                    Rectangle {
+                        readonly property bool isSelected: (SettingsService.barIconCycleShapes || []).indexOf(modelData.id) !== -1
+                        implicitWidth: chipText.implicitWidth + Constants.sizeMd * 2
+                        implicitHeight: 32
+                        radius: 16
+                        color: isSelected ? Theme.accent : Theme.bgSecondary
+                        border.width: 1
+                        border.color: isSelected ? Theme.accent : Theme.border
+
+                        ThemedText {
+                            id: chipText
+                            anchors.centerIn: parent
+                            text: modelData.label
+                            color: isSelected ? Theme.bg : Theme.fg
+                            font.bold: isSelected
+                            customSize: Constants.sizeSm
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                let list = (SettingsService.barIconCycleShapes || []).slice();
+                                let idx = list.indexOf(modelData.id);
+                                if (idx !== -1) {
+                                    if (list.length > 1) {
+                                        list.splice(idx, 1);
+                                    }
+                                } else {
+                                    list.push(modelData.id);
+                                }
+                                SettingsService.barIconCycleShapes = list;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Divider {
+            visible: SettingsService.barIconMode === "custom"
+        }
+
+        ColumnLayout {
+            visible: SettingsService.barIconMode === "custom"
+            Layout.fillWidth: true
+            spacing: Constants.sizeSm
+
+            ThemedText {
+                text: "Custom SVG Path Data"
+                customSize: Constants.sizeSm
+                font.bold: true
+            }
+
+            ThemedText {
+                text: "Paste an SVG path 'd' string (scaled to 24x24 viewBox)"
+                color: Theme.muted
+                customSize: Constants.sizeXs + 2
+            }
+
+            ThemedTextField {
+                Layout.fillWidth: true
+                placeholderText: "M 12 2 C 12 ... Z"
+                text: SettingsService.barIconCustomSvg
+                onEditingFinished: {
+                    SettingsService.barIconCustomSvg = text.trim();
+                }
+            }
+        }
     }
 
     AppGroup {

@@ -44,7 +44,7 @@ QtObject {
             return 32;
 
         if (style === "pill")
-            return 38;
+            return SettingsService.pillBarThickness > 0 ? SettingsService.pillBarThickness : 38;
 
         return 40; // convex
     }

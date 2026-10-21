@@ -7,7 +7,7 @@ import qs.Modules.Bar
 BarButton {
     id: root
 
-    property int iconSize: Constants.size2Xl + 4
+    property int iconSize: Math.round((Constants.size2Xl + 4) * (SettingsService.barWidgetHeight / 28.0))
     property bool enableIntervalAnim: true
 
     widgetId: "dashboard"

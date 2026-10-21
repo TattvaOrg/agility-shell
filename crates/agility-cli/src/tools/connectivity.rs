@@ -324,24 +324,76 @@ pub fn run_wifi(args: &[String]) -> i32 {
             0
         }
         "scan" => {
+            let force_rescan = args.get(1).map(|s| s.as_str()).unwrap_or("no") == "yes";
+            if force_rescan {
+                let _ = Command::new("nmcli")
+                    .args(["device", "wifi", "rescan"])
+                    .output();
+            }
             let networks = get_wifi_networks();
             println!("{}", serde_json::to_string(&networks).unwrap_or_default());
             0
         }
         "connect" => {
             if let Some(ssid) = args.get(1) {
-                let mut cmd = Command::new("nmcli");
-                cmd.args(["device", "wifi", "connect", ssid]);
-                if let Some(pw) = args.get(2) {
-                    if !pw.is_empty() {
-                        cmd.args(["password", pw]);
+                let password = args.get(2).map(|s| s.as_str()).unwrap_or("");
+
+                // 1. If password is not explicitly provided, try activating an existing saved NetworkManager connection first
+                if password.is_empty() {
+                    let up_out = Command::new("nmcli")
+                        .args(["connection", "up", "id", ssid])
+                        .output();
+                    if let Ok(out) = up_out {
+                        if out.status.success() {
+                            let msg = String::from_utf8_lossy(&out.stdout);
+                            println!("{}", msg.trim());
+                            return 0;
+                        }
                     }
                 }
-                let status = cmd.status();
-                if status.map(|s| s.success()).unwrap_or(false) {
-                    0
-                } else {
-                    1
+
+                // 2. Connect directly to device wifi (works for unsecured or password-provided networks)
+                let mut cmd = Command::new("nmcli");
+                cmd.args(["device", "wifi", "connect", ssid]);
+                if !password.is_empty() {
+                    cmd.args(["password", password]);
+                }
+                let res = cmd.output();
+                match res {
+                    Ok(out) => {
+                        if out.status.success() {
+                            let msg = String::from_utf8_lossy(&out.stdout);
+                            println!("{}", msg.trim());
+                            0
+                        } else {
+                            // If direct connect failed and no password was passed, try fallback connection up
+                            if password.is_empty() {
+                                if let Ok(retry) = Command::new("nmcli")
+                                    .args(["connection", "up", "id", ssid])
+                                    .output()
+                                {
+                                    if retry.status.success() {
+                                        let msg = String::from_utf8_lossy(&retry.stdout);
+                                        println!("{}", msg.trim());
+                                        return 0;
+                                    }
+                                }
+                            }
+                            let err_msg = String::from_utf8_lossy(&out.stderr);
+                            let stdout_msg = String::from_utf8_lossy(&out.stdout);
+                            let combined = if !err_msg.trim().is_empty() {
+                                err_msg.trim()
+                            } else {
+                                stdout_msg.trim()
+                            };
+                            eprintln!("Failed to connect to '{}': {}", ssid, combined);
+                            1
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to execute nmcli: {}", e);
+                        1
+                    }
                 }
             } else {
                 eprintln!("Missing SSID");
@@ -349,22 +401,43 @@ pub fn run_wifi(args: &[String]) -> i32 {
             }
         }
         "disconnect" => {
+            let mut success = false;
             if let Some(ssid) = args.get(1) {
-                let _ = Command::new("nmcli")
+                let res = Command::new("nmcli")
                     .args(["connection", "down", "id", ssid])
                     .status();
+                if let Ok(s) = res {
+                    if s.success() {
+                        success = true;
+                    }
+                }
+            }
+            if !success {
+                let st = get_wifi_status();
+                if !st.interface.is_empty() {
+                    let res = Command::new("nmcli")
+                        .args(["device", "disconnect", &st.interface])
+                        .status();
+                    if let Ok(s) = res {
+                        if s.success() {
+                            success = true;
+                        }
+                    }
+                }
+            }
+            if success {
                 0
             } else {
-                eprintln!("Missing SSID");
+                eprintln!("Failed to disconnect Wi-Fi");
                 1
             }
         }
         "forget" => {
             if let Some(ssid) = args.get(1) {
-                let _ = Command::new("nmcli")
+                let status = Command::new("nmcli")
                     .args(["connection", "delete", "id", ssid])
                     .status();
-                0
+                status.map(|s| if s.success() { 0 } else { 1 }).unwrap_or(1)
             } else {
                 eprintln!("Missing SSID");
                 1

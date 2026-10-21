@@ -253,10 +253,28 @@ async fn main() -> Result<()> {
 
 // ─── Command Handlers ───
 
+fn should_bluetooth_power_on_startup() -> bool {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let prefs_path = std::path::PathBuf::from(home).join(".cache/quickshell/settings_prefs.json");
+    if let Ok(data) = std::fs::read_to_string(&prefs_path) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) {
+            return v.get("bluetoothOnStartup").and_then(|b| b.as_bool()).unwrap_or(false);
+        }
+    }
+    false
+}
+
 async fn handle_start(legacy: bool) -> Result<()> {
     if legacy {
         println!("ℹ Notice: Legacy Python stack has been completely removed.");
         println!("  Agility Shell is now 100% Rust & QML. Starting Next-Gen shell...");
+    }
+
+    // Ensure Bluetooth adapter is powered off by default on startup unless explicitly enabled
+    if !should_bluetooth_power_on_startup() {
+        let _ = Command::new("bluetoothctl")
+            .args(["power", "off"])
+            .output();
     }
 
     // Next-Gen start: Check systemd user service first

@@ -33,6 +33,16 @@ Item {
     property int pillBarWidthPercent: 60
     property string pillPopupStyle: "center"
     property string pillWidgetLayout: "distributed"
+    property int pillBarThickness: 38
+    property bool bluetoothOnStartup: false
+
+    // Bar Icon customization
+    property string barIconMode: "cycle" // "cycle", "single", "custom"
+    property string barIconShape: "dashboard" // default single shape
+    property var barIconCycleShapes: ["dashboard", "sparkle", "flower", "scallop", "hexagon", "arch"]
+    property int barIconCycleInterval: 8 // seconds
+    property string barIconCustomSvg: ""
+
     property bool barAutoHide: false
     property bool barOpenOnHover: false
     property string barGlassMode: "solid"
@@ -48,7 +58,12 @@ Item {
     property bool appletNetwork: false
     property bool appletDnd: false
     property bool dndEnabled: false
-    readonly property int barWidgetHeight: 28
+    readonly property int barWidgetHeight: {
+        if (barPillMode) {
+            return Math.max(18, Math.min(44, Math.round(pillBarThickness - 10)));
+        }
+        return 28;
+    }
     property bool edgeLightingEnabled: true
     property string edgeLightingColorMode: "album_art"
     property color edgeLightingCustomColor: Theme.accent
@@ -289,8 +304,15 @@ Item {
                 "barStyle": settingsService.barStyle,
                 "islandRightMode": settingsService.islandRightMode,
                 "pillBarWidthPercent": settingsService.pillBarWidthPercent,
+                "pillBarThickness": settingsService.pillBarThickness,
                 "pillPopupStyle": settingsService.pillPopupStyle,
                 "pillWidgetLayout": settingsService.pillWidgetLayout,
+                "bluetoothOnStartup": settingsService.bluetoothOnStartup,
+                "barIconMode": settingsService.barIconMode,
+                "barIconShape": settingsService.barIconShape,
+                "barIconCycleShapes": settingsService.barIconCycleShapes,
+                "barIconCycleInterval": settingsService.barIconCycleInterval,
+                "barIconCustomSvg": settingsService.barIconCustomSvg,
                 "barAutoHide": settingsService.barAutoHide,
                 "barOpenOnHover": settingsService.barOpenOnHover,
                 "barGlassMode": settingsService.barGlassMode,
@@ -479,6 +501,33 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                                 settingsService.pillBarWidthPercent = pbw;
                         }
 
+                        if (prefs.pillBarThickness !== undefined) {
+                            let pbt = parseInt(prefs.pillBarThickness);
+                            if (!isNaN(pbt) && pbt >= 24 && pbt <= 60)
+                                settingsService.pillBarThickness = pbt;
+                        }
+
+                        if (prefs.bluetoothOnStartup !== undefined)
+                            settingsService.bluetoothOnStartup = Boolean(prefs.bluetoothOnStartup);
+
+                        if (prefs.barIconMode !== undefined)
+                            settingsService.barIconMode = prefs.barIconMode;
+
+                        if (prefs.barIconShape !== undefined)
+                            settingsService.barIconShape = prefs.barIconShape;
+
+                        if (prefs.barIconCycleShapes !== undefined && Array.isArray(prefs.barIconCycleShapes))
+                            settingsService.barIconCycleShapes = prefs.barIconCycleShapes;
+
+                        if (prefs.barIconCycleInterval !== undefined) {
+                            let bci = parseInt(prefs.barIconCycleInterval);
+                            if (!isNaN(bci) && bci >= 3 && bci <= 60)
+                                settingsService.barIconCycleInterval = bci;
+                        }
+
+                        if (prefs.barIconCustomSvg !== undefined)
+                            settingsService.barIconCustomSvg = prefs.barIconCustomSvg;
+
                         if (prefs.pillPopupStyle !== undefined) {
                             if (prefs.pillPopupStyle === "sided" || prefs.pillPopupStyle === "top" || prefs.pillPopupStyle === "center")
                                 settingsService.pillPopupStyle = prefs.pillPopupStyle;
@@ -553,16 +602,27 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                     }
                 }
                 settingsService.settingsLoaded = true;
+                if (!settingsService.bluetoothOnStartup) {
+                    bluetoothStartupProc.running = true;
+                }
                 HyprlandService.triggerStartupTimer();
             } else {
                 SystemInfoService.applyProfile("balanced");
                 settingsService.saveSettings();
                 settingsService.settingsLoaded = true;
+                if (!settingsService.bluetoothOnStartup) {
+                    bluetoothStartupProc.running = true;
+                }
                 HyprlandService.triggerStartupTimer();
                 settingsService.applyCursor(settingsService.cursorTheme, settingsService.cursorSize);
                 settingsService.applyFont(settingsService.fontFamily, Math.round(11 * settingsService.fontScale));
             }
         }
+    }
+
+    Process {
+        id: bluetoothStartupProc
+        command: ["bluetoothctl", "power", "off"]
     }
 
     Process {

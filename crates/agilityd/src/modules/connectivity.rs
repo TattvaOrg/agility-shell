@@ -96,6 +96,23 @@ pub struct ConnectivityService {
 impl ConnectivityService {
     pub fn new() -> Arc<Self> {
         let mut initial = ConnectivitySnapshot::default();
+
+        // Enforce Bluetooth off by default on startup unless explicitly enabled in user options
+        let home = std::env::var("HOME").unwrap_or_default();
+        let prefs_path = std::path::PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
+        let bt_startup = if let Ok(data) = std::fs::read_to_string(&prefs_path) {
+            serde_json::from_str::<serde_json::Value>(&data)
+                .ok()
+                .and_then(|v| v.get("bluetoothOnStartup").and_then(|b| b.as_bool()))
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
+        if !bt_startup {
+            let _ = Command::new("bluetoothctl").args(["power", "off"]).output();
+        }
+
         // Seed initial values from local system commands
         if let Ok(net) = poll_network_cli() {
             initial.wifi_enabled = net.wifi_enabled;
@@ -343,13 +360,36 @@ impl ConnectivityService {
     /// Connect to a WiFi access point with given SSID and password.
     async fn connect_wifi(&self, ssid: String, password: String) -> zbus::fdo::Result<bool> {
         let res = tokio::task::spawn_blocking(move || {
+            if password.is_empty() {
+                if let Ok(out) = Command::new("nmcli")
+                    .args(["connection", "up", "id", &ssid])
+                    .output()
+                {
+                    if out.status.success() {
+                        return true;
+                    }
+                }
+            }
             let mut cmd = Command::new("nmcli");
             cmd.args(["device", "wifi", "connect", &ssid]);
             if !password.is_empty() {
                 cmd.args(["password", &password]);
             }
             match cmd.output() {
-                Ok(output) => output.status.success(),
+                Ok(output) => {
+                    if output.status.success() {
+                        true
+                    } else if password.is_empty() {
+                        // Fallback retry via connection up
+                        Command::new("nmcli")
+                            .args(["connection", "up", "id", &ssid])
+                            .output()
+                            .map(|o| o.status.success())
+                            .unwrap_or(false)
+                    } else {
+                        false
+                    }
+                }
                 Err(_) => false,
             }
         })
@@ -362,18 +402,39 @@ impl ConnectivityService {
     /// Disconnect current active WiFi connection.
     async fn disconnect_wifi(&self) -> zbus::fdo::Result<bool> {
         let ssid = self.snapshot.read().unwrap().ssid.clone();
-        if ssid.is_empty() {
-            return Ok(true);
-        }
 
         let res = tokio::task::spawn_blocking(move || {
-            match Command::new("nmcli")
-                .args(["connection", "down", &ssid])
-                .output()
-            {
-                Ok(output) => output.status.success(),
-                Err(_) => false,
+            let mut success = false;
+            if !ssid.is_empty() {
+                if let Ok(out) = Command::new("nmcli")
+                    .args(["connection", "down", "id", &ssid])
+                    .output()
+                {
+                    if out.status.success() {
+                        success = true;
+                    }
+                }
             }
+            if !success {
+                // Discover active wifi device and disconnect
+                if let Ok(out) = Command::new("nmcli")
+                    .args(["-t", "-f", "DEVICE,TYPE,STATE", "device"])
+                    .output()
+                {
+                    let text = String::from_utf8_lossy(&out.stdout);
+                    for line in text.lines() {
+                        let parts: Vec<&str> = line.split(':').collect();
+                        if parts.len() >= 3 && parts[1] == "wifi" && parts[2] == "connected" {
+                            let _ = Command::new("nmcli")
+                                .args(["device", "disconnect", parts[0]])
+                                .status();
+                            success = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            success
         })
         .await
         .unwrap_or(false);

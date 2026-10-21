@@ -11,6 +11,24 @@ import qs.Modules.Settings.Components
 AppContainer {
     id: barSettingsRoot
 
+    readonly property var allM3Shapes: [
+        { "id": "dashboard", "label": "Dashboard" },
+        { "id": "sparkle", "label": "Sparkle" },
+        { "id": "flower", "label": "Flower" },
+        { "id": "scallop", "label": "Scallop" },
+        { "id": "hexagon", "label": "Hexagon" },
+        { "id": "arch", "label": "Arch" },
+        { "id": "gem", "label": "Gem" },
+        { "id": "clover", "label": "Clover" },
+        { "id": "star8", "label": "8-Point Star" },
+        { "id": "star4", "label": "4-Point Star" },
+        { "id": "diamond", "label": "Diamond" },
+        { "id": "heart", "label": "Heart" },
+        { "id": "shield", "label": "Shield" },
+        { "id": "teardrop", "label": "Teardrop" },
+        { "id": "triangle", "label": "Triangle" }
+    ]
+
     AppGroup {
         title: "Bar Style"
         icon: "bar"
@@ -195,32 +213,57 @@ AppContainer {
             visible: SettingsService.barIconMode === "single"
         }
 
-        SettingSegmented {
+        ColumnLayout {
             visible: SettingsService.barIconMode === "single"
-            label: "Active Shape"
-            description: "Select which Material shape to display"
-            model: [{
-                "text": "Dashboard",
-                "value": "dashboard"
-            }, {
-                "text": "Sparkle",
-                "value": "sparkle"
-            }, {
-                "text": "Flower",
-                "value": "flower"
-            }, {
-                "text": "Scallop",
-                "value": "scallop"
-            }, {
-                "text": "Hexagon",
-                "value": "hexagon"
-            }, {
-                "text": "Arch",
-                "value": "arch"
-            }]
-            currentValue: SettingsService.barIconShape
-            onActivated: (value) => {
-                SettingsService.barIconShape = value;
+            Layout.fillWidth: true
+            spacing: Constants.sizeSm
+
+            ThemedText {
+                text: "Active Shape"
+                customSize: Constants.sizeSm
+                font.bold: true
+            }
+
+            ThemedText {
+                text: "Select which Material 3 shape to display as the bar icon"
+                color: Theme.muted
+                customSize: Constants.sizeXs + 2
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: Constants.sizeSm
+
+                Repeater {
+                    model: barSettingsRoot.allM3Shapes
+
+                    Rectangle {
+                        readonly property bool isSelected: SettingsService.barIconShape === modelData.id
+                        implicitWidth: singleChipText.implicitWidth + Constants.sizeMd * 2
+                        implicitHeight: 32
+                        radius: 16
+                        color: isSelected ? Theme.accent : Theme.bgSecondary
+                        border.width: 1
+                        border.color: isSelected ? Theme.accent : Theme.border
+
+                        ThemedText {
+                            id: singleChipText
+                            anchors.centerIn: parent
+                            text: modelData.label
+                            color: isSelected ? Theme.bg : Theme.fg
+                            font.bold: isSelected
+                            customSize: Constants.sizeSm
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                SettingsService.barIconShape = modelData.id;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -268,15 +311,7 @@ AppContainer {
                 spacing: Constants.sizeSm
 
                 Repeater {
-                    model: [
-                        { id: "dashboard", label: "Dashboard" },
-                        { id: "sparkle", label: "Sparkle" },
-                        { id: "flower", label: "Flower" },
-                        { id: "scallop", label: "Scallop" },
-                        { id: "hexagon", label: "Hexagon" },
-                        { id: "arch", label: "Arch" },
-                        { id: "gem", label: "Gem" }
-                    ]
+                    model: barSettingsRoot.allM3Shapes
 
                     Rectangle {
                         readonly property bool isSelected: (SettingsService.barIconCycleShapes || []).indexOf(modelData.id) !== -1

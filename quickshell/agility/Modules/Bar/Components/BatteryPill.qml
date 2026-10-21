@@ -36,8 +36,8 @@ Rectangle {
     clip: true
 
     radius: height / 2
-    color: isHovered ? Theme.bgSecondary : (isCharging ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : "transparent")
-    border.color: isCharging ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : (isHovered ? Theme.borderSecondary : "transparent")
+    color: isHovered ? Theme.barBgSecondary : (isCharging ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : "transparent")
+    border.color: isCharging ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : (isHovered ? Theme.barBorder : "transparent")
     border.width: 1
     scale: isPressed ? 0.96 : (isHovered ? 1.02 : 1)
 
@@ -126,7 +126,7 @@ Rectangle {
                     return Theme.error;
                 if (root.level <= 30)
                     return Theme.warning;
-                return root.isHovered ? Theme.fg : Theme.muted;
+                return root.isHovered ? Theme.barFg : Theme.barMuted;
             }
             Layout.alignment: Qt.AlignVCenter
 
@@ -150,7 +150,7 @@ Rectangle {
             }
             customSize: 11
             font.weight: Font.Medium
-            color: root.isHovered ? Theme.fg : Theme.muted
+            color: root.isHovered ? Theme.barFg : Theme.barMuted
             Layout.alignment: Qt.AlignVCenter
 
             Behavior on color {

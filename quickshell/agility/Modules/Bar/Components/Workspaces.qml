@@ -169,9 +169,9 @@ Item {
                             return Theme.accent;
 
                         if (wsSlot.hasWindows)
-                            return wsSlot.isHovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.95) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.65);
+                            return wsSlot.isHovered ? Qt.rgba(Theme.barFg.r, Theme.barFg.g, Theme.barFg.b, 0.95) : Qt.rgba(Theme.barFg.r, Theme.barFg.g, Theme.barFg.b, 0.65);
 
-                        return wsSlot.isHovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.45) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.22);
+                        return wsSlot.isHovered ? Qt.rgba(Theme.barFg.r, Theme.barFg.g, Theme.barFg.b, 0.45) : Qt.rgba(Theme.barFg.r, Theme.barFg.g, Theme.barFg.b, 0.22);
                     }
                     scale: mouseAreaH.pressed ? 0.85 : (wsSlot.isHovered && !wsSlot.isActive ? 1.2 : 1)
 

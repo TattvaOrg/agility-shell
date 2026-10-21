@@ -47,6 +47,7 @@ Item {
     property bool barAutoHide: false
     property bool barOpenOnHover: false
     property string barGlassMode: "solid"
+    property string barSolidTone: "black" // "black", "white"
     property int barGlassOpacity: 85
     property bool appletActiveWindow: true
     property string appletActiveWindowAction: "maximize"
@@ -318,6 +319,7 @@ Item {
                 "barAutoHide": settingsService.barAutoHide,
                 "barOpenOnHover": settingsService.barOpenOnHover,
                 "barGlassMode": settingsService.barGlassMode,
+                "barSolidTone": settingsService.barSolidTone,
                 "barGlassOpacity": settingsService.barGlassOpacity,
                 "appletActiveWindow": settingsService.appletActiveWindow,
                 "appletActiveWindowAction": settingsService.appletActiveWindowAction,
@@ -551,6 +553,8 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.barGlassMode !== undefined)
                             settingsService.barGlassMode = prefs.barGlassMode;
+                        if (prefs.barSolidTone !== undefined)
+                            settingsService.barSolidTone = prefs.barSolidTone;
                         if (prefs.barGlassOpacity !== undefined)
                             settingsService.barGlassOpacity = prefs.barGlassOpacity;
                         if (prefs.appletActiveWindow !== undefined)

@@ -12,10 +12,10 @@ Rectangle {
     property string icon: ""
     property int iconSize: Constants.sizeLg
     property int fontSize: Constants.sizeSm
-    property color iconColor: Theme.fg
+    property color iconColor: Theme.barFg
     property bool hasBackground: false
-    property color backgroundColor: Theme.bgSecondary
-    property color hoverBackgroundColor: Theme.bgTertiary
+    property color backgroundColor: Theme.barBgSecondary
+    property color hoverBackgroundColor: Theme.barBgTertiary
 
     implicitHeight: hasBackground ? SettingsService.barWidgetHeight : (svgIcon.implicitHeight > 0 ? svgIcon.implicitHeight : iconSize)
     implicitWidth: hasBackground ? height : (svgIcon.implicitWidth > 0 ? svgIcon.implicitWidth : iconSize)

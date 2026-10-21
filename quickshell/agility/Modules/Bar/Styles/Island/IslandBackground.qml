@@ -24,7 +24,11 @@ Item {
 
         anchors.fill: parent
         radius: root.radius
-        color: Theme.bg
+        color: {
+            if (SettingsService.barGlassMode === "solid")
+                return (SettingsService.barSolidTone === "white") ? Qt.rgba(1.0, 1.0, 1.0, 1.0) : Qt.rgba(0.04, 0.04, 0.05, 1.0);
+            return Theme.bg;
+        }
         antialiasing: true
         layer.enabled: true
         layer.smooth: true

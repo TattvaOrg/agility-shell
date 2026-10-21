@@ -21,8 +21,8 @@ Rectangle {
     clip: true
 
     radius: height / 2
-    color: isDnd ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2) : (isHovered ? Theme.bgSecondary : "transparent")
-    border.color: isDnd ? Theme.accent : (isHovered ? Theme.borderSecondary : "transparent")
+    color: isDnd ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.2) : (isHovered ? Theme.barBgSecondary : "transparent")
+    border.color: isDnd ? Theme.accent : (isHovered ? Theme.barBorder : "transparent")
     border.width: 1
     scale: isPressed ? 0.94 : (isHovered ? 1.05 : 1)
 
@@ -68,7 +68,7 @@ Rectangle {
         icon: root.isDnd ? "bell-slash-duotone" : "bell"
         iconSize: 14
         flat: true
-        iconColor: root.isDnd ? Theme.accent : (root.isHovered ? Theme.fg : Theme.muted)
+        iconColor: root.isDnd ? Theme.accent : (root.isHovered ? Theme.barFg : Theme.barMuted)
 
         Behavior on iconColor {
             ColorAnimation {

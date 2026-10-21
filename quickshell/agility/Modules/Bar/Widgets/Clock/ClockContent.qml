@@ -44,7 +44,7 @@ Item {
                 }
                 font.bold: true
                 customSize: Constants.size4Xl - 4
-                color: Theme.fg
+                color: Theme.barFg
             }
 
             ColumnLayout {
@@ -53,7 +53,7 @@ Item {
 
                 Rectangle {
                     visible: !SettingsService.clock24h
-                    color: Theme.bgSecondary
+                    color: Theme.barBgSecondary
                     radius: Constants.sizeXs - 2
                     Layout.preferredWidth: apText.implicitWidth + 10
                     Layout.preferredHeight: Constants.sizeLg + 2
@@ -74,7 +74,7 @@ Item {
                     text: Qt.formatDateTime(root.now, ":ss")
                     customSize: Constants.sizeMd
                     font.bold: true
-                    color: Theme.muted
+                    color: Theme.barMuted
                 }
 
             }
@@ -113,7 +113,7 @@ Item {
             ThemedText {
                 text: Qt.formatDateTime(root.now, "dddd, MMMM d")
                 customSize: Constants.sizeSm
-                color: Theme.muted
+                color: Theme.barMuted
                 font.bold: true
                 Layout.fillWidth: true
                 elide: Text.ElideRight

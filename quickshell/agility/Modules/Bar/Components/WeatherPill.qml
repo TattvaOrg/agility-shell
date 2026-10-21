@@ -38,8 +38,8 @@ Item {
         id: contentPill
         anchors.fill: parent
         radius: height / 2
-        color: root.isCardOpen ? Theme.bgSecondary : (root.isHovered ? Theme.bgSecondary : "transparent")
-        border.color: root.isCardOpen ? Theme.accent : (root.isHovered ? Theme.borderSecondary : "transparent")
+        color: root.isCardOpen ? Theme.barBgSecondary : (root.isHovered ? Theme.barBgSecondary : "transparent")
+        border.color: root.isCardOpen ? Theme.accent : (root.isHovered ? Theme.barBorder : "transparent")
         border.width: 1
         scale: root.isPressed ? 0.96 : (root.isHovered ? 1.02 : 1)
 
@@ -97,7 +97,7 @@ Item {
                 icon: WeatherService.conditionIcon
                 iconSize: 14
                 flat: true
-                iconColor: (root.isCardOpen || root.isHovered) ? Theme.accent : Theme.fg
+                iconColor: (root.isCardOpen || root.isHovered) ? Theme.accent : Theme.barFg
                 Layout.alignment: Qt.AlignVCenter
 
                 Behavior on iconColor {
@@ -111,7 +111,7 @@ Item {
                 text: WeatherService.displayTemp
                 customSize: 11
                 font.weight: Font.Medium
-                color: (root.isCardOpen || root.isHovered) ? Theme.fg : Theme.muted
+                color: (root.isCardOpen || root.isHovered) ? Theme.barFg : Theme.barMuted
                 Layout.alignment: Qt.AlignVCenter
 
                 Behavior on color {

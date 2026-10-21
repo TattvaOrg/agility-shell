@@ -55,6 +55,9 @@ Item {
 
         readonly property real bgAlpha: (SettingsService.barGlassMode === "solid") ? 1.0 : (SettingsService.barGlassOpacity / 100)
         readonly property color baseBgColor: {
+            if (SettingsService.barGlassMode === "solid") {
+                return (SettingsService.barSolidTone === "white") ? Qt.rgba(1.0, 1.0, 1.0, 1.0) : Qt.rgba(0.04, 0.04, 0.05, 1.0);
+            }
             if (SettingsService.barGlassMode === "adaptive")
                 return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, bgAlpha * 0.65);
             return Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, bgAlpha);
@@ -67,7 +70,7 @@ Item {
         implicitWidth: width
         radius: isFullWidth ? Constants.sizeSm : height / 2
         color: baseBgColor
-        border.color: SettingsService.barGlassMode === "adaptive" ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : Theme.borderSecondary
+        border.color: (SettingsService.barGlassMode === "solid" && SettingsService.barSolidTone === "white") ? Qt.rgba(0.85, 0.85, 0.88, 1.0) : (SettingsService.barGlassMode === "adaptive" ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.4) : Theme.barBorder)
         border.width: 1
 
         gradient: SettingsService.barGlassMode === "gradient" ? gradientDef : null
@@ -163,7 +166,7 @@ Item {
             Rectangle {
                 width: 1
                 height: Math.round(16 * root.thicknessScale)
-                color: Theme.borderSecondary
+                color: Theme.barBorder
                 Layout.alignment: Qt.AlignVCenter
                 opacity: 0.6
             }
@@ -189,7 +192,7 @@ Item {
             Rectangle {
                 width: 1
                 height: Math.round(16 * root.thicknessScale)
-                color: Theme.borderSecondary
+                color: Theme.barBorder
                 Layout.alignment: Qt.AlignVCenter
                 opacity: 0.6
             }

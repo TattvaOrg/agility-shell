@@ -195,6 +195,27 @@ AppContainer {
         }
 
         Divider {
+            visible: SettingsService.barGlassMode === "solid"
+        }
+
+        SettingSegmented {
+            visible: SettingsService.barGlassMode === "solid"
+            label: "Solid Tone"
+            description: "Choose between deep black or pure white solid bar background"
+            model: [{
+                "text": "Black",
+                "value": "black"
+            }, {
+                "text": "White",
+                "value": "white"
+            }]
+            currentValue: SettingsService.barSolidTone
+            onActivated: (value) => {
+                SettingsService.barSolidTone = value;
+            }
+        }
+
+        Divider {
             visible: SettingsService.barGlassMode !== "solid"
         }
 

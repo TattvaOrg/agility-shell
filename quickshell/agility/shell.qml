@@ -31,6 +31,14 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "wallpaper"
+
+        function cycle(x: real, y: real) {
+            WallpaperManager.cycleNextWallpaper(x, y, 1920, 1080);
+        }
+    }
+
+    IpcHandler {
         function toggle(widgetId: string) {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
@@ -157,7 +165,8 @@ ShellRoot {
             required property var modelData
             screen: modelData
 
-            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.layer: WlrLayer.Bottom
+            WlrLayershell.exclusionMode: ExclusionMode.Ignore
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             color: "transparent"
             focusable: false
@@ -170,9 +179,18 @@ ShellRoot {
                 right: true
             }
 
+            TapHandler {
+                acceptedButtons: Qt.LeftButton
+                gesturePolicy: TapHandler.WithinBounds
+                onDoubleTapped: (eventPoint) => {
+                    WallpaperManager.cycleNextWallpaper(eventPoint.position.x, eventPoint.position.y, parent.width, parent.height);
+                }
+            }
+
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton
+                propagateComposedEvents: true
                 onDoubleClicked: (mouse) => {
                     WallpaperManager.cycleNextWallpaper(mouse.x, mouse.y, parent.width, parent.height);
                 }

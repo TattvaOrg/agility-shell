@@ -104,7 +104,14 @@ QtObject {
         wallpaperApplyProc.startDetached();
     }
 
+    property real _lastCycleTime: 0
+
     function cycleNextWallpaper(screenX, screenY, screenWidth, screenHeight) {
+        let now = Date.now();
+        if (now - _lastCycleTime < 350)
+            return;
+        _lastCycleTime = now;
+
         if (!wallpaperList || wallpaperList.length === 0) {
             reloadWallpaperList();
             randomWallpaperProc.running = false;

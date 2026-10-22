@@ -1,3 +1,5 @@
+//@ pragma ShellId agility-shell
+//@ pragma AppId agility-shell
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -8,12 +10,25 @@ import qs.Core.Windows
 import qs.Modules.Bar
 import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
+import qs.Modules.OSD
 
 ShellRoot {
     id: root
 
     readonly property bool isGaming: DisplayProfileService.gameModeActive
     readonly property bool isConvex: SettingsService.barStyle === "convex"
+
+    IpcHandler {
+        target: "osd"
+
+        function volume(val: string) {
+            OsdService.showVolume(val);
+        }
+
+        function brightness(val: string) {
+            OsdService.showBrightness(val);
+        }
+    }
 
     IpcHandler {
         function toggle(widgetId: string) {
@@ -133,6 +148,40 @@ ShellRoot {
     ShellModules {
         id: shellModules
         notificationService: globalNotificationService
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+
+            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            color: "transparent"
+            focusable: false
+            visible: SettingsService.settingsLoaded && HyprlandService.wpClicksEnabled
+
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                onDoubleClicked: (mouse) => {
+                    WallpaperManager.cycleNextWallpaper(mouse.x, mouse.y, parent.width, parent.height);
+                }
+            }
+        }
+    }
+
+    OsdPill {
+        id: osdPillWindow
     }
 
     Timer {

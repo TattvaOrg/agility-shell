@@ -39,11 +39,11 @@ for cand in \
 done
 
 # If already running: toggle launcher/dashboard
-if pgrep -x "quickshell" >/dev/null 2>&1; then
+if pgrep -f "quickshell.*agility" >/dev/null 2>&1 || pgrep -f "agility.*shell.qml" >/dev/null 2>&1; then
     if command -v agl >/dev/null 2>&1; then
         agl toggle launcher >/dev/null 2>&1 || true
     elif command -v qs >/dev/null 2>&1; then
-        qs ipc call launcher toggle >/dev/null 2>&1 || true
+        qs ipc -i agility-shell call launcher toggle >/dev/null 2>&1 || true
     elif [[ -x "$SELF_DIR/target/release/agl" ]]; then
         "$SELF_DIR/target/release/agl" toggle launcher >/dev/null 2>&1 || true
     fi

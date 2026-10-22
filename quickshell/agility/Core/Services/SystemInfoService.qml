@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Core
+import qs.Core.Services
 pragma Singleton
 
 Item {
@@ -35,6 +36,41 @@ Item {
     property int batteryLevel: 100
     readonly property string batteryPercentage: batteryLevel + "%"
     property string batteryStatus: ""
+    property string _prevBatteryStatus: ""
+    property int _prevBatteryLevel: -1
+    property bool _batteryInitialized: false
+
+    onBatteryStatusChanged: {
+        if (!_batteryInitialized) {
+            if (batteryStatus !== "") {
+                _batteryInitialized = true;
+                _prevBatteryStatus = batteryStatus;
+                _prevBatteryLevel = batteryLevel;
+            }
+            return;
+        }
+
+        if (batteryStatus !== _prevBatteryStatus && batteryStatus !== "") {
+            if (batteryStatus === "Charging") {
+                SoundService.play("battery-charge");
+            } else if (_prevBatteryStatus === "Charging" && batteryStatus === "Discharging") {
+                SoundService.play("battery-warning");
+            }
+            _prevBatteryStatus = batteryStatus;
+        }
+    }
+
+    onBatteryLevelChanged: {
+        if (!_batteryInitialized || batteryStatus === "Charging")
+            return;
+
+        if (_prevBatteryLevel > 20 && batteryLevel <= 20 && batteryLevel > 10) {
+            SoundService.play("battery-warning");
+        } else if (_prevBatteryLevel > 10 && batteryLevel <= 10) {
+            SoundService.play("battery-low");
+        }
+        _prevBatteryLevel = batteryLevel;
+    }
     property string batteryEstimation: {
         if (!hasBattery)
             return "Continuous power supply active";

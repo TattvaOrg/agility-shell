@@ -297,6 +297,9 @@ Item {
                 "wpTransitionAngle": HyprlandService.wpTransitionAngle,
                 "wpResizeMode": HyprlandService.wpResizeMode,
                 "wpCropGravity": HyprlandService.wpCropGravity,
+                "wpSourceMode": HyprlandService.wpSourceMode,
+                "wpCustomFolderPath": HyprlandService.wpCustomFolderPath,
+                "wpClicksEnabled": HyprlandService.wpClicksEnabled,
                 "micMuted": AudioService.micMuted,
                 "micVolume": AudioService.micVolume,
                 "quoteCategory": settingsService.quoteCategory,
@@ -453,6 +456,15 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
                         if (prefs.wpCropGravity !== undefined)
                             HyprlandService.wpCropGravity = prefs.wpCropGravity;
+
+                        if (prefs.wpSourceMode !== undefined)
+                            HyprlandService.wpSourceMode = prefs.wpSourceMode;
+
+                        if (prefs.wpCustomFolderPath !== undefined)
+                            HyprlandService.wpCustomFolderPath = prefs.wpCustomFolderPath;
+
+                        if (prefs.wpClicksEnabled !== undefined)
+                            HyprlandService.wpClicksEnabled = prefs.wpClicksEnabled;
 
                         if (prefs.micVolume !== undefined) {
                             AudioService.micVolume = AudioService.hasPhysicalMic ? prefs.micVolume : 0;

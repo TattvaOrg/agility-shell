@@ -1601,7 +1601,7 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     let qml_path = locate_shell_qml();
 
     let mut cmd = Command::new("quickshell");
-    cmd.arg("ipc");
+    cmd.args(["ipc", "-i", "agility-shell"]);
     if let Some(ref p) = qml_path {
         cmd.args(["-p", p.to_str().unwrap_or("")]);
     }
@@ -1616,7 +1616,7 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     }
 
     let mut fallback = Command::new("qs");
-    fallback.arg("ipc");
+    fallback.args(["ipc", "-i", "agility-shell"]);
     if let Some(ref p) = qml_path {
         fallback.args(["-p", p.to_str().unwrap_or("")]);
     }
@@ -2126,7 +2126,7 @@ async fn apply_cli_wallpaper(
         if is_command_available("awww") {
             let mut cmd = Command::new("awww");
             let t_type = transition.unwrap_or("grow");
-            let dur_str = format!("{:.2}", duration.unwrap_or(0.2));
+            let dur_str = format!("{:.2}", duration.unwrap_or(0.25));
             cmd.args([
                 "img",
                 &abs_str,
@@ -2136,6 +2136,8 @@ async fn apply_cli_wallpaper(
                 "Bilinear",
                 "--transition-type",
                 t_type,
+                "--transition-bezier",
+                ".54,0,.34,.99",
                 "--transition-duration",
                 &dur_str,
                 "--transition-step",

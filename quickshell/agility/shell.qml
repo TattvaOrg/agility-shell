@@ -183,7 +183,6 @@ ShellRoot {
     OsdPill {
         id: osdPillWindow
     }
-
     Timer {
         id: startupSoundTimer
         interval: 300

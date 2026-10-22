@@ -1495,7 +1495,7 @@ fn get_agility_quickshell_pids() -> Vec<u32> {
         if out.status.success() {
             let s = String::from_utf8_lossy(&out.stdout);
             for line in s.lines() {
-                let parts: Vec<&str> = line.trim().split_whitespace().collect();
+                let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 2 {
                     let cmdline = parts[1..].join(" ");
                     if cmdline.contains("agility") || cmdline.contains("agility-shell") {

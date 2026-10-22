@@ -168,6 +168,12 @@ enum Commands {
         /// Optional transition duration in seconds
         #[arg(long)]
         duration: Option<f64>,
+        /// Optional transition center position (e.g. "center" or "500,300")
+        #[arg(long)]
+        pos: Option<String>,
+        /// Skip awww dispatch if already dispatched by fast path
+        #[arg(long)]
+        skip_backend: bool,
         /// Output list in JSON format
         #[arg(long)]
         json: bool,
@@ -206,8 +212,20 @@ async fn main() -> Result<()> {
             action,
             transition,
             duration,
+            pos,
+            skip_backend,
             json,
-        } => handle_wallpaper(&action, transition.as_deref(), duration, json).await?,
+        } => {
+            handle_wallpaper(
+                &action,
+                transition.as_deref(),
+                duration,
+                pos.as_deref(),
+                skip_backend,
+                json,
+            )
+            .await?
+        }
         Commands::Auth { args } => {
             std::process::exit(tools::auth::run(&args));
         }
@@ -331,9 +349,9 @@ async fn handle_start(legacy: bool) -> Result<()> {
         println!("✓ Spawned awww-daemon.");
     }
 
-    let quickshell_pid = get_process_pid("quickshell");
+    let quickshell_pid = get_agility_quickshell_pid();
     if let Some(pid) = quickshell_pid {
-        println!("ℹ quickshell is already running (PID: {pid}).");
+        println!("ℹ quickshell (agility) is already running (PID: {pid}).");
     } else {
         let shell_qml = locate_shell_qml();
         if let Some(path) = shell_qml {
@@ -379,8 +397,13 @@ async fn handle_stop() -> Result<()> {
             .status();
     }
 
-    // Gracefully terminate daemon and frontend
-    let _ = Command::new("killall").arg("-q").arg("quickshell").status();
+    // Gracefully terminate daemon and agility frontend
+    for pid in get_agility_quickshell_pids() {
+        let _ = Command::new("kill")
+            .arg("-15")
+            .arg(pid.to_string())
+            .status();
+    }
     let _ = Command::new("killall").arg("-q").arg("agilityd").status();
     let _ = Command::new("killall")
         .arg("-q")
@@ -430,13 +453,15 @@ async fn handle_status() -> Result<()> {
     }
 
     // Quickshell process check
-    let qs_pid = get_process_pid("quickshell");
+    let qs_pid = get_agility_quickshell_pid();
     match qs_pid {
         Some(pid) => {
             let rss = get_process_rss_mb(pid);
-            println!("● Frontend (quickshell): RUNNING (PID: {pid}, Memory: {rss:.1} MB RSS)");
+            println!(
+                "● Frontend (quickshell - agility): RUNNING (PID: {pid}, Memory: {rss:.1} MB RSS)"
+            );
         }
-        None => println!("○ Frontend (quickshell): STOPPED"),
+        None => println!("○ Frontend (quickshell - agility): STOPPED"),
     }
 
     // Total memory calculation
@@ -1464,6 +1489,31 @@ fn is_command_available(cmd: &str) -> bool {
         .unwrap_or(false)
 }
 
+fn get_agility_quickshell_pids() -> Vec<u32> {
+    let mut pids = Vec::new();
+    if let Ok(out) = Command::new("pgrep").arg("-a").arg("quickshell").output() {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            for line in s.lines() {
+                let parts: Vec<&str> = line.trim().split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let cmdline = parts[1..].join(" ");
+                    if cmdline.contains("agility") || cmdline.contains("agility-shell") {
+                        if let Ok(pid) = parts[0].parse::<u32>() {
+                            pids.push(pid);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    pids
+}
+
+fn get_agility_quickshell_pid() -> Option<u32> {
+    get_agility_quickshell_pids().into_iter().next()
+}
+
 fn get_process_pid(proc_name: &str) -> Option<u32> {
     let out = Command::new("pgrep")
         .arg("-x")
@@ -1551,10 +1601,11 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     let qml_path = locate_shell_qml();
 
     let mut cmd = Command::new("quickshell");
+    cmd.args(["ipc", "-i", "agility-shell"]);
     if let Some(ref p) = qml_path {
         cmd.args(["-p", p.to_str().unwrap_or("")]);
     }
-    cmd.args(["ipc", "call", target, func]);
+    cmd.args(["call", target, func]);
     for a in args {
         cmd.arg(*a);
     }
@@ -1565,10 +1616,11 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     }
 
     let mut fallback = Command::new("qs");
+    fallback.args(["ipc", "-i", "agility-shell"]);
     if let Some(ref p) = qml_path {
         fallback.args(["-p", p.to_str().unwrap_or("")]);
     }
-    fallback.args(["ipc", "call", target, func]);
+    fallback.args(["call", target, func]);
     for a in args {
         fallback.arg(*a);
     }
@@ -1785,6 +1837,22 @@ fn expand_user_path(p: &str) -> std::path::PathBuf {
     Path::new(trimmed).to_path_buf()
 }
 
+fn get_custom_wallpaper_dir() -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+    let prefs_path = Path::new(&home).join(".cache/quickshell/settings_prefs.json");
+    let content = fs::read_to_string(&prefs_path).ok()?;
+    let val: serde_json::Value = serde_json::from_str(&content).ok()?;
+    if val.get("wpSourceMode").and_then(|v| v.as_str()) == Some("custom") {
+        if let Some(folder) = val.get("wpCustomFolderPath").and_then(|v| v.as_str()) {
+            let expanded = expand_user_path(folder);
+            if expanded.is_dir() {
+                return Some(expanded);
+            }
+        }
+    }
+    None
+}
+
 fn resolve_cli_wallpaper(path_str: &str) -> Option<std::path::PathBuf> {
     let trimmed = path_str.trim();
     if trimmed.is_empty() {
@@ -1798,6 +1866,10 @@ fn resolve_cli_wallpaper(path_str: &str) -> Option<std::path::PathBuf> {
 
     let file_name = direct.file_name()?.to_str()?;
     let mut search_dirs = Vec::new();
+
+    if let Some(custom_dir) = get_custom_wallpaper_dir() {
+        search_dirs.push(custom_dir);
+    }
 
     if let Ok(home) = std::env::var("HOME") {
         search_dirs.push(Path::new(&home).join(".local/share/agility-shell/wallpapers"));
@@ -1823,17 +1895,22 @@ fn resolve_cli_wallpaper(path_str: &str) -> Option<std::path::PathBuf> {
 
 fn list_cli_wallpapers() -> Vec<std::path::PathBuf> {
     let mut search_dirs = Vec::new();
-    if let Ok(home) = std::env::var("HOME") {
-        search_dirs.push(Path::new(&home).join(".local/share/agility-shell/wallpapers"));
-        search_dirs.push(Path::new(&home).join(".config/agility-shell/wallpapers"));
-        search_dirs.push(Path::new(&home).join("Pictures/Wallpapers"));
-        search_dirs.push(Path::new(&home).join("Pictures"));
+
+    if let Some(custom_dir) = get_custom_wallpaper_dir() {
+        search_dirs.push(custom_dir);
+    } else {
+        if let Ok(home) = std::env::var("HOME") {
+            search_dirs.push(Path::new(&home).join(".local/share/agility-shell/wallpapers"));
+            search_dirs.push(Path::new(&home).join(".config/agility-shell/wallpapers"));
+            search_dirs.push(Path::new(&home).join("Pictures/Wallpapers"));
+            search_dirs.push(Path::new(&home).join("Pictures"));
+        }
+        if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+            search_dirs.push(Path::new(&data_home).join("agility-shell/wallpapers"));
+        }
+        search_dirs.push(Path::new("/usr/share/agility-shell/wallpapers").to_path_buf());
+        search_dirs.push(Path::new("wallpapers").to_path_buf());
     }
-    if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
-        search_dirs.push(Path::new(&data_home).join("agility-shell/wallpapers"));
-    }
-    search_dirs.push(Path::new("/usr/share/agility-shell/wallpapers").to_path_buf());
-    search_dirs.push(Path::new("wallpapers").to_path_buf());
 
     let mut found = Vec::new();
     let mut seen_names = std::collections::HashSet::new();
@@ -1885,6 +1962,8 @@ async fn handle_wallpaper(
     action: &str,
     transition: Option<&str>,
     duration: Option<f64>,
+    pos: Option<&str>,
+    skip_backend: bool,
     json: bool,
 ) -> Result<()> {
     let action_lower = action.trim().to_lowercase();
@@ -1986,12 +2065,12 @@ async fn handle_wallpaper(
             let picked = &walls[idx];
             let path_str = picked.to_string_lossy().to_string();
             // Apply this chosen wallpaper
-            apply_cli_wallpaper(&path_str, transition, duration).await?;
+            apply_cli_wallpaper(&path_str, transition, duration, pos, skip_backend).await?;
             println!("{path_str}");
         }
         _ => {
             // Target is a path or filename
-            apply_cli_wallpaper(action, transition, duration).await?;
+            apply_cli_wallpaper(action, transition, duration, pos, skip_backend).await?;
         }
     }
 
@@ -2002,10 +2081,16 @@ async fn apply_cli_wallpaper(
     path_str: &str,
     transition: Option<&str>,
     duration: Option<f64>,
+    pos: Option<&str>,
+    skip_backend: bool,
 ) -> Result<()> {
     // 1. Try D-Bus SetWallpaper
     if let Ok(conn) = Connection::session().await {
-        let t_type = transition.unwrap_or("");
+        let t_type = if skip_backend {
+            "skip"
+        } else {
+            transition.unwrap_or("")
+        };
         let dur = duration.unwrap_or(0.0);
         if let Ok(reply) = conn
             .call_method(
@@ -2031,33 +2116,43 @@ async fn apply_cli_wallpaper(
         resolve_cli_wallpaper(path_str).context(format!("Wallpaper file not found: {path_str}"))?;
     let abs_str = resolved.to_string_lossy().to_string();
 
-    // Ensure awww-daemon is running
-    if is_command_available("awww-daemon") && get_process_pid("awww-daemon").is_none() {
-        let _ = Command::new("awww-daemon").spawn();
-    }
+    if !skip_backend {
+        // Ensure awww-daemon is running
+        if is_command_available("awww-daemon") && get_process_pid("awww-daemon").is_none() {
+            let _ = Command::new("awww-daemon").spawn();
+        }
 
-    // Dispatch awww img with ultra-fast bilinear filter and 60fps step
-    if is_command_available("awww") {
-        let mut cmd = Command::new("awww");
-        let t_type = transition.unwrap_or("grow");
-        let dur_str = format!("{:.2}", duration.unwrap_or(0.2));
-        cmd.args([
-            "img",
-            &abs_str,
-            "--resize",
-            "crop",
-            "--filter",
-            "Bilinear",
-            "--transition-type",
-            t_type,
-            "--transition-duration",
-            &dur_str,
-            "--transition-step",
-            "180",
-            "--transition-fps",
-            "60",
-        ]);
-        let _ = cmd.spawn();
+        // Dispatch awww img with ultra-fast bilinear filter and 60fps step
+        if is_command_available("awww") {
+            let mut cmd = Command::new("awww");
+            let t_type = transition.unwrap_or("grow");
+            let dur_str = format!("{:.2}", duration.unwrap_or(0.25));
+            cmd.args([
+                "img",
+                &abs_str,
+                "--resize",
+                "crop",
+                "--filter",
+                "Bilinear",
+                "--transition-type",
+                t_type,
+                "--transition-bezier",
+                ".54,0,.34,.99",
+                "--transition-duration",
+                &dur_str,
+                "--transition-step",
+                "180",
+                "--transition-fps",
+                "60",
+            ]);
+            if let Some(p) = pos {
+                if p.contains(',') {
+                    cmd.arg("--invert-y");
+                }
+                cmd.args(["--transition-pos", p]);
+            }
+            let _ = cmd.spawn();
+        }
     }
 
     // Write caches

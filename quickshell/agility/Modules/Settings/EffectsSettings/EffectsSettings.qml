@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Core
 import qs.Core.Components
@@ -49,6 +50,52 @@ AppContainer {
                 SettingsService.soundEffectsEnabled = checked;
                 if (checked) {
                     SoundService.play("confirm");
+                }
+            }
+        }
+
+        Divider {
+            Layout.fillWidth: true
+            visible: true
+        }
+
+        SettingRowTemplate {
+            label: "Audition Sound Theme"
+            description: "Play a preview sound effect to verify audio feedback"
+
+            Button {
+                id: testSoundBtn
+                text: "▶ Play Test Sound"
+                enabled: SettingsService.soundEffectsEnabled
+                opacity: enabled ? 1.0 : 0.5
+                font.family: Constants.fontFamily
+                font.pixelSize: Math.round(11 * SettingsService.fontScale)
+                font.weight: Font.DemiBold
+                implicitHeight: 32
+                implicitWidth: 140
+                contentItem: ThemedText {
+                    text: testSoundBtn.text
+                    font.family: Constants.fontFamily
+                    font.pixelSize: Math.round(11 * SettingsService.fontScale)
+                    font.weight: Font.DemiBold
+                    color: testSoundBtn.enabled ? (testSoundBtn.hovered ? Theme.bg : Theme.accent) : Theme.muted
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                background: Rectangle {
+                    color: testSoundBtn.enabled && testSoundBtn.hovered ? Theme.accent : Theme.bg
+                    border.color: testSoundBtn.enabled ? Theme.accent : Theme.borderSecondary
+                    border.width: 1
+                    radius: Constants.sizeXs
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Constants.animFast
+                        }
+                    }
+                }
+                onClicked: {
+                    SoundService.play("confirm", 0);
                 }
             }
         }

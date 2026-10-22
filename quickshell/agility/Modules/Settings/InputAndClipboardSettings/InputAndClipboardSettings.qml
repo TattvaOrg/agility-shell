@@ -320,6 +320,7 @@ AppContainer {
                                     });
                                     SettingsService.customShortcuts = updated;
                                     SettingsService.saveSettings();
+                                    SoundService.play("confirm");
                                     newShortcutName.text = "";
                                     newShortcutKeyPill.keyText = "";
                                     newShortcutCmd.text = "";

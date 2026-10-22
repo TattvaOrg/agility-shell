@@ -12,6 +12,7 @@ PanelWindow {
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "agility-osd"
+    WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     anchors {
@@ -28,6 +29,15 @@ PanelWindow {
     height: implicitHeight
     color: "transparent"
     visible: OsdService.isVisible || scaleAnimation.running
+
+    mask: Region {
+        Region {
+            x: 0
+            y: 0
+            width: (OsdService.isVisible || scaleAnimation.running) ? root.width : 0
+            height: (OsdService.isVisible || scaleAnimation.running) ? root.height : 0
+        }
+    }
 
     Rectangle {
         id: container

@@ -10,12 +10,25 @@ import qs.Core.Windows
 import qs.Modules.Bar
 import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
+import qs.Modules.OSD
 
 ShellRoot {
     id: root
 
     readonly property bool isGaming: DisplayProfileService.gameModeActive
     readonly property bool isConvex: SettingsService.barStyle === "convex"
+
+    IpcHandler {
+        target: "osd"
+
+        function volume(val: string) {
+            OsdService.showVolume(val);
+        }
+
+        function brightness(val: string) {
+            OsdService.showBrightness(val);
+        }
+    }
 
     IpcHandler {
         function toggle(widgetId: string) {
@@ -165,6 +178,10 @@ ShellRoot {
                 }
             }
         }
+    }
+
+    OsdPill {
+        id: osdPillWindow
     }
 
     Timer {

@@ -1601,7 +1601,7 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     let qml_path = locate_shell_qml();
 
     let mut cmd = Command::new("quickshell");
-    cmd.args(["ipc", "-i", "agility-shell"]);
+    cmd.arg("ipc");
     if let Some(ref p) = qml_path {
         cmd.args(["-p", p.to_str().unwrap_or("")]);
     }
@@ -1616,7 +1616,7 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     }
 
     let mut fallback = Command::new("qs");
-    fallback.args(["ipc", "-i", "agility-shell"]);
+    fallback.arg("ipc");
     if let Some(ref p) = qml_path {
         fallback.args(["-p", p.to_str().unwrap_or("")]);
     }

@@ -42,8 +42,8 @@ done
 if pgrep -f "quickshell.*agility" >/dev/null 2>&1 || pgrep -f "agility.*shell.qml" >/dev/null 2>&1; then
     if command -v agl >/dev/null 2>&1; then
         agl toggle launcher >/dev/null 2>&1 || true
-    elif command -v qs >/dev/null 2>&1; then
-        qs ipc -i agility-shell call launcher toggle >/dev/null 2>&1 || true
+    elif command -v qs >/dev/null 2>&1 && [[ -n "$SHELL_QML" ]]; then
+        qs ipc -p "$SHELL_QML" call widgets toggle launcher >/dev/null 2>&1 || true
     elif [[ -x "$SELF_DIR/target/release/agl" ]]; then
         "$SELF_DIR/target/release/agl" toggle launcher >/dev/null 2>&1 || true
     fi

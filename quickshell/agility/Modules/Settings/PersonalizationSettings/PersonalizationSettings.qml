@@ -315,6 +315,46 @@ AppContainer {
                 SettingsService.saveSettings();
             }
         }
+
+        RowLayout {
+            visible: SettingsService.systemTheme === "material"
+            Layout.fillWidth: true
+            Layout.topMargin: 8
+            Layout.bottomMargin: 4
+
+            Rectangle {
+                implicitHeight: 38
+                Layout.fillWidth: true
+                radius: Constants.sizeXs
+                color: Theme.bgAccent
+                border.width: 1
+                border.color: Theme.accent
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Open Full Material Theme Settings App ↗"
+                    font.family: SettingsService.fontFamily
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: Theme.accent
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onClicked: {
+                        launchMaterialSettingsProc.running = false;
+                        launchMaterialSettingsProc.running = true;
+                    }
+                }
+            }
+        }
+    }
+
+    Process {
+        id: launchMaterialSettingsProc
+        command: ["quickshell", "-p", Quickshell.shellDir + "/material_settings.qml"]
     }
 
 }

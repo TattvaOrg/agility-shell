@@ -7,9 +7,15 @@ StyledText {
     property real fill: 0
     property real truncatedFill: fill.toFixed(1) // Reduce memory consumption spikes from constant font remapping
     renderType: Text.NativeRendering
+
+    FontLoader {
+        id: materialFontLoader
+        source: Qt.resolvedUrl("../../../assets/fonts/MaterialSymbolsRounded.ttf")
+    }
+
     font {
         hintingPreference: Font.PreferNoHinting
-        family: Appearance?.font.family.iconMaterial ?? "Material Symbols Rounded"
+        family: materialFontLoader.name || (Appearance?.font.family.iconMaterial ?? "Material Symbols Rounded")
         pixelSize: iconSize
         weight: Font.Normal + (Font.DemiBold - Font.Normal) * truncatedFill
         variableAxes: { 

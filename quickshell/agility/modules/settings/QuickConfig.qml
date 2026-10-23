@@ -32,7 +32,7 @@ ContentPage {
         toggled: Appearance.m3colors.darkmode === dark
         colBackground: Appearance.colors.colLayer2
         onClicked: {
-            Quickshell.execDetached(["bash", "-c", `${Directories.wallpaperSwitchScriptPath} --mode ${dark ? "dark" : "light"} --noswitch`]);
+            MaterialThemeLoader.toggleLightDark();
         }
         contentItem: Item {
             anchors.centerIn: parent
@@ -72,7 +72,15 @@ ContentPage {
                     id: wallpaperPreview
                     anchors.fill: parent
                     fillMode: Image.PreserveAspectCrop
-                    source: Config.options.background.wallpaperPath
+                    source: {
+                        let wp = Config.options.background.wallpaperPath;
+                        if (wp && wp !== "" && !wp.includes("end4-pC")) {
+                            if (wp.startsWith("/")) return "file://" + wp;
+                            return wp;
+                        }
+                        let homeDir = FileUtils.trimFileProtocol(Directories.home);
+                        return "file://" + homeDir + "/.local/share/agility-shell/wallpapers/18.jpg";
+                    }
                     cache: false
                     layer.enabled: true
                     layer.effect: OpacityMask {
@@ -340,7 +348,7 @@ ContentPage {
             mainText: justCopied ? Translation.tr("Path copied") : Translation.tr("Copy path")
             onClicked: {
                 copyPathButton.justCopied = true
-                Quickshell.clipboardText = FileUtils.trimFileProtocol(`${Directories.config}/illogical-impulse/config.json`);
+                Quickshell.clipboardText = FileUtils.trimFileProtocol(Directories.shellConfigPath);
                 revertTextTimer.restart();
             }
             colBackground: ColorUtils.transparentize(Appearance.colors.colPrimaryContainer)

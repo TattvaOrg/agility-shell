@@ -246,8 +246,8 @@ AppContainer {
             label: "Shell UI Theme"
             description: "Choose between default liquid glass and dynamic Material theme"
             model: [
-                { "label": "Default", "value": "default" },
-                { "label": "Material", "value": "material" }
+                { "text": "Default", "value": "default" },
+                { "text": "Material", "value": "material" }
             ]
             currentValue: SettingsService.systemTheme
             onActivated: (val) => {
@@ -261,10 +261,10 @@ AppContainer {
             label: "Desktop Layout Preset"
             description: "Switch desktop layout arrangements with fluid animations"
             model: [
-                { "label": "Full Canvas", "value": "full_canvas" },
-                { "label": "Compact Island", "value": "compact_island" },
-                { "label": "Bottom Waffle", "value": "bottom_waffle" },
-                { "label": "Custom", "value": "custom" }
+                { "text": "Full Canvas", "value": "full_canvas" },
+                { "text": "Compact Island", "value": "compact_island" },
+                { "text": "Bottom Waffle", "value": "bottom_waffle" },
+                { "text": "Custom", "value": "custom" }
             ]
             currentValue: SettingsService.desktopPreset
             onActivated: (val) => {

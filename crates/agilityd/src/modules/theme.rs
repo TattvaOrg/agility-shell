@@ -752,6 +752,50 @@ impl ThemeService {
                 qs_cache.join("colorscheme.json"),
                 serde_json::to_string_pretty(&qs_colorscheme).unwrap_or_default(),
             );
+
+            // Also synchronize Material 3 color tokens for Material Theme loader
+            let gen_dir = PathBuf::from(&home).join(".local/state/quickshell/user/generated");
+            let _ = fs::create_dir_all(&gen_dir);
+            let m3_colors = serde_json::json!({
+                "background": tokens.background_color,
+                "on_background": tokens.on_surface,
+                "surface": tokens.surface_color,
+                "surface_dim": tokens.surface_color,
+                "surface_bright": tokens.surface_container,
+                "surface_container_lowest": tokens.background_color,
+                "surface_container_low": tokens.surface_color,
+                "surface_container": tokens.surface_container,
+                "surface_container_high": tokens.surface_container,
+                "surface_container_highest": tokens.surface_container,
+                "on_surface": tokens.on_surface,
+                "on_surface_variant": tokens.outline,
+                "outline": tokens.outline,
+                "outline_variant": tokens.outline,
+                "primary": tokens.primary_color,
+                "on_primary": if tokens.is_dark { "#000000" } else { "#ffffff" },
+                "primary_container": tokens.surface_container,
+                "on_primary_container": tokens.primary_color,
+                "secondary": tokens.secondary_color,
+                "on_secondary": if tokens.is_dark { "#000000" } else { "#ffffff" },
+                "secondary_container": tokens.surface_container,
+                "on_secondary_container": tokens.secondary_color,
+                "tertiary": tokens.accent_colors.get(1).cloned().unwrap_or_else(|| tokens.secondary_color.clone()),
+                "on_tertiary": if tokens.is_dark { "#000000" } else { "#ffffff" },
+                "tertiary_container": tokens.surface_container,
+                "on_tertiary_container": tokens.secondary_color,
+                "primary_fixed": tokens.primary_color,
+                "primary_fixed_dim": tokens.primary_color,
+                "secondary_fixed": tokens.secondary_color,
+                "secondary_fixed_dim": tokens.secondary_color,
+                "error": "#ffb4ab",
+                "on_error": "#690005",
+                "error_container": "#93000a",
+                "on_error_container": "#ffdad6",
+            });
+            let _ = fs::write(
+                gen_dir.join("colors.json"),
+                serde_json::to_string_pretty(&m3_colors).unwrap_or_default(),
+            );
         }
 
         // 2. Render templates for terminals and Niri borders

@@ -20,15 +20,12 @@ Singleton {
         id: wallColorQuant
         property string rawPath: (Config.options && Config.options.background && Config.options.background.wallpaperPath) ? Config.options.background.wallpaperPath : ""
         property string wallpaperPath: {
-            if (rawPath !== "" && !rawPath.includes("end4-pC") && !rawPath.endsWith("18.jpg")) return rawPath;
-            let wp = WallpaperManager.currentWallpaperPath;
-            if (wp && wp !== "") return wp;
-            let wname = WallpaperManager.currentWallpaper;
-            if (wname && wname !== "") {
-                if (wname.startsWith("/")) return wname;
-                return Directories.config + "/wallpapers/" + wname;
+            if (rawPath !== "" && !rawPath.includes("end4-pC")) {
+                if (rawPath.startsWith("/")) return "file://" + rawPath;
+                if (rawPath.startsWith("file://")) return rawPath;
             }
-            return Directories.assetsPath + "/images/default_wallpaper.png";
+            let homeDir = FileUtils.trimFileProtocol(Directories.home);
+            return "file://" + homeDir + "/.local/share/agility-shell/wallpapers/18.jpg";
         }
         property bool wallpaperIsVideo: wallpaperPath.endsWith(".mp4") || wallpaperPath.endsWith(".webm") || wallpaperPath.endsWith(".mkv") || wallpaperPath.endsWith(".avi") || wallpaperPath.endsWith(".mov")
         source: Qt.resolvedUrl(wallpaperIsVideo ? ((Config.options && Config.options.background && Config.options.background.thumbnailPath) ? Config.options.background.thumbnailPath : "") : wallpaperPath)

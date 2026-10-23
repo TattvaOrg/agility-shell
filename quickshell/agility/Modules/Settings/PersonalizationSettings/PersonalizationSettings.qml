@@ -238,4 +238,83 @@ AppContainer {
 
     }
 
+    AppGroup {
+        title: "System Theme"
+        icon: "window"
+
+        SettingSegmented {
+            label: "Shell UI Theme"
+            description: "Choose between default liquid glass and dynamic Material theme"
+            model: [
+                { "label": "Default", "value": "default" },
+                { "label": "Material", "value": "material" }
+            ]
+            currentValue: SettingsService.systemTheme
+            onActivated: (val) => {
+                SettingsService.systemTheme = val;
+                SettingsService.saveSettings();
+            }
+        }
+
+        SettingSegmented {
+            visible: SettingsService.systemTheme === "material"
+            label: "Desktop Layout Preset"
+            description: "Switch desktop layout arrangements with fluid animations"
+            model: [
+                { "label": "Full Canvas", "value": "full_canvas" },
+                { "label": "Compact Island", "value": "compact_island" },
+                { "label": "Bottom Waffle", "value": "bottom_waffle" },
+                { "label": "Custom", "value": "custom" }
+            ]
+            currentValue: SettingsService.desktopPreset
+            onActivated: (val) => {
+                SettingsService.applyDesktopPreset(val);
+            }
+        }
+
+        SettingToggle {
+            visible: SettingsService.systemTheme === "material" && SettingsService.desktopPreset === "custom"
+            label: "Desktop Clock & Calendar"
+            description: "Show large Material You clock and date widget on the desktop"
+            checked: SettingsService.widgetClockEnabled
+            onCheckedChanged: {
+                SettingsService.widgetClockEnabled = checked;
+                SettingsService.saveSettings();
+            }
+        }
+
+        SettingToggle {
+            visible: SettingsService.systemTheme === "material" && SettingsService.desktopPreset === "custom"
+            label: "System Resources Card"
+            description: "Show CPU, Memory, and battery status monitor on the desktop"
+            checked: SettingsService.widgetResourcesEnabled
+            onCheckedChanged: {
+                SettingsService.widgetResourcesEnabled = checked;
+                SettingsService.saveSettings();
+            }
+        }
+
+        SettingToggle {
+            visible: SettingsService.systemTheme === "material" && SettingsService.desktopPreset === "custom"
+            label: "Media Player Controller"
+            description: "Show floating Material media player with album art on desktop"
+            checked: SettingsService.widgetMediaEnabled
+            onCheckedChanged: {
+                SettingsService.widgetMediaEnabled = checked;
+                SettingsService.saveSettings();
+            }
+        }
+
+        SettingToggle {
+            visible: SettingsService.systemTheme === "material" && SettingsService.desktopPreset === "custom"
+            label: "Quick Sticky Note"
+            description: "Show quick note / scratchpad widget on desktop"
+            checked: SettingsService.widgetNoteEnabled
+            onCheckedChanged: {
+                SettingsService.widgetNoteEnabled = checked;
+                SettingsService.saveSettings();
+            }
+        }
+    }
+
 }

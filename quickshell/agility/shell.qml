@@ -10,6 +10,8 @@ import qs.Core.Windows
 import qs.Modules.Bar
 import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
+import qs.Modules.Bar.Styles.Material
+import qs.Modules.DesktopCanvas
 import qs.Modules.OSD
 
 ShellRoot {
@@ -98,7 +100,7 @@ ShellRoot {
         color: "transparent"
         focusable: false
         implicitHeight: !SettingsService.settingsLoaded ? 0 : (barMarginTop + barHeight)
-        visible: SettingsService.settingsLoaded && !root.isGaming
+        visible: SettingsService.settingsLoaded && !root.isGaming && SettingsService.systemTheme !== "material"
 
         anchors {
             top: true
@@ -137,14 +139,48 @@ ShellRoot {
     BarOverlayWindow {
         notificationService: globalNotificationService
         barSurface: barSurface
-        visible: SettingsService.settingsLoaded && !root.isConvex && !root.isGaming
+        visible: SettingsService.settingsLoaded && !root.isConvex && !root.isGaming && SettingsService.systemTheme !== "material"
     }
 
     ConvexDesktop {
         id: convexDesktopSurface
 
         notificationService: globalNotificationService
-        visible: SettingsService.settingsLoaded && root.isConvex && !root.isGaming
+        visible: SettingsService.settingsLoaded && root.isConvex && !root.isGaming && SettingsService.systemTheme !== "material"
+    }
+
+    PanelWindow {
+        id: materialBarSurface
+
+        readonly property bool isWaffle: SettingsService.desktopPreset === "bottom_waffle"
+
+        WlrLayershell.layer: WlrLayer.Top
+        WlrLayershell.exclusiveZone: isWaffle ? 48 : 46
+        color: "transparent"
+        focusable: false
+        implicitHeight: isWaffle ? 48 : 46
+        visible: SettingsService.settingsLoaded && !root.isGaming && SettingsService.systemTheme === "material"
+
+        anchors {
+            top: !isWaffle
+            bottom: isWaffle
+            left: true
+            right: true
+        }
+
+        MaterialBar {
+            anchors.fill: parent
+            notificationService: globalNotificationService
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        DesktopCanvas {
+            required property var modelData
+            screen: modelData
+        }
     }
 
     GamingOverlay {

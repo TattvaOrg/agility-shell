@@ -1,12 +1,15 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Core
 import qs.Core.Services
 import qs.Core.Utils
 pragma Singleton
 
 QtObject {
     id: root
+
+    readonly property QtObject m3: MaterialTheme
 
     property var themes: [{
         "name": "Default",

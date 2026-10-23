@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 import qs.Core
 import qs.Core.Components
 import qs.Core.Services
@@ -118,6 +120,20 @@ Item {
 
         sourceComponent: Component {
             Settings {
+            }
+        }
+    }
+
+    WidgetLoader {
+        widgetId: "material_settings"
+        exclusive: false
+
+        sourceComponent: Component {
+            Item {
+                Process {
+                    running: true
+                    command: ["quickshell", "-p", Quickshell.shellDir + "/material_settings.qml"]
+                }
             }
         }
     }

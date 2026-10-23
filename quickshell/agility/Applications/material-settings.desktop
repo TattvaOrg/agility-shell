@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Material Theme Settings
+Comment=Material You theme, desktop presets, and wallpaper color settings
+Exec=quickshell -p ~/.config/agility-shell/quickshell/agility/material_settings.qml
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;

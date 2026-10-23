@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Core
+import qs.modules.common
 pragma Singleton
 
 Item {
@@ -87,6 +88,63 @@ Item {
         {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]}
     ]
     property var customShortcuts: []
+
+    // System Theme & Desktop Presets (Material Theme Engine)
+    property string systemTheme: "default" // "default", "material"
+    property string desktopPreset: "full_canvas" // "full_canvas", "compact_island", "bottom_waffle", "custom"
+    property bool widgetClockEnabled: true
+    property bool widgetResourcesEnabled: true
+    property bool widgetMediaEnabled: true
+    property bool widgetNoteEnabled: true
+    property string noteContent: "Welcome to Agility Shell Material Theme!\n• Switch presets in Settings\n• Enjoy wallpaper-adaptive dynamic colors\n• Sub-15ms lightning fast performance"
+
+    function applyDesktopPreset(preset) {
+        desktopPreset = preset;
+        if (preset === "full_canvas") {
+            widgetClockEnabled = true;
+            widgetResourcesEnabled = true;
+            widgetMediaEnabled = true;
+            widgetNoteEnabled = true;
+            barStyle = "pill";
+            if (typeof Config !== "undefined" && Config.options) {
+                Config.options.panelFamily = "ii";
+                if (Config.options.bar) {
+                    Config.options.bar.bottom = false;
+                    Config.options.bar.cornerStyle = 0;
+                }
+                if (Config.options.dock) Config.options.dock.enable = true;
+            }
+        } else if (preset === "compact_island") {
+            widgetClockEnabled = true;
+            widgetResourcesEnabled = false;
+            widgetMediaEnabled = true;
+            widgetNoteEnabled = false;
+            barStyle = "island";
+            if (typeof Config !== "undefined" && Config.options) {
+                Config.options.panelFamily = "ii";
+                if (Config.options.bar) {
+                    Config.options.bar.bottom = false;
+                    Config.options.bar.cornerStyle = 1;
+                }
+                if (Config.options.dock) Config.options.dock.enable = false;
+            }
+        } else if (preset === "bottom_waffle") {
+            widgetClockEnabled = false;
+            widgetResourcesEnabled = true;
+            widgetMediaEnabled = false;
+            widgetNoteEnabled = false;
+            barStyle = "pill";
+            if (typeof Config !== "undefined" && Config.options) {
+                Config.options.panelFamily = "waffle";
+                if (Config.options.bar) {
+                    Config.options.bar.bottom = true;
+                    Config.options.bar.cornerStyle = 2;
+                }
+            }
+        }
+        if (settingsLoaded)
+            saveSettings();
+    }
 
     // Settings Window Presentation
     property string settingsWindowMode: "half" // "full", "half", "boxed"
@@ -353,7 +411,14 @@ Item {
                 "edgeLightingThickness": settingsService.edgeLightingThickness,
                 "edgeLightingGlow": settingsService.edgeLightingGlow,
                 "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly,
-                "edgeLightingDirection": settingsService.edgeLightingDirection
+                "edgeLightingDirection": settingsService.edgeLightingDirection,
+                "systemTheme": settingsService.systemTheme,
+                "desktopPreset": settingsService.desktopPreset,
+                "widgetClockEnabled": settingsService.widgetClockEnabled,
+                "widgetResourcesEnabled": settingsService.widgetResourcesEnabled,
+                "widgetMediaEnabled": settingsService.widgetMediaEnabled,
+                "widgetNoteEnabled": settingsService.widgetNoteEnabled,
+                "noteContent": settingsService.noteContent
             };
             syncShortcuts();
             settingsSaver.command = ["sh", "-c", "mkdir -p ~/.cache/quickshell /var/tmp/sddm-theme && cat << 'EOF' > ~/.cache/quickshell/settings_prefs.json
@@ -631,6 +696,21 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                             settingsService.edgeLightingAudioOnly = prefs.edgeLightingAudioOnly;
                         if (prefs.edgeLightingDirection !== undefined)
                             settingsService.edgeLightingDirection = prefs.edgeLightingDirection;
+
+                        if (prefs.systemTheme !== undefined)
+                            settingsService.systemTheme = prefs.systemTheme;
+                        if (prefs.desktopPreset !== undefined)
+                            settingsService.desktopPreset = prefs.desktopPreset;
+                        if (prefs.widgetClockEnabled !== undefined)
+                            settingsService.widgetClockEnabled = Boolean(prefs.widgetClockEnabled);
+                        if (prefs.widgetResourcesEnabled !== undefined)
+                            settingsService.widgetResourcesEnabled = Boolean(prefs.widgetResourcesEnabled);
+                        if (prefs.widgetMediaEnabled !== undefined)
+                            settingsService.widgetMediaEnabled = Boolean(prefs.widgetMediaEnabled);
+                        if (prefs.widgetNoteEnabled !== undefined)
+                            settingsService.widgetNoteEnabled = Boolean(prefs.widgetNoteEnabled);
+                        if (prefs.noteContent !== undefined)
+                            settingsService.noteContent = prefs.noteContent;
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);

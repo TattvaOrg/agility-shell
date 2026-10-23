@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import qs.Core
 import qs.Core.Services
 import qs.Core.Utils
 pragma Singleton
@@ -8,7 +9,7 @@ QtObject {
     id: root
 
     readonly property bool active: SettingsService.systemTheme === "material"
-    readonly property bool isDark: SettingsService.settingsLoaded ? SettingsService.darkMode : true
+    readonly property bool isDark: Theme.isDark
 
     // Quickshell native wallpaper color quantizer
     property ColorQuantizer quantizer: ColorQuantizer {

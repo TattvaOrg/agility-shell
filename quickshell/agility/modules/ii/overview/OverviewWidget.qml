@@ -20,7 +20,7 @@ Item {
     readonly property int effectiveActiveWorkspaceId: Math.max(1, Math.min(100, monitor?.activeWorkspace?.id ?? 1))
     readonly property int workspacesShown: Config.options.overview.rows * Config.options.overview.columns
     readonly property int workspaceGroup: Math.floor((effectiveActiveWorkspaceId - 1) / workspacesShown)
-    property bool monitorIsFocused: (Hyprland.focusedMonitor?.name == monitor.name)
+    property bool monitorIsFocused: (Hyprland.focusedMonitor && monitor) ? (Hyprland.focusedMonitor.name == monitor.name) : false
     property var windows: HyprlandData.windowList
     property var windowByAddress: HyprlandData.windowByAddress
     property var windowAddresses: HyprlandData.addresses

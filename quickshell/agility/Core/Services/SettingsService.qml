@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Core
+import qs.modules.common
 pragma Singleton
 
 Item {
@@ -105,18 +106,41 @@ Item {
             widgetMediaEnabled = true;
             widgetNoteEnabled = true;
             barStyle = "pill";
+            if (typeof Config !== "undefined" && Config.options) {
+                Config.options.panelFamily = "ii";
+                if (Config.options.bar) {
+                    Config.options.bar.bottom = false;
+                    Config.options.bar.cornerStyle = 0;
+                }
+                if (Config.options.dock) Config.options.dock.enable = true;
+            }
         } else if (preset === "compact_island") {
             widgetClockEnabled = true;
             widgetResourcesEnabled = false;
             widgetMediaEnabled = true;
             widgetNoteEnabled = false;
             barStyle = "island";
+            if (typeof Config !== "undefined" && Config.options) {
+                Config.options.panelFamily = "ii";
+                if (Config.options.bar) {
+                    Config.options.bar.bottom = false;
+                    Config.options.bar.cornerStyle = 1;
+                }
+                if (Config.options.dock) Config.options.dock.enable = false;
+            }
         } else if (preset === "bottom_waffle") {
             widgetClockEnabled = false;
             widgetResourcesEnabled = true;
             widgetMediaEnabled = false;
             widgetNoteEnabled = false;
             barStyle = "pill";
+            if (typeof Config !== "undefined" && Config.options) {
+                Config.options.panelFamily = "waffle";
+                if (Config.options.bar) {
+                    Config.options.bar.bottom = true;
+                    Config.options.bar.cornerStyle = 2;
+                }
+            }
         }
         if (settingsLoaded)
             saveSettings();

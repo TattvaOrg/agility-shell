@@ -39,7 +39,7 @@ Variants {
 
         StyledImage {
             anchors.fill: parent
-            source: Config.options.background.wallpaperPath
+            source: (Config.options && Config.options.background && Config.options.background.wallpaperPath) ? Config.options.background.wallpaperPath : ""
             fillMode: Image.PreserveAspectCrop
         }
     }

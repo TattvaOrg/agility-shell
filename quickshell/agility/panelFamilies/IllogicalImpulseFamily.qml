@@ -24,10 +24,10 @@ import qs.modules.ii.verticalBar
 import qs.modules.ii.wallpaperSelector
 
 Scope {
-    PanelLoader { extraCondition: !Config.options.bar.vertical; component: Bar {} }
+    PanelLoader { extraCondition: !Boolean(Config.options && Config.options.bar && Config.options.bar.vertical); component: Bar {} }
     PanelLoader { component: Background {} }
     PanelLoader { component: Cheatsheet {} }
-    PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
+    PanelLoader { extraCondition: Boolean(Config.options && Config.options.dock && Config.options.dock.enable); component: Dock {} }
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
     PanelLoader { component: NotificationPopup {} }
@@ -42,6 +42,6 @@ Scope {
     PanelLoader { component: SessionScreen {} }
     PanelLoader { component: SidebarLeft {} }
     PanelLoader { component: SidebarRight {} }
-    PanelLoader { extraCondition: Config.options.bar.vertical; component: VerticalBar {} }
+    PanelLoader { extraCondition: Boolean(Config.options && Config.options.bar && Config.options.bar.vertical); component: VerticalBar {} }
     PanelLoader { component: WallpaperSelector {} }
 }

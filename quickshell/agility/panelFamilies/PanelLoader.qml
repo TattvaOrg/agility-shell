@@ -5,5 +5,5 @@ import qs.modules.common
 
 LazyLoader {
     property bool extraCondition: true
-    active: Config.ready && extraCondition
+    active: (Config.ready || Boolean(Config.options)) && extraCondition
 }

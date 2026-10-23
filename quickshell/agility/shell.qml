@@ -1,18 +1,28 @@
 //@ pragma ShellId agility-shell
 //@ pragma AppId agility-shell
+//@ pragma UseQApplication
+//@ pragma Env QS_NO_RELOAD_POPUP=1
+//@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic
+//@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
+
 import QtQuick
+import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import qs.Core
 import qs.Core.Services
 import qs.Core.Windows
 import qs.Modules.Bar
 import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
-import qs.Modules.Bar.Styles.Material
 import qs.Modules.DesktopCanvas
 import qs.Modules.OSD
+import qs.modules.common
+import qs.services
+import qs.panelFamilies
+import qs
 
 ShellRoot {
     id: root
@@ -20,15 +30,46 @@ ShellRoot {
     readonly property bool isGaming: DisplayProfileService.gameModeActive
     readonly property bool isConvex: SettingsService.barStyle === "convex"
 
+    // ─── Dots-Hyprland Material Theme Panel Families ───
+    property var families: ["ii", "waffle"]
+
+    function cyclePanelFamily() {
+        const currentFamily = (SettingsService.desktopPreset === "bottom_waffle" || (Config.options && Config.options.panelFamily === "waffle")) ? "waffle" : "ii";
+        const nextFamily = currentFamily === "ii" ? "waffle" : "ii";
+        if (nextFamily === "waffle") {
+            SettingsService.applyDesktopPreset("bottom_waffle");
+        } else {
+            SettingsService.applyDesktopPreset("full_canvas");
+        }
+        if (Config.options) Config.options.panelFamily = nextFamily;
+    }
+
+    component PanelFamilyLoader: LazyLoader {
+        required property string identifier
+        property bool extraCondition: true
+        active: SettingsService.settingsLoaded && SettingsService.systemTheme === "material" && (
+            identifier === "waffle" ? (SettingsService.desktopPreset === "bottom_waffle" || (Config.options && Config.options.panelFamily === "waffle"))
+                                   : (SettingsService.desktopPreset !== "bottom_waffle" && (!Config.options || Config.options.panelFamily !== "waffle"))
+        ) && extraCondition
+    }
+
     IpcHandler {
         target: "osd"
 
         function volume(val: string) {
-            OsdService.showVolume(val);
+            if (SettingsService.systemTheme === "material") {
+                GlobalStates.osdVolumeOpen = true;
+            } else {
+                OsdService.showVolume(val);
+            }
         }
 
         function brightness(val: string) {
-            OsdService.showBrightness(val);
+            if (SettingsService.systemTheme === "material") {
+                GlobalStates.osdBrightnessOpen = true;
+            } else {
+                OsdService.showBrightness(val);
+            }
         }
     }
 
@@ -41,10 +82,38 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "widgets"
+
         function toggle(widgetId: string) {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
                 return;
+            }
+            if (SettingsService.systemTheme === "material") {
+                if (widgetId === "launcher") {
+                    if (SettingsService.desktopPreset === "bottom_waffle") {
+                        GlobalStates.searchOpen = !GlobalStates.searchOpen;
+                    } else {
+                        GlobalStates.sidebarLeftOpen = !GlobalStates.sidebarLeftOpen;
+                    }
+                    return;
+                }
+                if (widgetId === "controlCenter" || widgetId === "notificationsCenter") {
+                    GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
+                    return;
+                }
+                if (widgetId === "powerMenu") {
+                    GlobalStates.sessionOpen = !GlobalStates.sessionOpen;
+                    return;
+                }
+                if (widgetId === "wallpaper") {
+                    GlobalStates.wallpaperSelectorOpen = !GlobalStates.wallpaperSelectorOpen;
+                    return;
+                }
+                if (widgetId === "cheatsheet" || widgetId === "minflair_keybinds") {
+                    GlobalStates.overlayOpen = !GlobalStates.overlayOpen;
+                    return;
+                }
             }
             AppState.toggleWidget(widgetId);
         }
@@ -54,6 +123,28 @@ ShellRoot {
                 SettingsService.edgeLightingEnabled = true;
                 return;
             }
+            if (SettingsService.systemTheme === "material") {
+                if (widgetId === "launcher") {
+                    if (SettingsService.desktopPreset === "bottom_waffle") {
+                        GlobalStates.searchOpen = true;
+                    } else {
+                        GlobalStates.sidebarLeftOpen = true;
+                    }
+                    return;
+                }
+                if (widgetId === "controlCenter" || widgetId === "notificationsCenter") {
+                    GlobalStates.sidebarRightOpen = true;
+                    return;
+                }
+                if (widgetId === "powerMenu") {
+                    GlobalStates.sessionOpen = true;
+                    return;
+                }
+                if (widgetId === "wallpaper") {
+                    GlobalStates.wallpaperSelectorOpen = true;
+                    return;
+                }
+            }
             AppState.openWidget(widgetId);
         }
 
@@ -62,10 +153,27 @@ ShellRoot {
                 SettingsService.edgeLightingEnabled = false;
                 return;
             }
+            if (SettingsService.systemTheme === "material") {
+                if (widgetId === "launcher") {
+                    GlobalStates.sidebarLeftOpen = false;
+                    GlobalStates.searchOpen = false;
+                    return;
+                }
+                if (widgetId === "controlCenter" || widgetId === "notificationsCenter") {
+                    GlobalStates.sidebarRightOpen = false;
+                    return;
+                }
+                if (widgetId === "powerMenu") {
+                    GlobalStates.sessionOpen = false;
+                    return;
+                }
+                if (widgetId === "wallpaper") {
+                    GlobalStates.wallpaperSelectorOpen = false;
+                    return;
+                }
+            }
             AppState.closeWidget(widgetId);
         }
-
-        target: "widgets"
     }
 
     SocketServer {
@@ -110,7 +218,6 @@ ShellRoot {
 
         mask: Region {
         }
-
     }
 
     PanelWindow {
@@ -133,7 +240,6 @@ ShellRoot {
             anchors.fill: parent
             notificationService: globalNotificationService
         }
-
     }
 
     BarOverlayWindow {
@@ -149,29 +255,32 @@ ShellRoot {
         visible: SettingsService.settingsLoaded && root.isConvex && !root.isGaming && SettingsService.systemTheme !== "material"
     }
 
-    PanelWindow {
-        id: materialBarSurface
+    // ─── Dots-Hyprland Material Theme Integration ───
+    ReloadPopup {}
 
-        readonly property bool isWaffle: SettingsService.desktopPreset === "bottom_waffle"
+    PanelFamilyLoader {
+        identifier: "ii"
+        component: IllogicalImpulseFamily {}
+    }
 
-        WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.exclusiveZone: isWaffle ? 48 : 46
-        color: "transparent"
-        focusable: false
-        implicitHeight: isWaffle ? 48 : 46
-        visible: SettingsService.settingsLoaded && !root.isGaming && SettingsService.systemTheme === "material"
+    PanelFamilyLoader {
+        identifier: "waffle"
+        component: WaffleFamily {}
+    }
 
-        anchors {
-            top: !isWaffle
-            bottom: isWaffle
-            left: true
-            right: true
+    IpcHandler {
+        target: "panelFamily"
+
+        function cycle() {
+            root.cyclePanelFamily();
         }
+    }
 
-        MaterialBar {
-            anchors.fill: parent
-            notificationService: globalNotificationService
-        }
+    GlobalShortcut {
+        name: "panelFamilyCycle"
+        description: "Cycles panel family"
+
+        onPressed: root.cyclePanelFamily()
     }
 
     Variants {
@@ -206,7 +315,7 @@ ShellRoot {
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             color: "transparent"
             focusable: false
-            visible: SettingsService.settingsLoaded && HyprlandService.wpClicksEnabled
+            visible: SettingsService.settingsLoaded && HyprlandService.wpClicksEnabled && SettingsService.systemTheme !== "material"
 
             anchors {
                 top: true
@@ -236,7 +345,9 @@ ShellRoot {
 
     OsdPill {
         id: osdPillWindow
+        visible: SettingsService.settingsLoaded && SettingsService.systemTheme !== "material"
     }
+
     Timer {
         id: startupSoundTimer
         interval: 300
@@ -247,4 +358,30 @@ ShellRoot {
         }
     }
 
+    Component.onCompleted: {
+        if (SettingsService.systemTheme === "material") {
+            MaterialThemeLoader.reapplyTheme();
+            Hyprsunset.load();
+            FirstRunExperience.load();
+            ConflictKiller.load();
+            Cliphist.refresh();
+            Wallpapers.load();
+            Updates.load();
+        }
+    }
+
+    Connections {
+        target: SettingsService
+        function onSystemThemeChanged() {
+            if (SettingsService.systemTheme === "material") {
+                MaterialThemeLoader.reapplyTheme();
+                Hyprsunset.load();
+                FirstRunExperience.load();
+                ConflictKiller.load();
+                Cliphist.refresh();
+                Wallpapers.load();
+                Updates.load();
+            }
+        }
+    }
 }

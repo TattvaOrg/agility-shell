@@ -23,7 +23,7 @@ PanelWindow {
         right: true
     }
 
-    visible: SettingsService.settingsLoaded && SettingsService.systemTheme === "material"
+    visible: SettingsService.settingsLoaded && SettingsService.systemTheme === "material" && SettingsService.desktopPreset === "custom"
 
     // Top Bar Margin based on preset
     readonly property int topBarMargin: SettingsService.desktopPreset === "bottom_waffle" ? 24 : 64

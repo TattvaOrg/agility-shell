@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Parse enabled layouts from settings
-PREFS_FILE="$HOME/.cache/quickshell/settings_prefs.json"
+PREFS_FILE="$HOME/.config/agility-shell/settings_prefs.json"
+if [ ! -f "$PREFS_FILE" ]; then
+  PREFS_FILE="$HOME/.cache/quickshell/settings_prefs.json"
+fi
 LAYOUTS_STR=$(jq -r '.enabledKbLayouts | join(" ")' "$PREFS_FILE" 2>/dev/null)
 
 if [ -z "$LAYOUTS_STR" ] || [ "$LAYOUTS_STR" == "null" ]; then

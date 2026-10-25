@@ -18,9 +18,13 @@ AppContainer {
         SettingToggle {
             label: "Enable Active Window Pill"
             description: "Display the focused application's icon and truncated window title in a compact pill"
-            checked: SettingsService.appletActiveWindow
             onCheckedChanged: {
-                SettingsService.appletActiveWindow = checked;
+                if (checked !== SettingsService.appletActiveWindow)
+                    SettingsService.appletActiveWindow = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletActiveWindow
             }
         }
 
@@ -54,9 +58,13 @@ AppContainer {
         SettingToggle {
             label: "Enable Dynamic Media Pill"
             description: "Display playing song and artist inside a dynamic capsule with hover playback controls"
-            checked: SettingsService.appletDynamicMedia
             onCheckedChanged: {
-                SettingsService.appletDynamicMedia = checked;
+                if (checked !== SettingsService.appletDynamicMedia)
+                    SettingsService.appletDynamicMedia = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletDynamicMedia
             }
         }
 
@@ -68,9 +76,13 @@ AppContainer {
             visible: SettingsService.appletDynamicMedia
             label: "Live Cava Audio Visualizer"
             description: "Show 4-bar bouncing visualizer bars synchronized with audio output"
-            checked: SettingsService.appletMediaVisualizer
             onCheckedChanged: {
-                SettingsService.appletMediaVisualizer = checked;
+                if (checked !== SettingsService.appletMediaVisualizer)
+                    SettingsService.appletMediaVisualizer = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletMediaVisualizer
             }
         }
     }
@@ -83,9 +95,13 @@ AppContainer {
         SettingToggle {
             label: "Enable Weather Pill"
             description: "Display live weather condition icon and temperature beside the clock that expands into a 3-day card"
-            checked: SettingsService.appletWeather
             onCheckedChanged: {
-                SettingsService.appletWeather = checked;
+                if (checked !== SettingsService.appletWeather)
+                    SettingsService.appletWeather = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletWeather
             }
         }
 
@@ -119,9 +135,13 @@ AppContainer {
         SettingToggle {
             label: "Enable Battery Pill"
             description: "Display battery capsule with pulse charging animation and level indicator"
-            checked: SettingsService.appletBattery
             onCheckedChanged: {
-                SettingsService.appletBattery = checked;
+                if (checked !== SettingsService.appletBattery)
+                    SettingsService.appletBattery = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletBattery
             }
         }
 
@@ -133,9 +153,13 @@ AppContainer {
             visible: SettingsService.appletBattery
             label: "Show Discharge / Charge Time"
             description: "Display estimated remaining hours and minutes (e.g. ⚡ 85% • 3h 15m)"
-            checked: SettingsService.appletBatteryShowTime
             onCheckedChanged: {
-                SettingsService.appletBatteryShowTime = checked;
+                if (checked !== SettingsService.appletBatteryShowTime)
+                    SettingsService.appletBatteryShowTime = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletBatteryShowTime
             }
         }
     }
@@ -148,9 +172,13 @@ AppContainer {
         SettingToggle {
             label: "Network Traffic Monitor"
             description: "Display real-time upload and download speeds on the bar"
-            checked: SettingsService.appletNetwork
             onCheckedChanged: {
-                SettingsService.appletNetwork = checked;
+                if (checked !== SettingsService.appletNetwork)
+                    SettingsService.appletNetwork = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletNetwork
             }
         }
 
@@ -160,9 +188,13 @@ AppContainer {
         SettingToggle {
             label: "Do Not Disturb (DND) Pill"
             description: "Quick 1-click toggle on the bar to suppress notification popups and banners"
-            checked: SettingsService.appletDnd
             onCheckedChanged: {
-                SettingsService.appletDnd = checked;
+                if (checked !== SettingsService.appletDnd)
+                    SettingsService.appletDnd = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.appletDnd
             }
         }
     }

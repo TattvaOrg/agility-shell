@@ -273,7 +273,9 @@ async fn main() -> Result<()> {
 
 fn should_bluetooth_power_on_startup() -> bool {
     let home = std::env::var("HOME").unwrap_or_default();
-    let prefs_path = std::path::PathBuf::from(home).join(".cache/quickshell/settings_prefs.json");
+    let primary = std::path::PathBuf::from(&home).join(".config/agility-shell/settings_prefs.json");
+    let cache = std::path::PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
+    let prefs_path = if primary.is_file() { primary } else { cache };
     if let Ok(data) = std::fs::read_to_string(&prefs_path) {
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) {
             return v
@@ -1839,7 +1841,9 @@ fn expand_user_path(p: &str) -> std::path::PathBuf {
 
 fn get_custom_wallpaper_dir() -> Option<std::path::PathBuf> {
     let home = std::env::var("HOME").ok()?;
-    let prefs_path = Path::new(&home).join(".cache/quickshell/settings_prefs.json");
+    let primary = Path::new(&home).join(".config/agility-shell/settings_prefs.json");
+    let cache = Path::new(&home).join(".cache/quickshell/settings_prefs.json");
+    let prefs_path = if primary.is_file() { primary } else { cache };
     let content = fs::read_to_string(&prefs_path).ok()?;
     let val: serde_json::Value = serde_json::from_str(&content).ok()?;
     if val.get("wpSourceMode").and_then(|v| v.as_str()) == Some("custom") {

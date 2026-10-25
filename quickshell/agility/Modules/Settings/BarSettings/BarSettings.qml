@@ -60,9 +60,13 @@ AppContainer {
             visible: SettingsService.barIslandMode || SettingsService.barPillMode
             label: "Auto-hide Bar"
             description: "Smoothly slide the bar out of view when a window is open, reveal when hovered or screen is empty"
-            checked: SettingsService.barAutoHide
             onCheckedChanged: {
-                SettingsService.barAutoHide = checked;
+                if (checked !== SettingsService.barAutoHide)
+                    SettingsService.barAutoHide = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.barAutoHide
             }
         }
 
@@ -72,9 +76,13 @@ AppContainer {
         SettingToggle {
             label: "Open on Hover"
             description: "Automatically open menus and popups when hovering over bar widgets without needing to click"
-            checked: SettingsService.barOpenOnHover
             onCheckedChanged: {
-                SettingsService.barOpenOnHover = checked;
+                if (checked !== SettingsService.barOpenOnHover)
+                    SettingsService.barOpenOnHover = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.barOpenOnHover
             }
         }
 
@@ -391,27 +399,39 @@ AppContainer {
         SettingToggle {
             label: "24-Hour Time"
             description: "Use 24-hour time format instead of 12-hour AM/PM"
-            checked: SettingsService.clock24h
             onCheckedChanged: {
-                SettingsService.clock24h = checked;
+                if (checked !== SettingsService.clock24h)
+                    SettingsService.clock24h = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.clock24h
             }
         }
 
         SettingToggle {
             label: "Show Seconds"
             description: "Display seconds on the main clock"
-            checked: SettingsService.clockSeconds
             onCheckedChanged: {
-                SettingsService.clockSeconds = checked;
+                if (checked !== SettingsService.clockSeconds)
+                    SettingsService.clockSeconds = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.clockSeconds
             }
         }
 
         SettingToggle {
             label: "Show Date"
             description: "Display the current date next to the clock"
-            checked: SettingsService.clockShowDate
             onCheckedChanged: {
-                SettingsService.clockShowDate = checked;
+                if (checked !== SettingsService.clockShowDate)
+                    SettingsService.clockShowDate = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.clockShowDate
             }
         }
 

@@ -181,6 +181,18 @@ Item {
             WallpaperManager.reapplyCurrentWallpaper();
         }
     }
+    onWpClicksEnabledChanged: {
+        if (SettingsService.settingsLoaded)
+            SettingsService.saveSettings();
+    }
+    onWpSourceModeChanged: {
+        if (SettingsService.settingsLoaded)
+            SettingsService.saveSettings();
+    }
+    onWpCustomFolderPathChanged: {
+        if (SettingsService.settingsLoaded)
+            SettingsService.saveSettings();
+    }
     onKeyboardLayoutChanged: {
         if (SettingsService.settingsLoaded) {
             SettingsService.saveSettings();

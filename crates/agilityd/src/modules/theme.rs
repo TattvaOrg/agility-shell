@@ -41,7 +41,9 @@ pub fn expand_tilde(path_str: &str) -> PathBuf {
 
 fn get_custom_wallpaper_dir() -> Option<PathBuf> {
     let home = std::env::var("HOME").ok()?;
-    let prefs_path = PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
+    let primary = PathBuf::from(&home).join(".config/agility-shell/settings_prefs.json");
+    let cache = PathBuf::from(&home).join(".cache/quickshell/settings_prefs.json");
+    let prefs_path = if primary.is_file() { primary } else { cache };
     let content = fs::read_to_string(&prefs_path).ok()?;
     let val: serde_json::Value = serde_json::from_str(&content).ok()?;
     if val.get("wpSourceMode").and_then(|v| v.as_str()) == Some("custom") {

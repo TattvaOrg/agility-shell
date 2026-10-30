@@ -241,8 +241,23 @@ Item {
             saveSettings();
 
     }
+    onBarOpenOnHoverChanged: { if (settingsLoaded) saveSettings(); }
     onBarGlassModeChanged: { if (settingsLoaded) saveSettings(); }
+    onBarSolidToneChanged: { if (settingsLoaded) saveSettings(); }
     onBarGlassOpacityChanged: { if (settingsLoaded) saveSettings(); }
+    onPillBarThicknessChanged: { if (settingsLoaded) saveSettings(); }
+    onBluetoothOnStartupChanged: { if (settingsLoaded) saveSettings(); }
+    onSoundEffectsEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onBarIconModeChanged: { if (settingsLoaded) saveSettings(); }
+    onBarIconShapeChanged: { if (settingsLoaded) saveSettings(); }
+    onBarIconCycleShapesChanged: { if (settingsLoaded) saveSettings(); }
+    onBarIconCycleIntervalChanged: { if (settingsLoaded) saveSettings(); }
+    onBarIconCustomSvgChanged: { if (settingsLoaded) saveSettings(); }
+    onActionShortcutsChanged: { if (settingsLoaded) saveSettings(); }
+    onCustomShortcutsChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsWindowModeChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsBoxedWidthChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsBoxedHeightChanged: { if (settingsLoaded) saveSettings(); }
     onAppletActiveWindowChanged: { if (settingsLoaded) saveSettings(); }
     onAppletActiveWindowActionChanged: { if (settingsLoaded) saveSettings(); }
     onAppletDynamicMediaChanged: { if (settingsLoaded) saveSettings(); }
@@ -356,10 +371,8 @@ Item {
                 "edgeLightingDirection": settingsService.edgeLightingDirection
             };
             syncShortcuts();
-            settingsSaver.command = ["sh", "-c", "mkdir -p ~/.cache/quickshell /var/tmp/sddm-theme && cat << 'EOF' > ~/.cache/quickshell/settings_prefs.json
-" + JSON.stringify(data) + "
-EOF
-cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.json 2>/dev/null && chmod 666 /var/tmp/sddm-theme/settings_prefs.json 2>/dev/null || true"];
+            settingsSaver.command = ["python3", Quickshell.shellDir + "/Core/Services/scripts/save_settings.py", JSON.stringify(data)];
+            settingsSaver.running = false;
             settingsSaver.running = true;
         }
     }
@@ -367,7 +380,7 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
     Process {
         id: settingsLoader
 
-        command: ["cat", Quickshell.env("HOME") + "/.cache/quickshell/settings_prefs.json"]
+        command: ["python3", Quickshell.shellDir + "/Core/Services/scripts/read_settings.py"]
         stdout: StdioCollector {
             id: settingsLoaderOutput
         }
@@ -639,14 +652,16 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
                 }
                 settingsService.settingsLoaded = true;
                 if (!settingsService.bluetoothOnStartup) {
+                    bluetoothStartupProc.running = false;
                     bluetoothStartupProc.running = true;
                 }
                 HyprlandService.triggerStartupTimer();
             } else {
+                settingsService.settingsLoaded = true;
                 SystemInfoService.applyProfile("balanced");
                 settingsService.saveSettings();
-                settingsService.settingsLoaded = true;
                 if (!settingsService.bluetoothOnStartup) {
+                    bluetoothStartupProc.running = false;
                     bluetoothStartupProc.running = true;
                 }
                 HyprlandService.triggerStartupTimer();
@@ -667,6 +682,12 @@ cp ~/.cache/quickshell/settings_prefs.json /var/tmp/sddm-theme/settings_prefs.js
 
     Process {
         id: settingsSaver
+
+        onExited: function(exitCode) {
+            if (exitCode !== 0) {
+                console.error("Agility Shell: settingsSaver exited with code " + exitCode);
+            }
+        }
     }
 
     Process {

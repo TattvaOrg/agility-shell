@@ -115,7 +115,7 @@ QtObject {
         let json = JSON.stringify(obj);
         let home = Quickshell.env("HOME");
         saver.running = false;
-        saver.command = ["bash", "-c", "mkdir -p '" + home + "/.cache/quickshell' && echo '" + json + "' > '" + home + "/.cache/quickshell/colorscheme.json'"];
+        saver.command = ["bash", "-c", "mkdir -p '" + home + "/.config/agility-shell' '" + home + "/.cache/quickshell' && echo '" + json + "' > '" + home + "/.cache/quickshell/colorscheme.json' && cp '" + home + "/.cache/quickshell/colorscheme.json' '" + home + "/.config/agility-shell/colorscheme.json' 2>/dev/null || true"];
         saver.running = true;
     }
 
@@ -198,7 +198,7 @@ QtObject {
     }
 
     loader: Process {
-        command: ["cat", Quickshell.env("HOME") + "/.cache/quickshell/colorscheme.json"]
+        command: ["bash", "-c", "if [ -f \"$HOME/.config/agility-shell/colorscheme.json\" ]; then cat \"$HOME/.config/agility-shell/colorscheme.json\"; elif [ -f \"$HOME/.cache/quickshell/colorscheme.json\" ]; then cat \"$HOME/.cache/quickshell/colorscheme.json\"; fi"]
         onExited: function(exitCode) {
             if (exitCode === 0) {
                 try {

@@ -12,12 +12,17 @@ QuickSettingsTile {
 
     property bool expanded: false
     property bool isScanning: wifiScanProc.running
+    property bool isConnecting: wifiConnectProc.running
+    property string connectingSsid: ""
+    property string connectError: ""
+    property bool isPromptOpen: false
     property var wifiList: []
     property string connectedSsid: "Disconnected"
     property string currentSsid: {
         if (!isActive)
             return "Off";
-
+        if (isConnecting && connectingSsid.length > 0)
+            return "Connecting...";
         return connectedSsid;
     }
     property bool isVisible: true
@@ -29,7 +34,7 @@ QuickSettingsTile {
     }
 
     function scan(forceRescan) {
-        if (!root.isActive)
+        if (!root.isActive || root.isPromptOpen)
             return ;
 
         let rescan = (forceRescan === undefined) ? true : forceRescan;
@@ -39,6 +44,8 @@ QuickSettingsTile {
     }
 
     function connect(ssid, password) {
+        root.connectingSsid = ssid;
+        root.connectError = "";
         let cmd = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "connect", ssid];
         if (password) {
             cmd.push(password);
@@ -53,35 +60,39 @@ QuickSettingsTile {
     subtitle: root.currentSsid
     onClicked: root.toggle()
     onExpandedChanged: {
-        if (expanded)
+        if (expanded && !isPromptOpen)
             scan(true);
 
     }
     onIsActiveChanged: {
         if (isActive) {
-            scan(false);
-            if (expanded)
-                scan(true);
+            if (!isPromptOpen) {
+                scan(false);
+                if (expanded)
+                    scan(true);
+            }
 
         } else {
             wifiList = [];
             connectedSsid = "Disconnected";
+            connectingSsid = "";
+            connectError = "";
         }
     }
     onIsVisibleChanged: {
-        if (isVisible && isActive && root.wifiList.length === 0)
+        if (isVisible && isActive && root.wifiList.length === 0 && !isPromptOpen)
             scan(false);
 
     }
     Component.onCompleted: {
-        if (isActive && root.wifiList.length === 0)
+        if (isActive && root.wifiList.length === 0 && !isPromptOpen)
             scan(false);
 
     }
 
     Timer {
         interval: 2000
-        running: root.isVisible
+        running: root.isVisible && !root.isPromptOpen
         repeat: true
         triggeredOnStart: true
         onTriggered: {
@@ -102,7 +113,13 @@ QuickSettingsTile {
                 try {
                     let st = JSON.parse(data.trim());
                     root.isActive = st.radio;
-                    root.connectedSsid = st.connected_ssid || "Disconnected";
+                    if (st.connected_ssid && st.connected_ssid !== "" && st.connected_ssid !== "Disconnected") {
+                        root.connectedSsid = st.connected_ssid;
+                    } else if (!st.radio) {
+                        root.connectedSsid = "Disconnected";
+                    } else if (!root.isConnecting) {
+                        root.connectedSsid = "Disconnected";
+                    }
                 } catch (e) {
                 }
             }
@@ -127,7 +144,7 @@ QuickSettingsTile {
 
         stdout: SplitParser {
             onRead: (data) => {
-                if (!data)
+                if (!data || root.isPromptOpen)
                     return ;
 
                 try {
@@ -145,10 +162,22 @@ QuickSettingsTile {
     Process {
         id: wifiConnectProc
 
+        stderr: SplitParser {
+            onRead: (data) => {
+                if (data && data.trim().length > 0) {
+                    root.connectError = data.trim();
+                }
+            }
+        }
+
         onRunningChanged: {
             if (!running) {
+                if (root.connectError.length === 0) {
+                    root.connectingSsid = "";
+                }
                 wifiGetProc.running = true;
-                root.scan(true);
+                if (!root.isPromptOpen)
+                    root.scan(true);
             }
         }
     }

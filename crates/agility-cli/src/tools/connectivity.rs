@@ -142,6 +142,31 @@ pub fn run_bluetooth(args: &[String]) -> i32 {
 
 // ─── WiFi ───
 
+fn split_nmcli_escaped(line: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(&next_c) = chars.peek() {
+                if next_c == ':' || next_c == '\\' {
+                    current.push(next_c);
+                    chars.next();
+                    continue;
+                }
+            }
+            current.push('\\');
+        } else if c == ':' {
+            fields.push(current.clone());
+            current.clear();
+        } else {
+            current.push(c);
+        }
+    }
+    fields.push(current);
+    fields
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WifiStatus {
     pub radio: bool,
@@ -172,6 +197,33 @@ pub fn get_wifi_status() -> WifiStatus {
         .unwrap_or_default();
     let radio = radio_out.contains("enabled");
 
+    let mut interface = String::new();
+    let mut connected_ssid = "Disconnected".to_string();
+    let mut strength = 0;
+
+    // 1. Direct query of active in-use wifi network (highest accuracy)
+    let sig_out = Command::new("nmcli")
+        .args(["-t", "-f", "IN-USE,SSID,SIGNAL", "device", "wifi"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_default();
+
+    for line in sig_out.lines() {
+        let parts = split_nmcli_escaped(line);
+        if parts.len() >= 2 && parts[0].contains('*') {
+            let ssid = parts[1].trim();
+            if !ssid.is_empty() && ssid != "--" {
+                connected_ssid = ssid.to_string();
+            }
+            if parts.len() >= 3 {
+                strength = parts[2].trim().parse::<u8>().unwrap_or(0);
+            }
+            break;
+        }
+    }
+
+    // 2. Discover interface and connection name from nmcli device
     let dev_out = Command::new("nmcli")
         .args(["-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"])
         .output()
@@ -179,32 +231,31 @@ pub fn get_wifi_status() -> WifiStatus {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .unwrap_or_default();
 
-    let mut interface = String::new();
-    let mut connected_ssid = "Disconnected".to_string();
-
     for line in dev_out.lines() {
-        let parts: Vec<&str> = line.split(':').collect();
+        let parts = split_nmcli_escaped(line);
         if parts.len() >= 3 && parts[1] == "wifi" {
-            interface = parts[0].to_string();
-            if parts[2] == "connected" && parts.len() >= 4 && !parts[3].is_empty() {
-                connected_ssid = parts[3].to_string();
+            if interface.is_empty() {
+                interface = parts[0].to_string();
             }
-            break;
+            if parts[2].starts_with("connected") && parts.len() >= 4 && !parts[3].is_empty() {
+                if connected_ssid == "Disconnected" {
+                    connected_ssid = parts[3].to_string();
+                }
+            }
+            if parts[2].starts_with("connected") {
+                interface = parts[0].to_string();
+                break;
+            }
         }
     }
 
-    let mut strength = 0;
-    if connected_ssid != "Disconnected" {
-        let sig_out = Command::new("nmcli")
-            .args(["-t", "-f", "IN-USE,SIGNAL", "device", "wifi"])
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .unwrap_or_default();
+    // If strength wasn't resolved yet but we are connected, query signal for this SSID
+    if connected_ssid != "Disconnected" && strength == 0 {
         for line in sig_out.lines() {
-            if line.starts_with('*') {
-                if let Some(s) = line.split(':').nth(1) {
-                    strength = s.trim().parse::<u8>().unwrap_or(0);
+            let parts = split_nmcli_escaped(line);
+            if parts.len() >= 3 && parts[1].trim() == connected_ssid {
+                strength = parts[2].trim().parse::<u8>().unwrap_or(0);
+                if strength > 0 {
                     break;
                 }
             }
@@ -244,7 +295,7 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
 
     let mut saved_ssids = std::collections::HashSet::new();
     for line in saved_out.lines() {
-        let parts: Vec<&str> = line.split(':').collect();
+        let parts = split_nmcli_escaped(line);
         if parts.len() >= 2
             && (parts[1].contains("wireless")
                 || parts[1].contains("wifi")
@@ -268,36 +319,80 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .unwrap_or_default();
 
-    let mut networks = Vec::new();
-    let mut seen_ssids = std::collections::HashSet::new();
+    // Map by SSID to correctly aggregate multi-BSSID networks (e.g. 2.4GHz + 5GHz)
+    let mut network_map: std::collections::HashMap<String, WifiNetwork> =
+        std::collections::HashMap::new();
+
     for line in out.lines() {
-        let parts: Vec<&str> = line.split(':').collect();
+        let parts = split_nmcli_escaped(line);
         if parts.len() >= 4 {
-            let in_use = parts[0] == "*";
+            let in_use = parts[0].contains('*');
             let ssid = parts[1].trim().to_string();
             if ssid.is_empty() || ssid == "--" {
                 continue;
             }
-            if seen_ssids.contains(&ssid) {
-                continue;
-            }
-            seen_ssids.insert(ssid.clone());
             let strength = parts[2].trim().parse::<u8>().unwrap_or(0);
             let security = parts[3].trim().to_string();
             let saved = saved_ssids.contains(&ssid) || in_use;
 
-            networks.push(WifiNetwork {
-                ssid,
-                in_use,
-                active: in_use,
-                strength,
-                signal: strength,
-                security,
-                saved,
-            });
+            if let Some(existing) = network_map.get_mut(&ssid) {
+                if in_use {
+                    existing.in_use = true;
+                    existing.active = true;
+                    existing.saved = true;
+                }
+                if strength > existing.strength {
+                    existing.strength = strength;
+                    existing.signal = strength;
+                }
+                if (existing.security.is_empty() || existing.security == "--") && !security.is_empty() {
+                    existing.security = security;
+                }
+            } else {
+                network_map.insert(
+                    ssid.clone(),
+                    WifiNetwork {
+                        ssid,
+                        in_use,
+                        active: in_use,
+                        strength,
+                        signal: strength,
+                        security,
+                        saved,
+                    },
+                );
+            }
         }
     }
 
+    // Cross-reference with current wifi status so active connection is always flagged
+    let current_status = get_wifi_status();
+    if current_status.connected_ssid != "Disconnected" && !current_status.connected_ssid.is_empty() {
+        if let Some(entry) = network_map.get_mut(&current_status.connected_ssid) {
+            entry.in_use = true;
+            entry.active = true;
+            entry.saved = true;
+            if current_status.strength > entry.strength {
+                entry.strength = current_status.strength;
+                entry.signal = current_status.strength;
+            }
+        } else {
+            network_map.insert(
+                current_status.connected_ssid.clone(),
+                WifiNetwork {
+                    ssid: current_status.connected_ssid.clone(),
+                    in_use: true,
+                    active: true,
+                    strength: current_status.strength,
+                    signal: current_status.strength,
+                    security: "Secured".to_string(),
+                    saved: true,
+                },
+            );
+        }
+    }
+
+    let mut networks: Vec<WifiNetwork> = network_map.into_values().collect();
     networks.sort_by(|a, b| {
         b.in_use
             .cmp(&a.in_use)
@@ -338,7 +433,7 @@ pub fn run_wifi(args: &[String]) -> i32 {
             if let Some(ssid) = args.get(1) {
                 let password = args.get(2).map(|s| s.as_str()).unwrap_or("");
 
-                // 1. If password is not explicitly provided, try activating an existing saved NetworkManager connection first
+                // 1. If password is not provided, try activating existing connection first
                 if password.is_empty() {
                     let up_out = Command::new("nmcli")
                         .args(["connection", "up", "id", ssid])
@@ -352,7 +447,7 @@ pub fn run_wifi(args: &[String]) -> i32 {
                     }
                 }
 
-                // 2. Connect directly to device wifi (works for unsecured or password-provided networks)
+                // 2. Connect directly to device wifi
                 let mut cmd = Command::new("nmcli");
                 cmd.args(["device", "wifi", "connect", ssid]);
                 if !password.is_empty() {
@@ -366,8 +461,48 @@ pub fn run_wifi(args: &[String]) -> i32 {
                             println!("{}", msg.trim());
                             0
                         } else {
-                            // If direct connect failed and no password was passed, try fallback connection up
-                            if password.is_empty() {
+                            // If direct connect failed with a password, the connection profile might already exist with old settings.
+                            // Update the existing profile or delete and recreate with the new password.
+                            if !password.is_empty() {
+                                // Try updating the existing connection's password
+                                let _ = Command::new("nmcli")
+                                    .args([
+                                        "connection",
+                                        "modify",
+                                        "id",
+                                        ssid,
+                                        "802-11-wireless-security.key-mgmt",
+                                        "wpa-psk",
+                                        "802-11-wireless-security.psk",
+                                        password,
+                                    ])
+                                    .output();
+                                if let Ok(retry) = Command::new("nmcli")
+                                    .args(["connection", "up", "id", ssid])
+                                    .output()
+                                {
+                                    if retry.status.success() {
+                                        let msg = String::from_utf8_lossy(&retry.stdout);
+                                        println!("{}", msg.trim());
+                                        return 0;
+                                    }
+                                }
+
+                                // If modifying didn't work, delete old connection profile and re-run connect with password
+                                let _ = Command::new("nmcli")
+                                    .args(["connection", "delete", "id", ssid])
+                                    .output();
+                                if let Ok(fresh) = Command::new("nmcli")
+                                    .args(["device", "wifi", "connect", ssid, "password", password])
+                                    .output()
+                                {
+                                    if fresh.status.success() {
+                                        let msg = String::from_utf8_lossy(&fresh.stdout);
+                                        println!("{}", msg.trim());
+                                        return 0;
+                                    }
+                                }
+                            } else {
                                 if let Ok(retry) = Command::new("nmcli")
                                     .args(["connection", "up", "id", ssid])
                                     .output()

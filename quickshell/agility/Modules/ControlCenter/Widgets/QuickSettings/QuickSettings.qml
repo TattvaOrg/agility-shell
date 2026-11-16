@@ -247,11 +247,17 @@ Item {
                 isActive: wifiControl.isActive
                 wifiList: wifiControl.wifiList
                 isScanning: wifiControl.isScanning
+                isConnecting: wifiControl.isConnecting
+                connectingSsid: wifiControl.connectingSsid
+                errorMessage: wifiControl.connectError
                 onConnect: (ssid, password) => {
                     return wifiControl.connect(ssid, password);
                 }
                 onRefreshRequested: {
                     wifiControl.scan(true);
+                }
+                onPasswordPromptSsidChanged: {
+                    wifiControl.isPromptOpen = (passwordPromptSsid !== "");
                 }
             }
 

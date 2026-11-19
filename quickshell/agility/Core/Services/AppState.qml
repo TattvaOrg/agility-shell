@@ -34,7 +34,7 @@ Item {
     readonly property string activeWindowTitle: isNiri ? niriActiveTitle : (Hyprland.activeWindow ? (Hyprland.activeWindow.title || "") : "")
     readonly property string activeWindowClass: isNiri ? niriActiveAppId : (Hyprland.activeWindow ? (Hyprland.activeWindow.class || Hyprland.activeWindow.initialClass || "") : "")
     readonly property bool hasWindowOnScreen: isNiri ? hasActiveWindow : Boolean(Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.toplevelCount > 0)
-    readonly property var focusWidgets: ["launcher", "clipboard", "wallpaper", "screenshot", "powerMenu", "spotlight", "omni", "missioncontrol"]
+    readonly property var focusWidgets: ["launcher", "clipboard", "wallpaper", "screenshot", "powerMenu", "spotlight", "missioncontrol"]
     readonly property var standaloneWindows: ["minflair_settings", "minflair_keybinds", "packagemanager"]
 
     signal toggleWidget(string widgetId)
@@ -48,7 +48,8 @@ Item {
     }
 
     function isFocusWidget(id) {
-        return focusWidgets.indexOf(id) !== -1;
+        let targetId = (id === "omni") ? "spotlight" : id;
+        return focusWidgets.indexOf(targetId) !== -1;
     }
 
     function isBarOverlayWidget(id) {
@@ -63,14 +64,16 @@ Item {
         if (!id || isStandaloneWindow(id))
             return false;
 
-        if (activeWidget === id)
+        let targetId = (id === "omni") ? "spotlight" : id;
+        if (activeWidget === targetId)
             return true;
 
-        return activeWidgetsList.indexOf(id) !== -1;
+        return activeWidgetsList.indexOf(targetId) !== -1;
     }
 
     function getSlot(widgetId, barStyle) {
-        if (isFocusWidget(widgetId))
+        let targetId = (widgetId === "omni") ? "spotlight" : widgetId;
+        if (isFocusWidget(targetId))
             return "focus";
 
         let s = barStyle || SettingsService.barStyle;
@@ -78,33 +81,34 @@ Item {
             return "center";
 
         // convex
-        if (widgetId === "dashboard")
+        if (targetId === "dashboard")
             return "left";
 
-        if (widgetId === "music")
+        if (targetId === "music")
             return "center";
 
-        if (widgetId === "controlCenter" || widgetId === "notificationsCenter" || widgetId === "clock" || widgetId.startsWith("systemTray_"))
+        if (targetId === "controlCenter" || targetId === "notificationsCenter" || targetId === "clock" || targetId.startsWith("systemTray_"))
             return "right";
 
-        return widgetId;
+        return targetId;
     }
 
     function closeWidget(widgetId) {
         if (!widgetId)
             return ;
 
-        if (widgetId.startsWith("systemTray_") || activeWidget === widgetId)
+        let targetId = (widgetId === "omni") ? "spotlight" : widgetId;
+        if (targetId.startsWith("systemTray_") || activeWidget === targetId)
             activeTrayItem = null;
 
-        let idx = activeWidgetsList.indexOf(widgetId);
+        let idx = activeWidgetsList.indexOf(targetId);
         if (idx !== -1) {
             let next = activeWidgetsList.slice();
             next.splice(idx, 1);
             activeWidgetsList = next;
             SoundService.play("widget-removed");
         }
-        if (activeWidget === widgetId) {
+        if (activeWidget === targetId) {
             activeWidget = "";
             SoundService.play("widget-removed");
         }
@@ -121,16 +125,20 @@ Item {
     }
 
     function openWidgetInternal(widgetId) {
-        if (!widgetId || isStandaloneWindow(widgetId))
+        if (!widgetId)
             return ;
 
-        if (widgetId === "powerMenu") {
+        let targetId = (widgetId === "omni") ? "spotlight" : widgetId;
+        if (isStandaloneWindow(targetId))
+            return ;
+
+        if (targetId === "powerMenu") {
             SoundService.play("session-quit");
         } else {
             SoundService.play("widget-placed");
         }
 
-        let slot = getSlot(widgetId);
+        let slot = getSlot(targetId);
         // Rule 1: Focus widgets close each other, but do NOT close bar widgets
         if (slot === "focus") {
             let next = [];
@@ -141,9 +149,9 @@ Item {
 
                 next.push(item);
             }
-            next.push(widgetId);
+            next.push(targetId);
             activeWidgetsList = next;
-            activeWidget = widgetId;
+            activeWidget = targetId;
             return ;
         }
         // Rule 2: Opening a bar widget closes widgets in the same slot, but keeps focus widgets open
@@ -155,11 +163,11 @@ Item {
 
             next.push(item);
         }
-        if (next.indexOf(widgetId) === -1)
-            next.push(widgetId);
+        if (next.indexOf(targetId) === -1)
+            next.push(targetId);
 
         activeWidgetsList = next;
-        activeWidget = widgetId;
+        activeWidget = targetId;
     }
 
     function toggleWidgetInternal(widgetId) {
@@ -167,12 +175,15 @@ Item {
             closeAllWidgets();
             return ;
         }
-        if (isStandaloneWindow(widgetId))
+        let targetId = (widgetId === "omni") ? "spotlight" : widgetId;
+        if (isStandaloneWindow(targetId))
             return ;
 
-        if (isWidgetOpen(widgetId))
-            closeWidget(widgetId);
+        if (isWidgetOpen(targetId))
+            closeWidget(targetId);
         else
+            openWidgetInternal(targetId);
+    }
             openWidgetInternal(widgetId);
     }
 

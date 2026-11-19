@@ -114,15 +114,6 @@ Item {
     }
 
     WidgetLoader {
-        widgetId: "omni"
-
-        sourceComponent: Component {
-            Spotlight {
-            }
-        }
-    }
-
-    WidgetLoader {
         widgetId: "missioncontrol"
 
         sourceComponent: Component {

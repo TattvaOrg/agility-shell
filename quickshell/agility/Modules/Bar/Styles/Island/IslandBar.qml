@@ -20,7 +20,7 @@ Item {
     property string currentIslandTarget: ""
     readonly property string activeIslandTarget: (isOpen || isRemoving) && currentIslandTarget !== "" ? currentIslandTarget : getTargetPill(effectivePanel)
     readonly property bool isOverlayActive: isOpen || (leftPill.openProgress > 0.001) || (centerPill.openProgress > 0.001) || (rightPill.openProgress > 0.001) || isRemoving
-    readonly property bool needsFocus: (effectivePanel === "launcher" || effectivePanel === "clipboard" || effectivePanel === "wallpaper" || effectivePanel === "powerMenu" || effectivePanel === "screenshot")
+    readonly property bool needsFocus: (effectivePanel === "launcher" || effectivePanel === "clipboard" || effectivePanel === "wallpaper" || effectivePanel === "powerMenu" || effectivePanel === "screenshot" || (effectivePanel === "controlCenter" && activeItem && activeItem.needsFocus))
     readonly property bool hasActiveNotifications: centerPill.hasActiveNotifications
     readonly property real notifProgress: centerPill.notifProgress
     readonly property bool isOccupied: isOverlayActive || hasActiveNotifications

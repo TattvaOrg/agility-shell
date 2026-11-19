@@ -13,6 +13,7 @@ ColumnLayout {
     property var widget: null
     property var notificationService: null
     readonly property bool isWidgetOpen: widget ? (widget.isOpen !== undefined ? widget.isOpen : true) : true
+    readonly property bool needsFocus: (quickSettings && quickSettings.needsFocus)
 
     function resetViews() {
         if (quickSettings && typeof quickSettings.resetView === "function")

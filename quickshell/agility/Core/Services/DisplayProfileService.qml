@@ -37,13 +37,18 @@ Item {
     function applyCaffeine(state) {
         caffeineProc.running = false;
         if (state) {
-            pauseSwayidleProc.running = false;
-            pauseSwayidleProc.running = true;
+            pauseIdleProc.running = false;
+            pauseIdleProc.running = true;
             caffeineProc.running = true;
         } else {
-            resumeSwayidleProc.running = false;
-            resumeSwayidleProc.running = true;
+            stopInhibitProc.running = false;
+            stopInhibitProc.running = true;
+            resumeIdleProc.running = false;
+            resumeIdleProc.running = true;
         }
+        syncCaffeineProc.command = ["sh", "-c", "if command -v agl >/dev/null 2>&1; then agl caffeine >/dev/null 2>&1 & fi"];
+        syncCaffeineProc.running = false;
+        syncCaffeineProc.running = true;
     }
 
     function applyGameMode(enable) {
@@ -168,18 +173,28 @@ Item {
     Process {
         id: caffeineProc
 
-        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=quickshell", "--why=Keep screen and system active", "--mode=block", "sleep", "infinity"]
+        command: ["systemd-inhibit", "--what=idle:sleep:shutdown:handle-lid-switch", "--who=quickshell", "--why=Keep screen and system active", "--mode=block", "sleep", "infinity"]
     }
 
     Process {
-        id: pauseSwayidleProc
+        id: pauseIdleProc
 
-        command: ["pkill", "-STOP", "swayidle"]
+        command: ["sh", "-c", "pkill -STOP swayidle 2>/dev/null; pkill -STOP hypridle 2>/dev/null; exit 0"]
     }
 
     Process {
-        id: resumeSwayidleProc
+        id: resumeIdleProc
 
-        command: ["pkill", "-CONT", "swayidle"]
+        command: ["sh", "-c", "pkill -CONT swayidle 2>/dev/null; pkill -CONT hypridle 2>/dev/null; exit 0"]
+    }
+
+    Process {
+        id: stopInhibitProc
+
+        command: ["sh", "-c", "pkill -f 'systemd-inhibit.*Keep screen and system active' 2>/dev/null; exit 0"]
+    }
+
+    Process {
+        id: syncCaffeineProc
     }
 }

@@ -40,6 +40,34 @@ pub fn get_bluetooth_status() -> BtStatus {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .unwrap_or_default();
 
+    let conn_out = Command::new("bluetoothctl")
+        .args(["devices", "Connected"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_default();
+    let mut connected_macs = std::collections::HashSet::new();
+    for line in conn_out.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 && parts[0] == "Device" {
+            connected_macs.insert(parts[1].to_string());
+        }
+    }
+
+    let paired_out = Command::new("bluetoothctl")
+        .args(["devices", "Paired"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .unwrap_or_default();
+    let mut paired_macs = std::collections::HashSet::new();
+    for line in paired_out.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 && parts[0] == "Device" {
+            paired_macs.insert(parts[1].to_string());
+        }
+    }
+
     let mut devices = Vec::new();
     let mut connected_device = String::new();
 
@@ -49,22 +77,20 @@ pub fn get_bluetooth_status() -> BtStatus {
             let mac = parts[1].to_string();
             let name = parts[2..].join(" ");
 
-            let info_out = Command::new("bluetoothctl")
-                .args(["info", &mac])
-                .output()
-                .ok()
-                .and_then(|o| String::from_utf8(o.stdout).ok())
-                .unwrap_or_default();
-
-            let connected = info_out.contains("Connected: yes");
-            let paired = info_out.contains("Paired: yes");
-            let icon = if info_out.contains("Icon: audio-card")
-                || info_out.contains("Icon: audio-headset")
+            let connected = connected_macs.contains(&mac);
+            let paired = paired_macs.contains(&mac);
+            let lower = name.to_lowercase();
+            let icon = if lower.contains("bud")
+                || lower.contains("headset")
+                || lower.contains("airpod")
+                || lower.contains("headphone")
+                || lower.contains("audio")
+                || lower.contains("speaker")
             {
                 "audio-headset".to_string()
-            } else if info_out.contains("Icon: input-mouse") {
+            } else if lower.contains("mouse") {
                 "input-mouse".to_string()
-            } else if info_out.contains("Icon: input-keyboard") {
+            } else if lower.contains("keyboard") || lower.contains("keychron") {
                 "input-keyboard".to_string()
             } else {
                 "bluetooth".to_string()
@@ -125,12 +151,48 @@ pub fn run_bluetooth(args: &[String]) -> i32 {
                 1
             }
         }
+        "connect" => {
+            if let Some(mac) = args.get(1) {
+                let _ = Command::new("bluetoothctl").args(["connect", mac]).status();
+                0
+            } else {
+                eprintln!("Missing MAC address");
+                1
+            }
+        }
+        "disconnect" => {
+            if let Some(mac) = args.get(1) {
+                let _ = Command::new("bluetoothctl")
+                    .args(["disconnect", mac])
+                    .status();
+                0
+            } else {
+                eprintln!("Missing MAC address");
+                1
+            }
+        }
+        "remove" | "forget" => {
+            if let Some(mac) = args.get(1) {
+                let _ = Command::new("bluetoothctl").args(["remove", mac]).status();
+                0
+            } else {
+                eprintln!("Missing MAC address");
+                1
+            }
+        }
         "scan" => {
             let _ = Command::new("bluetoothctl")
                 .args(["--timeout", "5", "scan", "on"])
                 .status();
             let st = get_bluetooth_status();
-            println!("{}", serde_json::to_string(&st).unwrap_or_default());
+            let mut val = serde_json::to_value(&st).unwrap_or_default();
+            if let serde_json::Value::Object(ref mut map) = val {
+                map.insert(
+                    "event".to_string(),
+                    serde_json::Value::String("devices".to_string()),
+                );
+            }
+            println!("{}", serde_json::to_string(&val).unwrap_or_default());
             0
         }
         _ => {
@@ -237,10 +299,12 @@ pub fn get_wifi_status() -> WifiStatus {
             if interface.is_empty() {
                 interface = parts[0].to_string();
             }
-            if parts[2].starts_with("connected") && parts.len() >= 4 && !parts[3].is_empty() {
-                if connected_ssid == "Disconnected" {
-                    connected_ssid = parts[3].to_string();
-                }
+            if parts[2].starts_with("connected")
+                && parts.len() >= 4
+                && !parts[3].is_empty()
+                && connected_ssid == "Disconnected"
+            {
+                connected_ssid = parts[3].to_string();
             }
             if parts[2].starts_with("connected") {
                 interface = parts[0].to_string();
@@ -345,7 +409,9 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
                     existing.strength = strength;
                     existing.signal = strength;
                 }
-                if (existing.security.is_empty() || existing.security == "--") && !security.is_empty() {
+                if (existing.security.is_empty() || existing.security == "--")
+                    && !security.is_empty()
+                {
                     existing.security = security;
                 }
             } else {
@@ -367,7 +433,8 @@ pub fn get_wifi_networks() -> Vec<WifiNetwork> {
 
     // Cross-reference with current wifi status so active connection is always flagged
     let current_status = get_wifi_status();
-    if current_status.connected_ssid != "Disconnected" && !current_status.connected_ssid.is_empty() {
+    if current_status.connected_ssid != "Disconnected" && !current_status.connected_ssid.is_empty()
+    {
         if let Some(entry) = network_map.get_mut(&current_status.connected_ssid) {
             entry.in_use = true;
             entry.active = true;
@@ -426,7 +493,11 @@ pub fn run_wifi(args: &[String]) -> i32 {
                     .output();
             }
             let networks = get_wifi_networks();
-            println!("{}", serde_json::to_string(&networks).unwrap_or_default());
+            let val = serde_json::json!({
+                "event": "networks",
+                "networks": networks
+            });
+            println!("{}", serde_json::to_string(&val).unwrap_or_default());
             0
         }
         "connect" => {

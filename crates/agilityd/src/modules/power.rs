@@ -155,11 +155,13 @@ impl PowerService {
         if active {
             self.stop_idle_monitor();
             let _ = Command::new("pkill").args(["-STOP", "swayidle"]).status();
+            let _ = Command::new("pkill").args(["-STOP", "hypridle"]).status();
             self.spawn_caffeine_inhibit();
             info!("Caffeine idle inhibitor enabled.");
         } else {
             kill_child(&self.inhibit_child);
             let _ = Command::new("pkill").args(["-CONT", "swayidle"]).status();
+            let _ = Command::new("pkill").args(["-CONT", "hypridle"]).status();
             self.start_idle_monitor();
             info!("Caffeine idle inhibitor disabled.");
         }
@@ -283,7 +285,7 @@ impl PowerService {
 
         if Self::has_binary("systemd-inhibit") {
             match Command::new("systemd-inhibit")
-                .arg("--what=idle:sleep:handle-lid-switch")
+                .arg("--what=idle:sleep:shutdown:handle-lid-switch")
                 .arg("--why=Caffeine keep-awake")
                 .arg("--mode=block")
                 .arg("sleep")

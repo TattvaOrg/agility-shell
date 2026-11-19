@@ -16,6 +16,7 @@ Item {
     property var notificationService
     property int activePageIndex: 0
     property real extraExpandedHeight: 0
+    readonly property bool needsFocus: (wifiControl && wifiControl.isPromptOpen)
 
     function resetView() {
         root.activePageIndex = 0;
@@ -326,6 +327,8 @@ Item {
                 isActive: btControl.isActive
                 btList: btControl.btList
                 isScanning: btControl.isScanning
+                isConnecting: btControl.isConnecting
+                connectingMac: btControl.connectingMac
                 onConnect: (mac) => {
                     return btControl.connect(mac);
                 }

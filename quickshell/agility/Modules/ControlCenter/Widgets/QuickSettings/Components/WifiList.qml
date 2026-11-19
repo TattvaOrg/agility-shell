@@ -279,6 +279,22 @@ Rectangle {
                                                 root.passwordPromptSsid = "";
                                                 event.accepted = true;
                                             }
+                                            Keys.onReturnPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
+                                            Keys.onEnterPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
 
                                             onAccepted: {
                                                 if (text.length > 0) {
@@ -467,6 +483,22 @@ Rectangle {
                                             Keys.onEscapePressed: function(event) {
                                                 root.passwordPromptSsid = "";
                                                 event.accepted = true;
+                                            }
+                                            Keys.onReturnPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
+                                            Keys.onEnterPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
                                             }
 
                                             onAccepted: {

@@ -148,10 +148,14 @@ QuickSettingsTile {
                     return ;
 
                 try {
-                    let list = JSON.parse(data.trim());
-                    if (Array.isArray(list))
-                        root.wifiList = list;
-
+                    let parsed = JSON.parse(data.trim());
+                    if (Array.isArray(parsed)) {
+                        root.wifiList = parsed.slice();
+                    } else if (parsed.networks) {
+                        root.wifiList = (parsed.networks || []).slice();
+                    } else if (parsed.event === "networks") {
+                        root.wifiList = (parsed.networks || []).slice();
+                    }
                 } catch (e) {
                 }
             }

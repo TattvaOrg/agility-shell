@@ -149,7 +149,7 @@ AppSidebar {
         }
     }
 
-    // Dock & Activities (Tab 11)
+    // Dock & Spotlight (Tab 11)
     Item {
         Layout.fillWidth: true
         Layout.leftMargin: Constants.sizeSm
@@ -159,7 +159,7 @@ AppSidebar {
         SidebarNavRow {
             anchors.fill: parent
             iconName: "layout"
-            labelText: "Dock & Activities"
+            labelText: "Dock & Spotlight"
             isActive: sidebarRoot.activeTab === 11
             onRowClicked: sidebarRoot.tabClicked(11)
         }

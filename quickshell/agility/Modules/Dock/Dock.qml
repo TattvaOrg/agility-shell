@@ -40,6 +40,10 @@ Item {
             implicitWidth: dockPanel.isBottom ? dockStrip.width + 40 : (dockStrip.width + 20)
             implicitHeight: dockPanel.isBottom ? (dockStrip.height + 24) : (dockStrip.height + 40)
 
+            mask: Region {
+                item: dockStrip
+            }
+
             property bool isHovered: dockMouseArea.containsMouse || edgeTriggerArea.containsMouse
             property real hideOffset: (SettingsService.dockAutoHide && !dockPanel.isHovered) ? (dockPanel.isBottom ? 70 : (dockPanel.isLeft ? -70 : 70)) : 0
 
@@ -291,18 +295,12 @@ Item {
         }
     }
 
-    // Process executor for launching commands
-    Process {
-        id: execProc
-    }
-
     function triggerAction(item) {
         if (!item) return;
         if (item.actionType === "toggle") {
             AppState.toggleWidget(item.target);
         } else if (item.actionType === "exec") {
-            execProc.command = ["agl", "launch-exec", item.target];
-            execProc.startDetached();
+            Quickshell.execDetached(["agl", "launch-exec", item.target]);
         } else if (item.actionType === "overview") {
             AppState.toggleWidget("missioncontrol");
         }
@@ -311,7 +309,7 @@ Item {
     // Default Dock App Registry
     readonly property var dockAppList: [
         { id: "launcher",   name: "Applications",   icon: "apps",          actionType: "toggle",   target: "launcher",       isRunning: AppState.isWidgetOpen("launcher") },
-        { id: "omni",       name: "Omni Command Bar", icon: "search",      actionType: "toggle",   target: "omni",           isRunning: AppState.isWidgetOpen("omni") },
+        { id: "spotlight",  name: "Spotlight Search", icon: "search",      actionType: "toggle",   target: "spotlight",      isRunning: AppState.isWidgetOpen("spotlight") || AppState.isWidgetOpen("omni") },
         { id: "overview",   name: "Mission Control", icon: "window",       actionType: "overview", target: "missioncontrol", isRunning: AppState.isWidgetOpen("missioncontrol") },
         { id: "terminal",   name: "Terminal",       icon: "code",          actionType: "exec",     target: "x-terminal-emulator", isRunning: false },
         { id: "files",      name: "File Manager",   icon: "box",           actionType: "exec",     target: "xdg-open ~",     isRunning: false },

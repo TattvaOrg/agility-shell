@@ -42,67 +42,82 @@ ShellRoot {
     }
 
     IpcHandler {
-        function toggle(widgetId: string) {
+        target: "widgets"
+
+        function toggle(widgetId: string): bool {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
-                return;
+                return true;
             }
-            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
                 SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
-                return;
+                return true;
             }
             if (widgetId === "dock") {
                 SettingsService.dockEnabled = !SettingsService.dockEnabled;
-                return;
+                return true;
             }
             if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
                 SettingsService.dynamicIslandEnabled = !SettingsService.dynamicIslandEnabled;
-                return;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.toggleWidget("spotlight");
+                return true;
             }
             AppState.toggleWidget(widgetId);
+            return true;
         }
 
-        function open(widgetId: string) {
+        function open(widgetId: string): bool {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = true;
-                return;
+                return true;
             }
-            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
                 SettingsService.desktopWidgetsEnabled = true;
-                return;
+                return true;
             }
             if (widgetId === "dock") {
                 SettingsService.dockEnabled = true;
-                return;
+                return true;
             }
             if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
                 SettingsService.dynamicIslandEnabled = true;
-                return;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.openWidget("spotlight");
+                return true;
             }
             AppState.openWidget(widgetId);
+            return true;
         }
 
-        function close(widgetId: string) {
+        function close(widgetId: string): bool {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = false;
-                return;
+                return true;
             }
-            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
                 SettingsService.desktopWidgetsEnabled = false;
-                return;
+                return true;
             }
             if (widgetId === "dock") {
                 SettingsService.dockEnabled = false;
-                return;
+                return true;
             }
             if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
                 SettingsService.dynamicIslandEnabled = false;
-                return;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.closeWidget("spotlight");
+                return true;
             }
             AppState.closeWidget(widgetId);
+            return true;
         }
-
-        target: "widgets"
     }
 
     SocketServer {
@@ -114,6 +129,54 @@ ShellRoot {
                 onConnectedChanged: {
                     if (connected) {
                         SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: dockSocketServer
+        path: "/tmp/quickshell_dock"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.dockEnabled = !SettingsService.dockEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: islandSocketServer
+        path: "/tmp/quickshell_island"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.dynamicIslandEnabled = !SettingsService.dynamicIslandEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: desktopWidgetsSocketServer
+        path: "/tmp/quickshell_desktopwidgets"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
                         Qt.callLater(() => { connected = false; });
                     }
                 }

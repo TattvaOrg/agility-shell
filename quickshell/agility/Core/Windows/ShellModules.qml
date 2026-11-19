@@ -15,6 +15,7 @@ import qs.Modules.PackageManager
 import qs.Modules.PowerMenu
 import qs.Modules.Settings
 import qs.Modules.WallpaperSelector
+import qs.Modules.Spotlight
 import qs.Modules.OmniLauncher
 import qs.Modules.MissionControl
 
@@ -104,10 +105,19 @@ Item {
     }
 
     WidgetLoader {
+        widgetId: "spotlight"
+
+        sourceComponent: Component {
+            Spotlight {
+            }
+        }
+    }
+
+    WidgetLoader {
         widgetId: "omni"
 
         sourceComponent: Component {
-            OmniLauncher {
+            Spotlight {
             }
         }
     }

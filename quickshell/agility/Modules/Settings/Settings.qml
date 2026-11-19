@@ -83,8 +83,8 @@ AppWindow {
             "category": "DESKTOP"
         },
         "11": {
-            "title": "Dock & Activities",
-            "subtitle": "Floating dynamic dock, Dynamic Island pill, Omni Spotlight, and Mission Control",
+            "title": "Dock, Spotlight & Themes",
+            "subtitle": "Floating dynamic dock, Spotlight search, Dynamic Island, and system themes",
             "category": "DESKTOP"
         }
     })

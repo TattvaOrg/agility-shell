@@ -71,8 +71,9 @@ Item {
     property int dockIconSize: 48
     property bool dockMagnification: true
 
-    // Omni Spotlight Launcher
-    property bool omniLauncherEnabled: true
+    // Spotlight Command Bar
+    property bool spotlightEnabled: true
+    property alias omniLauncherEnabled: settingsService.spotlightEnabled
 
     // Dynamic Island / Live Activities Hub
     property bool dynamicIslandEnabled: true
@@ -104,7 +105,7 @@ Item {
         {"id": "screenshot", "title": "Screenshot Tool", "key": "Mod+Shift+S", "cmd": ["agl", "toggle", "screenshot"]},
         {"id": "powerMenu", "title": "Power Menu", "key": "Mod+Shift+E", "cmd": ["agl", "toggle", "power"]},
         {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]},
-        {"id": "omni", "title": "Omni Spotlight Launcher", "key": "Mod+K", "cmd": ["agl", "toggle", "omni"]},
+        {"id": "spotlight", "title": "Spotlight Command Bar", "key": "Mod+K", "cmd": ["agl", "toggle", "spotlight"]},
         {"id": "missioncontrol", "title": "Mission Control", "key": "Mod+Tab", "cmd": ["agl", "toggle", "missioncontrol"]},
         {"id": "dock", "title": "Toggle Dock", "key": "Mod+Alt+D", "cmd": ["agl", "toggle", "dock"]},
         {"id": "dynamicIsland", "title": "Toggle Dynamic Island", "key": "Mod+Alt+I", "cmd": ["agl", "toggle", "island"]}
@@ -401,7 +402,7 @@ Item {
                 "dockAutoHide": settingsService.dockAutoHide,
                 "dockIconSize": settingsService.dockIconSize,
                 "dockMagnification": settingsService.dockMagnification,
-                "omniLauncherEnabled": settingsService.omniLauncherEnabled,
+                "spotlightEnabled": settingsService.spotlightEnabled,
                 "dynamicIslandEnabled": settingsService.dynamicIslandEnabled,
                 "missionControlEnabled": settingsService.missionControlEnabled
             };
@@ -693,8 +694,10 @@ Item {
                             settingsService.dockIconSize = prefs.dockIconSize;
                         if (prefs.dockMagnification !== undefined)
                             settingsService.dockMagnification = prefs.dockMagnification;
-                        if (prefs.omniLauncherEnabled !== undefined)
-                            settingsService.omniLauncherEnabled = prefs.omniLauncherEnabled;
+                        if (prefs.spotlightEnabled !== undefined)
+                            settingsService.spotlightEnabled = prefs.spotlightEnabled;
+                        else if (prefs.omniLauncherEnabled !== undefined)
+                            settingsService.spotlightEnabled = prefs.omniLauncherEnabled;
                         if (prefs.dynamicIslandEnabled !== undefined)
                             settingsService.dynamicIslandEnabled = prefs.dynamicIslandEnabled;
                         if (prefs.missionControlEnabled !== undefined)

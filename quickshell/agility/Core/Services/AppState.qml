@@ -34,7 +34,7 @@ Item {
     readonly property string activeWindowTitle: isNiri ? niriActiveTitle : (Hyprland.activeWindow ? (Hyprland.activeWindow.title || "") : "")
     readonly property string activeWindowClass: isNiri ? niriActiveAppId : (Hyprland.activeWindow ? (Hyprland.activeWindow.class || Hyprland.activeWindow.initialClass || "") : "")
     readonly property bool hasWindowOnScreen: isNiri ? hasActiveWindow : Boolean(Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.toplevelCount > 0)
-    readonly property var focusWidgets: ["launcher", "clipboard", "wallpaper", "screenshot", "powerMenu", "omni", "missioncontrol"]
+    readonly property var focusWidgets: ["launcher", "clipboard", "wallpaper", "screenshot", "powerMenu", "spotlight", "omni", "missioncontrol"]
     readonly property var standaloneWindows: ["minflair_settings", "minflair_keybinds", "packagemanager"]
 
     signal toggleWidget(string widgetId)

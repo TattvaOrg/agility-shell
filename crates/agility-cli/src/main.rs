@@ -622,7 +622,7 @@ async fn handle_toggle(target: &str) -> Result<()> {
         "packages" | "packagemanager" => toggle_widget("packagemanager"),
         "edgelight" | "edgelighting" | "edge-lighting" | "ambient" => toggle_widget("edgelight"),
         "dock" => toggle_widget("dock"),
-        "omni" | "omnilauncher" | "spotlight" | "raycast" => toggle_widget("omni"),
+        "spotlight" | "spot" | "command" | "cmd" | "omni" | "omnilauncher" | "raycast" => toggle_widget("spotlight"),
         "missioncontrol" | "mission-control" | "overview" => toggle_widget("missioncontrol"),
         "island" | "dynamicisland" | "dynamic-island" => toggle_widget("island"),
         "desktopwidgets" | "desktop-widgets" | "widgets" => toggle_widget("desktopwidgets"),

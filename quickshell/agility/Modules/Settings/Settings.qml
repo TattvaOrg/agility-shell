@@ -18,13 +18,14 @@ import qs.Modules.Settings.SystemInfo
 import qs.Modules.Settings.WallpaperSettings
 import qs.Modules.Settings.WindowSettings
 import qs.Modules.Settings.WidgetsSettings
+import qs.Modules.Settings.DockSettings
 
 AppWindow {
     id: root
 
-    property var pageComponents: [personalizationComp, barSettingsComp, effectsComp, windowComp, integrationsComp, mouseComp, inputAndClipboardComp, systemInfoComp, wallpaperComp, barAppletsComp, widgetsComp]
+    property var pageComponents: [personalizationComp, barSettingsComp, effectsComp, windowComp, integrationsComp, mouseComp, inputAndClipboardComp, systemInfoComp, wallpaperComp, barAppletsComp, widgetsComp, dockComp]
     property int activeTab: 0
-    readonly property var navOrder: [0, 8, 1, 9, 10, 2, 3, 5, 6, 4, 7]
+    readonly property var navOrder: [0, 8, 1, 9, 10, 11, 2, 3, 5, 6, 4, 7]
     readonly property var tabMetadata: ({
         "0": {
             "title": "Appearance",
@@ -79,6 +80,11 @@ AppWindow {
         "10": {
             "title": "Widgets",
             "subtitle": "Material 3 floating desktop widgets, themes, visibility, and layout",
+            "category": "DESKTOP"
+        },
+        "11": {
+            "title": "Dock, Spotlight & Themes",
+            "subtitle": "Floating dynamic dock, Spotlight search, Dynamic Island, and system themes",
             "category": "DESKTOP"
         }
     })
@@ -340,6 +346,15 @@ AppWindow {
         id: widgetsComp
 
         WidgetsSettings {
+            anchors.fill: parent
+        }
+
+    }
+
+    Component {
+        id: dockComp
+
+        DockSettings {
             anchors.fill: parent
         }
 

@@ -12,6 +12,8 @@ import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
 import qs.Modules.OSD
 import qs.Modules.DesktopWidgets
+import qs.Modules.Dock
+import qs.Modules.DynamicIsland
 
 ShellRoot {
     id: root
@@ -40,43 +42,192 @@ ShellRoot {
     }
 
     IpcHandler {
-        function toggle(widgetId: string) {
+        target: "widgets"
+
+        function toggle(widgetId: string): bool {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
-                return;
+                return true;
             }
-            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
                 SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
-                return;
+                return true;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = !SettingsService.dockEnabled;
+                return true;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = !SettingsService.dynamicIslandEnabled;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.toggleWidget("spotlight");
+                return true;
             }
             AppState.toggleWidget(widgetId);
+            return true;
         }
 
-        function open(widgetId: string) {
+        function open(widgetId: string): bool {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = true;
-                return;
+                return true;
             }
-            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
                 SettingsService.desktopWidgetsEnabled = true;
-                return;
+                return true;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = true;
+                return true;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = true;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.openWidget("spotlight");
+                return true;
             }
             AppState.openWidget(widgetId);
+            return true;
         }
 
-        function close(widgetId: string) {
+        function close(widgetId: string): bool {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = false;
-                return;
+                return true;
             }
-            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
                 SettingsService.desktopWidgetsEnabled = false;
-                return;
+                return true;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = false;
+                return true;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = false;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.closeWidget("spotlight");
+                return true;
             }
             AppState.closeWidget(widgetId);
+            return true;
+        }
+    }
+
+    // Default target IPC Handler fallback for callers without target specifier
+    IpcHandler {
+        function toggle(widgetId: string): bool {
+            if (widgetId === "edgelight" || widgetId === "edgelighting") {
+                SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
+                return true;
+            }
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
+                SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
+                return true;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = !SettingsService.dockEnabled;
+                return true;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = !SettingsService.dynamicIslandEnabled;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.toggleWidget("spotlight");
+                return true;
+            }
+            AppState.toggleWidget(widgetId);
+            return true;
         }
 
-        target: "widgets"
+        function open(widgetId: string): bool {
+            if (widgetId === "edgelight" || widgetId === "edgelighting") {
+                SettingsService.edgeLightingEnabled = true;
+                return true;
+            }
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
+                SettingsService.desktopWidgetsEnabled = true;
+                return true;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = true;
+                return true;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = true;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.openWidget("spotlight");
+                return true;
+            }
+            AppState.openWidget(widgetId);
+            return true;
+        }
+
+        function close(widgetId: string): bool {
+            if (widgetId === "edgelight" || widgetId === "edgelighting") {
+                SettingsService.edgeLightingEnabled = false;
+                return true;
+            }
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets" || widgetId === "widgets") {
+                SettingsService.desktopWidgetsEnabled = false;
+                return true;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = false;
+                return true;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = false;
+                return true;
+            }
+            if (widgetId === "spotlight" || widgetId === "omni") {
+                AppState.closeWidget("spotlight");
+                return true;
+            }
+            AppState.closeWidget(widgetId);
+            return true;
+        }
+    }
+
+    SocketServer {
+        id: omniSocketServer
+        path: "/tmp/quickshell_omni"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        AppState.toggleWidget("spotlight");
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: spotlightSocketServer
+        path: "/tmp/quickshell_spotlight"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        AppState.toggleWidget("spotlight");
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
     }
 
     SocketServer {
@@ -88,6 +239,54 @@ ShellRoot {
                 onConnectedChanged: {
                     if (connected) {
                         SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: dockSocketServer
+        path: "/tmp/quickshell_dock"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.dockEnabled = !SettingsService.dockEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: islandSocketServer
+        path: "/tmp/quickshell_island"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.dynamicIslandEnabled = !SettingsService.dynamicIslandEnabled;
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
+    SocketServer {
+        id: desktopWidgetsSocketServer
+        path: "/tmp/quickshell_desktopwidgets"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
                         Qt.callLater(() => { connected = false; });
                     }
                 }
@@ -214,6 +413,16 @@ ShellRoot {
     DesktopWidgetsLayer {
         id: desktopWidgetsLayer
         visible: SettingsService.settingsLoaded && SettingsService.desktopWidgetsEnabled && !root.isGaming
+    }
+
+    Dock {
+        id: dockLayer
+        visible: SettingsService.settingsLoaded && SettingsService.dockEnabled && !root.isGaming
+    }
+
+    DynamicIsland {
+        id: dynamicIslandLayer
+        visible: SettingsService.settingsLoaded && SettingsService.dynamicIslandEnabled && !root.isGaming
     }
 
     OsdPill {

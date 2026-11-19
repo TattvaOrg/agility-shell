@@ -159,6 +159,77 @@ AppContainer {
             }
         }
 
+        // Visual Theme Cards Grid
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Constants.sizeLg
+            Layout.rightMargin: Constants.sizeLg
+            Layout.topMargin: 4
+            Layout.bottomMargin: 8
+            spacing: 8
+            opacity: Theme.generateFromWallpaper ? 0.45 : 1.0
+            enabled: !Theme.generateFromWallpaper
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: Theme.themes
+
+                    Rectangle {
+                        required property var modelData
+                        required property int index
+                        readonly property var activeSchemeData: appearanceRoot.showingDark ? modelData.dark : modelData.light
+                        readonly property bool isSelected: {
+                            let cur = Theme.currentScheme.replace(" Light", "");
+                            return cur === modelData.name || Theme.currentScheme === activeSchemeData.name;
+                        }
+
+                        width: 125
+                        height: 56
+                        radius: Constants.sizeMd
+                        color: activeSchemeData.bg
+                        border.width: isSelected ? 2 : 1
+                        border.color: isSelected ? Theme.accent : Theme.border
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 3
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: parent.parent.modelData.name
+                                font.pixelSize: 10
+                                font.weight: Font.Bold
+                                color: parent.parent.activeSchemeData.fg
+                                elide: Text.ElideRight
+                            }
+
+                            RowLayout {
+                                spacing: 3
+                                Rectangle { width: 12; height: 12; radius: 6; color: parent.parent.parent.activeSchemeData.bg; border.width: 1; border.color: Qt.rgba(1,1,1,0.2) }
+                                Rectangle { width: 12; height: 12; radius: 6; color: parent.parent.parent.activeSchemeData.accent }
+                                Rectangle { width: 12; height: 12; radius: 6; color: parent.parent.parent.activeSchemeData.accentComplementary }
+                                Rectangle { width: 12; height: 12; radius: 6; color: parent.parent.parent.activeSchemeData.fg }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                let s = appearanceRoot.showingDark ? parent.modelData.dark : parent.modelData.light;
+                                Theme.applyScheme(s);
+                                SoundService.play("click");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         SettingToggle {
             id: darkModeToggle
 

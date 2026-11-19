@@ -406,10 +406,34 @@ async fn handle_stop() -> Result<()> {
             .arg(pid.to_string())
             .status();
     }
-    let _ = Command::new("killall").arg("-q").arg("agilityd").status();
-    let _ = Command::new("killall")
-        .arg("-q")
-        .arg("agility-shell")
+    let _ = Command::new("pkill").args(["-f", "quickshell.*agility"]).status();
+    let _ = Command::new("pkill").args(["-f", "agility.*shell.qml"]).status();
+    let _ = Command::new("pkill").args(["-15", "-x", "quickshell"]).status();
+    let _ = Command::new("killall").arg("-q").arg("-15").arg("agilityd").status();
+    let _ = Command::new("killall").arg("-q").arg("-15").arg("agility-shell").status();
+
+    // Wait up to 1000ms for processes to exit
+    for _ in 0..20 {
+        if get_agility_quickshell_pids().is_empty() && get_process_pid("agilityd").is_none() && get_process_pid("quickshell").is_none() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+
+    // Force terminate any stubborn processes
+    if !get_agility_quickshell_pids().is_empty() || get_process_pid("quickshell").is_some() {
+        let _ = Command::new("pkill").args(["-9", "-f", "quickshell.*agility"]).status();
+        let _ = Command::new("pkill").args(["-9", "-f", "agility.*shell.qml"]).status();
+        let _ = Command::new("pkill").args(["-9", "-x", "quickshell"]).status();
+    }
+    if get_process_pid("agilityd").is_some() {
+        let _ = Command::new("killall").arg("-q").arg("-9").arg("agilityd").status();
+    }
+    let _ = Command::new("killall").arg("-q").arg("-9").arg("agility-shell").status();
+
+    // Clean up temporary IPC sockets so stale connections are never left behind
+    let _ = Command::new("sh")
+        .args(["-c", "rm -f /tmp/quickshell_* 2>/dev/null"])
         .status();
 
     println!("✓ Agility Shell stopped.");
@@ -417,7 +441,7 @@ async fn handle_stop() -> Result<()> {
 }
 
 async fn handle_restart() -> Result<()> {
-    println!("🔄 Gracefully restarting Agility Shell in < 15ms...");
+    println!("🔄 Gracefully restarting Agility Shell...");
 
     if is_systemd_service_active("agility-shell.service") {
         let out = Command::new("systemctl")
@@ -431,9 +455,9 @@ async fn handle_restart() -> Result<()> {
         }
     }
 
-    // Fast restart: reload quickshell or respawn
+    // Clean full restart
     handle_stop().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(15)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     handle_start(false).await?;
     println!("✓ Restart complete.");
     Ok(())
@@ -621,6 +645,11 @@ async fn handle_toggle(target: &str) -> Result<()> {
         "keybinds" | "minflair_keybinds" => toggle_widget("minflair_keybinds"),
         "packages" | "packagemanager" => toggle_widget("packagemanager"),
         "edgelight" | "edgelighting" | "edge-lighting" | "ambient" => toggle_widget("edgelight"),
+        "dock" => toggle_widget("dock"),
+        "spotlight" | "spot" | "command" | "cmd" | "omni" | "omnilauncher" | "raycast" => toggle_widget("spotlight"),
+        "missioncontrol" | "mission-control" | "overview" => toggle_widget("missioncontrol"),
+        "island" | "dynamicisland" | "dynamic-island" => toggle_widget("island"),
+        "desktopwidgets" | "desktop-widgets" | "widgets" => toggle_widget("desktopwidgets"),
         "suits" => dispatch_qs_ipc("suits", "reload", &[]),
         "osd" => dispatch_qs_ipc("osd", "volume", &["50"]),
         other => {
@@ -1498,9 +1527,9 @@ fn get_agility_quickshell_pids() -> Vec<u32> {
             let s = String::from_utf8_lossy(&out.stdout);
             for line in s.lines() {
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 {
+                if parts.len() >= 1 {
                     let cmdline = parts[1..].join(" ");
-                    if cmdline.contains("agility") || cmdline.contains("agility-shell") {
+                    if cmdline.contains("agility") || cmdline.contains("agility-shell") || cmdline.contains("shell.qml") || parts.len() == 1 {
                         if let Ok(pid) = parts[0].parse::<u32>() {
                             pids.push(pid);
                         }
@@ -1581,9 +1610,9 @@ fn locate_shell_qml() -> Option<std::path::PathBuf> {
     }
 
     let candidates = [
+        "quickshell/agility/shell.qml",
         "/usr/share/agility-shell/quickshell/agility/shell.qml",
         "/usr/local/share/agility-shell/quickshell/agility/shell.qml",
-        "quickshell/agility/shell.qml",
     ];
 
     for c in candidates {
@@ -1611,6 +1640,7 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     for a in args {
         cmd.arg(*a);
     }
+    cmd.stderr(std::process::Stdio::null());
     if let Ok(s) = cmd.status() {
         if s.success() {
             return true;
@@ -1626,6 +1656,7 @@ fn dispatch_qs_ipc(target: &str, func: &str, args: &[&str]) -> bool {
     for a in args {
         fallback.arg(*a);
     }
+    fallback.stderr(std::process::Stdio::null());
     fallback.status().map(|s| s.success()).unwrap_or(false)
 }
 

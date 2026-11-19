@@ -8,23 +8,161 @@ pragma Singleton
 QtObject {
     id: root
 
-    property var themes: [{
-        "name": "Default",
-        "dark": {
+    property var themes: [
+        {
             "name": "Default",
-            "bg": '#030107',
-            "fg": '#d1d1d1',
-            "accent": '#a77ef5',
-            "accentComplementary": '#f57eb6'
+            "dark": {
+                "name": "Default",
+                "bg": '#0b0914',
+                "fg": '#d1d1d1',
+                "accent": '#a77ef5',
+                "accentComplementary": '#f57eb6'
+            },
+            "light": {
+                "name": "Default Light",
+                "bg": '#f5f0ff',
+                "fg": '#1e1a2e',
+                "accent": '#7040e8',
+                "accentComplementary": '#e840a1'
+            }
         },
-        "light": {
-            "name": "Default Light",
-            "bg": '#e8dbff',
-            "fg": '#1e1a2e',
-            "accent": '#7040e8',
-            "accentComplementary": '#e840a1'
+        {
+            "name": "Catppuccin",
+            "dark": {
+                "name": "Catppuccin Mocha",
+                "bg": '#1e1e2e',
+                "fg": '#cdd6f4',
+                "accent": '#cba6f7',
+                "accentComplementary": '#f38ba8'
+            },
+            "light": {
+                "name": "Catppuccin Latte",
+                "bg": '#eff1f5',
+                "fg": '#4c4f69',
+                "accent": '#8839ef',
+                "accentComplementary": '#ea76cb'
+            }
+        },
+        {
+            "name": "Tokyo Night",
+            "dark": {
+                "name": "Tokyo Night",
+                "bg": '#1a1b26',
+                "fg": '#c0caf5',
+                "accent": '#7aa2f7',
+                "accentComplementary": '#bb9af7'
+            },
+            "light": {
+                "name": "Tokyo Night Light",
+                "bg": '#e1e2e7',
+                "fg": '#3760bf',
+                "accent": '#2e7de9',
+                "accentComplementary": '#9854f1'
+            }
+        },
+        {
+            "name": "Nord",
+            "dark": {
+                "name": "Nord",
+                "bg": '#2e3440',
+                "fg": '#eceff4',
+                "accent": '#88c0d0',
+                "accentComplementary": '#81a1c1'
+            },
+            "light": {
+                "name": "Nord Light",
+                "bg": '#e5e9f0',
+                "fg": '#2e3440',
+                "accent": '#5e81ac',
+                "accentComplementary": '#88c0d0'
+            }
+        },
+        {
+            "name": "Gruvbox",
+            "dark": {
+                "name": "Gruvbox Dark",
+                "bg": '#282828',
+                "fg": '#ebdbb2',
+                "accent": '#fabd2f',
+                "accentComplementary": '#fe8019'
+            },
+            "light": {
+                "name": "Gruvbox Light",
+                "bg": '#fbf1c7',
+                "fg": '#3c3836',
+                "accent": '#d79921',
+                "accentComplementary": '#af3a03'
+            }
+        },
+        {
+            "name": "Rosé Pine",
+            "dark": {
+                "name": "Rosé Pine",
+                "bg": '#191724',
+                "fg": '#e0def4',
+                "accent": '#ebbcba',
+                "accentComplementary": '#c4a7e7'
+            },
+            "light": {
+                "name": "Rosé Pine Dawn",
+                "bg": '#faf4ed',
+                "fg": '#575279',
+                "accent": '#d7827e',
+                "accentComplementary": '#907aa9'
+            }
+        },
+        {
+            "name": "Everforest",
+            "dark": {
+                "name": "Everforest Dark",
+                "bg": '#2d353b',
+                "fg": '#d3c6aa',
+                "accent": '#a7c080',
+                "accentComplementary": '#e67e80'
+            },
+            "light": {
+                "name": "Everforest Light",
+                "bg": '#fdf6e3',
+                "fg": '#5c6a72',
+                "accent": '#8da101',
+                "accentComplementary": '#f85552'
+            }
+        },
+        {
+            "name": "Cyberpunk",
+            "dark": {
+                "name": "Cyberpunk Neon",
+                "bg": '#0f051d',
+                "fg": '#f0f6fc',
+                "accent": '#00f0ff',
+                "accentComplementary": '#ff007f'
+            },
+            "light": {
+                "name": "Cyberpunk Light",
+                "bg": '#f8f4ff',
+                "fg": '#1a0033',
+                "accent": '#00b4d8',
+                "accentComplementary": '#d90429'
+            }
+        },
+        {
+            "name": "Monochrome",
+            "dark": {
+                "name": "Monochrome OLED",
+                "bg": '#000000',
+                "fg": '#ffffff',
+                "accent": '#e5e5e5',
+                "accentComplementary": '#a3a3a3'
+            },
+            "light": {
+                "name": "Monochrome Light",
+                "bg": '#ffffff',
+                "fg": '#000000',
+                "accent": '#171717',
+                "accentComplementary": '#525252'
+            }
         }
-    }]
+    ]
     property string currentScheme: "Default"
     property real bgOpacity: 1
     property color _rawBg: themes[0].dark.bg

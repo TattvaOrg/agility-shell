@@ -15,6 +15,9 @@ import qs.Modules.PackageManager
 import qs.Modules.PowerMenu
 import qs.Modules.Settings
 import qs.Modules.WallpaperSelector
+import qs.Modules.Spotlight
+import qs.Modules.OmniLauncher
+import qs.Modules.MissionControl
 
 Item {
     id: root
@@ -97,6 +100,24 @@ Item {
 
         sourceComponent: Component {
             PowerMenu {
+            }
+        }
+    }
+
+    WidgetLoader {
+        widgetId: "spotlight"
+
+        sourceComponent: Component {
+            Spotlight {
+            }
+        }
+    }
+
+    WidgetLoader {
+        widgetId: "missioncontrol"
+
+        sourceComponent: Component {
+            MissionControl {
             }
         }
     }

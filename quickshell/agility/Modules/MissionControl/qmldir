@@ -1,0 +1,3 @@
+module qs.Modules.MissionControl
+MissionControl 1.0 MissionControl.qml
+MissionControlContent 1.0 MissionControlContent.qml

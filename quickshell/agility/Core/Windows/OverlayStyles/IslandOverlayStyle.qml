@@ -31,18 +31,16 @@ Item {
             AppState.isIslandOpen = true;
             let nw = (AppState.hasActiveNotification && AppState.activeNotificationWidth > 0) ? AppState.activeNotificationWidth : 0;
             let nh = (AppState.hasActiveNotification && AppState.activeNotificationHeight > 0) ? AppState.activeNotificationHeight : 0;
-            let pillW = (SettingsService.barPillMode && root.width > 0) ? Math.round(root.width * (SettingsService.pillBarWidthPercent / 100)) : 0;
-            let baseW = pillW > 0 ? pillW : ((AppState.barIslandWidth > 0) ? AppState.barIslandWidth : ((AppState.islandWidth > 0) ? AppState.islandWidth : mainContainer.fromWidth));
-            let baseH = SettingsService.barPillMode ? 38 : ((AppState.barIslandHeight > 0) ? AppState.barIslandHeight : ((AppState.islandHeight > 0) ? AppState.islandHeight : mainContainer.fromHeight));
+            let baseW = (AppState.barIslandWidth > 0) ? AppState.barIslandWidth : ((AppState.islandWidth > 0) ? AppState.islandWidth : mainContainer.fromWidth);
+            let baseH = (AppState.barIslandHeight > 0) ? AppState.barIslandHeight : ((AppState.islandHeight > 0) ? AppState.islandHeight : mainContainer.fromHeight);
             mainContainer.fromWidth = nw > 0 ? nw : baseW;
             mainContainer.fromHeight = nh > 0 ? nh : baseH;
             mainContainer.fromRadius = nh > 0 ? Constants.sizeSm : mainContainer.fromHeight / 2;
         } else {
             let nw = (AppState.hasActiveNotification && AppState.activeNotificationWidth > 0) ? AppState.activeNotificationWidth : 0;
             let nh = (AppState.hasActiveNotification && AppState.activeNotificationHeight > 0) ? AppState.activeNotificationHeight : 0;
-            let pillW = (SettingsService.barPillMode && root.width > 0) ? Math.round(root.width * (SettingsService.pillBarWidthPercent / 100)) : 0;
-            let baseW = pillW > 0 ? pillW : ((AppState.barIslandWidth > 0) ? AppState.barIslandWidth : ((AppState.islandWidth > 0) ? AppState.islandWidth : mainContainer.fromWidth));
-            let baseH = SettingsService.barPillMode ? 38 : ((AppState.barIslandHeight > 0) ? AppState.barIslandHeight : ((AppState.islandHeight > 0) ? AppState.islandHeight : mainContainer.fromHeight));
+            let baseW = (AppState.barIslandWidth > 0) ? AppState.barIslandWidth : ((AppState.islandWidth > 0) ? AppState.islandWidth : mainContainer.fromWidth);
+            let baseH = (AppState.barIslandHeight > 0) ? AppState.barIslandHeight : ((AppState.islandHeight > 0) ? AppState.islandHeight : mainContainer.fromHeight);
             mainContainer.fromWidth = nw > 0 ? nw : baseW;
             mainContainer.fromHeight = nh > 0 ? nh : baseH;
             mainContainer.fromRadius = nh > 0 ? Constants.sizeSm : mainContainer.fromHeight / 2;
@@ -51,7 +49,7 @@ Item {
 
     Connections {
         function onFullyClosed() {
-            if ((SettingsService.barIslandMode || (SettingsService.barPillMode && SettingsService.pillPopupStyle === "top")) && !widget.positionAtBottom) {
+            if (SettingsService.barIslandMode && !widget.positionAtBottom) {
                 isHandover = true;
                 AppState.isIslandOpen = false;
                 if (AppState.activeWidget !== "")
@@ -79,8 +77,8 @@ Item {
 
         readonly property real notifW: (AppState.hasActiveNotification && AppState.activeNotificationWidth > 0) ? AppState.activeNotificationWidth : 0
         readonly property real notifH: (AppState.hasActiveNotification && AppState.activeNotificationHeight > 0) ? AppState.activeNotificationHeight : 0
-        property real fromWidth: notifW > 0 ? notifW : (SettingsService.barPillMode && root.width > 0 ? Math.round(root.width * (SettingsService.pillBarWidthPercent / 100)) : ((AppState.barIslandWidth > 0) ? AppState.barIslandWidth : ((AppState.islandWidth > 0) ? AppState.islandWidth : 180)))
-        property real fromHeight: notifH > 0 ? notifH : (SettingsService.barPillMode ? 38 : ((AppState.barIslandHeight > 0) ? AppState.barIslandHeight : ((AppState.islandHeight > 0) ? AppState.islandHeight : Constants.size3Xl)))
+        property real fromWidth: notifW > 0 ? notifW : ((AppState.barIslandWidth > 0) ? AppState.barIslandWidth : ((AppState.islandWidth > 0) ? AppState.islandWidth : 180))
+        property real fromHeight: notifH > 0 ? notifH : ((AppState.barIslandHeight > 0) ? AppState.barIslandHeight : ((AppState.islandHeight > 0) ? AppState.islandHeight : Constants.size3Xl))
         property real fromRadius: notifH > 0 ? Constants.sizeXl : fromHeight / 2
         readonly property real openY: 8
         readonly property real currentWidth: Math.round(fromWidth + (preferredWidth - fromWidth) * bounceProgress)
@@ -97,7 +95,7 @@ Item {
         IslandStyle.IslandBackground {
             anchors.fill: parent
             radius: mainContainer.currentRadius
-            enableShadow: (SettingsService.barIslandMode || SettingsService.barPillMode) && !isHandover
+            enableShadow: SettingsService.barIslandMode && !isHandover
         }
 
         Item {

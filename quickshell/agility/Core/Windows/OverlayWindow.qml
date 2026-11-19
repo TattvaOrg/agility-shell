@@ -41,12 +41,16 @@ PanelWindow {
     property bool windowFocusable: true
     // Determine the active style mode cleanly
     readonly property string activeStyle: {
-        if ((SettingsService.barIslandMode || (SettingsService.barPillMode && SettingsService.pillPopupStyle === "top")) && !positionAtBottom)
+        if (SettingsService.barIslandMode && !positionAtBottom)
             return "island";
+
+        if (SettingsService.barPillMode && (SettingsService.pillPopupStyle === "top" || SettingsService.pillPopupStyle === ""))
+            return "pill";
 
         return "floating";
     }
     readonly property bool isIsland: activeStyle === "island"
+    readonly property bool isPill: activeStyle === "pill"
     readonly property bool isFloating: activeStyle === "floating"
 
     signal widgetOpened()
@@ -130,7 +134,7 @@ PanelWindow {
     Timer {
         id: closeDelayTimer
 
-        interval: HyprlandService.enableAnimations ? (root.isIsland ? (Constants.animNormal + 80) : (Constants.animSlow + 150)) : 10
+        interval: HyprlandService.enableAnimations ? ((root.isIsland || root.isPill) ? (Constants.animNormal + 80) : (Constants.animSlow + 150)) : 10
         repeat: false
         onTriggered: {
             if (exclusive && AppState.isWidgetOpen(widgetId))
@@ -165,6 +169,8 @@ PanelWindow {
             switch (root.activeStyle) {
             case "island":
                 return islandComponent;
+            case "pill":
+                return pillComponent;
             case "floating":
             default:
                 return floatingComponent;
@@ -198,6 +204,15 @@ PanelWindow {
         id: islandComponent
 
         IslandOverlayStyle {
+            widget: root
+        }
+
+    }
+
+    Component {
+        id: pillComponent
+
+        PillOverlayStyle {
             widget: root
         }
 
@@ -281,8 +296,13 @@ PanelWindow {
         enabled: HyprlandService.enableAnimations
 
         NumberAnimation {
-            duration: root.isOpen ? ((root.isIsland && AppState.hasActiveNotification) ? Constants.animSlow : (root.isIsland ? Constants.animExpressive : Constants.animNormal)) : Constants.animNormal
-            easing.type: root.isIsland ? (root.isOpen ? Easing.OutQuint : Easing.OutCubic) : (root.isOpen ? Easing.OutCubic : Easing.InCubic)
+            duration: root.isOpen ? ((root.isIsland && AppState.hasActiveNotification) ? Constants.animSlow : ((root.isIsland || root.isPill) ? Constants.animExpressive : Constants.animNormal)) : Constants.animNormal
+            easing.type: (root.isIsland || root.isPill) ? (root.isOpen ? Easing.OutQuint : Easing.OutCubic) : (root.isOpen ? Easing.OutCubic : Easing.InCubic)
+            onRunningChanged: {
+                if (!running && !root.isOpen && root.isPill)
+                    root.finishClosing();
+
+            }
         }
 
     }

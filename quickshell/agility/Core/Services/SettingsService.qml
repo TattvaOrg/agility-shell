@@ -31,7 +31,7 @@ Item {
     property bool barPillMode: barStyle === "pill"
     property string islandRightMode: "auto"
     property int pillBarWidthPercent: 60
-    property string pillPopupStyle: "center"
+    property string pillPopupStyle: "top"
     property string pillWidgetLayout: "distributed"
     property int pillBarThickness: 38
     property bool bluetoothOnStartup: false

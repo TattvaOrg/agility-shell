@@ -36,7 +36,7 @@ PanelWindow {
     readonly property bool isScreenshot: AppState.isWidgetOpen("screenshot")
     readonly property bool isTray: (AppState.activeWidget || "").startsWith("systemTray_")
     readonly property bool hasAnyOpen: isControlCenter || isNotificationsCenter || isDashboard || isMusic || isLauncher || isClipboard || isWallpaper || isPowerMenu || isScreenshot || isTray
-    readonly property bool needsFocus: isLauncher || isClipboard || isWallpaper || isPowerMenu || isScreenshot
+    readonly property bool needsFocus: isLauncher || isClipboard || isWallpaper || isPowerMenu || isScreenshot || (isControlCenter && ccContent && ccContent.needsFocus)
     readonly property int activeTrayIndex: {
         let targetId = AppState.activeWidget && AppState.activeWidget.startsWith("systemTray_") ? AppState.activeWidget : "";
         if (targetId && targetId.startsWith("systemTray_")) {

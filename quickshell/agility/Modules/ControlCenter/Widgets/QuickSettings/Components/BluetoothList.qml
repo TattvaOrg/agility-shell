@@ -13,6 +13,8 @@ Rectangle {
     property bool isActive: false
     property var btList: []
     property bool isScanning: false
+    property bool isConnecting: false
+    property string connectingMac: ""
     property bool timedOut: false
     property bool isVisible: true
     readonly property var pairedList: {
@@ -142,20 +144,28 @@ Rectangle {
                             Layout.fillWidth: true
                             width: parent.width
                             titleText: modelData.name
-                            subtitleText: modelData.connected ? "Connected" : "Paired"
-                            iconName: modelData.connected ? "bluetooth" : "bluetooth-off"
+                            subtitleText: {
+                                if (root.isConnecting && root.connectingMac === modelData.mac)
+                                    return "Connecting...";
+                                return modelData.connected ? "Connected" : "Paired";
+                            }
+                            iconName: modelData.icon ? modelData.icon : (modelData.connected ? "bluetooth" : "bluetooth-off")
                             isActive: modelData.connected
+                            isConnecting: root.isConnecting && root.connectingMac === modelData.mac
                             canForget: true
                             onClicked: root.connect(modelData.mac)
                             onActionClicked: {
+                                settingsProc.running = false;
                                 settingsProc.running = true;
                             }
                             onDisconnectClicked: {
-                                disconnectProc.command = ["bluetoothctl", "disconnect", modelData.mac];
+                                disconnectProc.running = false;
+                                disconnectProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/bluetooth.py", "disconnect", modelData.mac];
                                 disconnectProc.running = true;
                             }
                             onForgetClicked: {
-                                forgetProc.command = ["bluetoothctl", "remove", modelData.mac];
+                                forgetProc.running = false;
+                                forgetProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/bluetooth.py", "remove", modelData.mac];
                                 forgetProc.running = true;
                             }
                         }
@@ -187,9 +197,10 @@ Rectangle {
                             Layout.fillWidth: true
                             width: parent.width
                             titleText: modelData.name
-                            subtitleText: "Available"
-                            iconName: "bluetooth-off"
+                            subtitleText: (root.isConnecting && root.connectingMac === modelData.mac) ? "Connecting..." : "Available"
+                            iconName: modelData.icon ? modelData.icon : "bluetooth-off"
                             isActive: false
+                            isConnecting: root.isConnecting && root.connectingMac === modelData.mac
                             onClicked: root.connect(modelData.mac)
                         }
 

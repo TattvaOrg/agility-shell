@@ -5,7 +5,9 @@ import subprocess
 import sys
 
 HOME = os.path.expanduser("~")
-PREFS_PATH = os.path.join(HOME, ".cache/quickshell/settings_prefs.json")
+PRIMARY_PREFS = os.path.join(HOME, ".config/agility-shell/settings_prefs.json")
+CACHE_PREFS = os.path.join(HOME, ".cache/quickshell/settings_prefs.json")
+PREFS_PATH = PRIMARY_PREFS if os.path.isfile(PRIMARY_PREFS) else CACHE_PREFS
 NIRI_CONFIG_PATH = os.path.join(HOME, ".config/agility-shell/config/niri.kdl")
 
 DEFAULT_ACTION_SHORTCUTS = [

@@ -12,6 +12,8 @@ QuickSettingsTile {
 
     property bool expanded: false
     property bool isScanning: btDiscoveryProc.running
+    property bool isConnecting: btConnectProc.running
+    property string connectingMac: ""
     property var btList: []
     property bool isVisible: true
 
@@ -29,6 +31,8 @@ QuickSettingsTile {
     }
 
     function connect(mac) {
+        root.connectingMac = mac;
+        btConnectProc.running = false;
         btConnectProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/bluetooth.py", "toggle-connect", mac];
         btConnectProc.running = true;
     }
@@ -101,12 +105,15 @@ QuickSettingsTile {
 
                 try {
                     let parsed = JSON.parse(data);
-                    root.isActive = parsed.powered;
-                    if (!btDiscoveryProc.running || root.btList.length === 0) {
-                        let devs = (parsed.devices || []).slice();
-                        if (devs.length > 0 || !root.isScanning)
-                            root.btList = devs;
-
+                    if (Array.isArray(parsed)) {
+                        root.btList = parsed.slice();
+                    } else {
+                        root.isActive = parsed.powered !== undefined ? parsed.powered : false;
+                        if (!btDiscoveryProc.running || root.btList.length === 0) {
+                            let devs = (parsed.devices || []).slice();
+                            if (devs.length > 0 || !root.isScanning)
+                                root.btList = devs;
+                        }
                     }
                 } catch (e) {
                 }
@@ -137,9 +144,13 @@ QuickSettingsTile {
 
                 try {
                     let parsed = JSON.parse(data);
-                    if (parsed.event === "devices")
+                    if (Array.isArray(parsed)) {
+                        root.btList = parsed.slice();
+                    } else if (parsed.devices) {
                         root.btList = (parsed.devices || []).slice();
-
+                    } else if (parsed.event === "devices") {
+                        root.btList = (parsed.devices || []).slice();
+                    }
                 } catch (e) {
                 }
             }
@@ -151,9 +162,11 @@ QuickSettingsTile {
         id: btConnectProc
 
         onRunningChanged: {
-            if (!running)
+            if (!running) {
+                root.connectingMac = "";
+                btGetProc.running = false;
                 btGetProc.running = true;
-
+            }
         }
     }
 

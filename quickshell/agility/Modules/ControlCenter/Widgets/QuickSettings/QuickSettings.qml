@@ -16,6 +16,7 @@ Item {
     property var notificationService
     property int activePageIndex: 0
     property real extraExpandedHeight: 0
+    readonly property bool needsFocus: (wifiControl && wifiControl.isPromptOpen)
 
     function resetView() {
         root.activePageIndex = 0;
@@ -247,11 +248,17 @@ Item {
                 isActive: wifiControl.isActive
                 wifiList: wifiControl.wifiList
                 isScanning: wifiControl.isScanning
+                isConnecting: wifiControl.isConnecting
+                connectingSsid: wifiControl.connectingSsid
+                errorMessage: wifiControl.connectError
                 onConnect: (ssid, password) => {
                     return wifiControl.connect(ssid, password);
                 }
                 onRefreshRequested: {
                     wifiControl.scan(true);
+                }
+                onPasswordPromptSsidChanged: {
+                    wifiControl.isPromptOpen = (passwordPromptSsid !== "");
                 }
             }
 
@@ -320,6 +327,8 @@ Item {
                 isActive: btControl.isActive
                 btList: btControl.btList
                 isScanning: btControl.isScanning
+                isConnecting: btControl.isConnecting
+                connectingMac: btControl.connectingMac
                 onConnect: (mac) => {
                     return btControl.connect(mac);
                 }

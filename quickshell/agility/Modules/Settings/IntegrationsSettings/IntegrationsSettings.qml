@@ -187,9 +187,13 @@ AppContainer {
         SettingToggle {
             label: "Bluetooth on Startup"
             description: "Automatically enable Bluetooth adapter when starting Agility Shell (disabled by default to preserve battery and privacy)"
-            checked: SettingsService.bluetoothOnStartup
             onCheckedChanged: {
-                SettingsService.bluetoothOnStartup = checked;
+                if (checked !== SettingsService.bluetoothOnStartup)
+                    SettingsService.bluetoothOnStartup = checked;
+            }
+
+            Binding on checked {
+                value: SettingsService.bluetoothOnStartup
             }
         }
     }

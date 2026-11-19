@@ -11,19 +11,36 @@ Rectangle {
     property string iconName: ""
     property bool isActive: false
     property bool canForget: false
+    property bool canEditPassword: false
+    property bool isConnecting: false
 
     signal clicked()
     signal actionClicked()
     signal disconnectClicked()
     signal forgetClicked()
+    signal editPasswordClicked()
 
     Layout.fillWidth: true
     width: parent ? parent.width : 280
     implicitHeight: 52
     radius: Constants.sizeSm
-    color: Theme.bgTertiary
+    color: rootHover.hovered ? Theme.bgSecondary : Theme.bgTertiary
     border.width: 1
-    border.color: Theme.border
+    border.color: rootHover.hovered ? Theme.accent : Theme.border
+
+    HoverHandler {
+        id: rootHover
+        cursorShape: Qt.PointingHandCursor
+    }
+
+    TapHandler {
+        onTapped: {
+            if (root.isActive)
+                root.disconnectClicked();
+            else
+                root.clicked();
+        }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -81,6 +98,36 @@ Rectangle {
         }
 
         Rectangle {
+            id: keyBtn
+
+            visible: root.canEditPassword
+            Layout.alignment: Qt.AlignVCenter
+            implicitWidth: Constants.size2Xl + 4
+            implicitHeight: Constants.size2Xl + 4
+            radius: Constants.sizeSm
+            color: keyHover.hovered ? Theme.bgSecondary : "transparent"
+            border.width: 1
+            border.color: keyHover.hovered ? Theme.border : "transparent"
+
+            SvgIcon {
+                anchors.centerIn: parent
+                icon: "lock"
+                iconColor: keyHover.hovered ? Theme.accent : Theme.muted
+                iconSize: Constants.sizeSm + 2
+                flat: true
+            }
+
+            HoverHandler {
+                id: keyHover
+                cursorShape: Qt.PointingHandCursor
+            }
+
+            TapHandler {
+                onTapped: root.editPasswordClicked()
+            }
+        }
+
+        Rectangle {
             id: forgetBtn
 
             visible: root.canForget
@@ -126,8 +173,8 @@ Rectangle {
             ThemedText {
                 id: btnText
 
-                text: root.isActive ? "Disconnect" : "Connect"
-                color: root.isActive ? Theme.accentComplementary : Theme.fg
+                text: root.isConnecting ? "Connecting..." : (root.isActive ? "Disconnect" : "Connect")
+                color: root.isConnecting ? Theme.accent : (root.isActive ? Theme.accentComplementary : Theme.fg)
                 customSize: Constants.sizeXs + 2
                 font.bold: true
                 anchors.centerIn: parent

@@ -13,6 +13,10 @@ Rectangle {
     property bool isActive: false
     property var wifiList: []
     property bool isScanning: false
+    property bool isConnecting: false
+    property string connectingSsid: ""
+    property string errorMessage: ""
+    property string lastAttemptedSsid: ""
     property bool timedOut: false
     property bool isVisible: true
     property string passwordPromptSsid: ""
@@ -155,25 +159,204 @@ Rectangle {
                     Repeater {
                         model: root.savedList
 
-                        ControlCenterListDelegate {
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            width: parent.width
-                            titleText: modelData.ssid
-                            subtitleText: (modelData.active || modelData.in_use) ? ("Connected • " + ((modelData.signal || modelData.strength) > 75 ? "Excellent signal" : ((modelData.signal || modelData.strength) > 50 ? "Good signal" : "Weak signal"))) : ((modelData.signal || modelData.strength) > 75 ? "Excellent signal" : ((modelData.signal || modelData.strength) > 50 ? "Good signal" : "Weak signal"))
-                            iconName: root.getWifiIcon(modelData.signal || modelData.strength)
-                            isActive: modelData.active || modelData.in_use
-                            canForget: true
-                            onClicked: root.connect(modelData.ssid, "")
-                            onActionClicked: {
-                                settingsProc.running = true;
+                            spacing: Constants.size2Xs
+
+                            ControlCenterListDelegate {
+                                Layout.fillWidth: true
+                                width: parent.width
+                                titleText: modelData.ssid
+                                subtitleText: {
+                                    if (modelData.active || modelData.in_use) {
+                                        let sig = (modelData.signal || modelData.strength);
+                                        let quality = sig > 75 ? "Excellent signal" : (sig > 50 ? "Good signal" : "Weak signal");
+                                        return "Connected • " + quality;
+                                    }
+                                    if (root.isConnecting && root.connectingSsid === modelData.ssid)
+                                        return "Connecting...";
+                                    if (root.errorMessage !== "" && root.lastAttemptedSsid === modelData.ssid)
+                                        return root.errorMessage;
+                                    let sig = (modelData.signal || modelData.strength);
+                                    return sig > 75 ? "Excellent signal" : (sig > 50 ? "Good signal" : "Weak signal");
+                                }
+                                iconName: root.getWifiIcon(modelData.signal || modelData.strength)
+                                isActive: modelData.active || modelData.in_use
+                                isConnecting: root.isConnecting && root.connectingSsid === modelData.ssid
+                                canForget: true
+                                canEditPassword: (modelData.security && modelData.security !== "--" && modelData.security !== "none")
+                                onClicked: {
+                                    if (modelData.active || modelData.in_use) {
+                                        disconnectProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "disconnect", modelData.ssid];
+                                        disconnectProc.running = true;
+                                    } else {
+                                        root.lastAttemptedSsid = modelData.ssid;
+                                        root.connect(modelData.ssid, "");
+                                    }
+                                }
+                                onEditPasswordClicked: {
+                                    root.passwordPromptSsid = (root.passwordPromptSsid === modelData.ssid) ? "" : modelData.ssid;
+                                }
+                                onActionClicked: {
+                                    settingsProc.running = true;
+                                }
+                                onDisconnectClicked: {
+                                    disconnectProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "disconnect", modelData.ssid];
+                                    disconnectProc.running = true;
+                                }
+                                onForgetClicked: {
+                                    forgetProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "forget", modelData.ssid];
+                                    forgetProc.running = true;
+                                }
                             }
-                            onDisconnectClicked: {
-                                disconnectProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "disconnect", modelData.ssid];
-                                disconnectProc.running = true;
-                            }
-                            onForgetClicked: {
-                                forgetProc.command = ["python3", Quickshell.shellDir + "/Modules/ControlCenter/scripts/wifi.py", "forget", modelData.ssid];
-                                forgetProc.running = true;
+
+                            // Inline password card for saved network (change password)
+                            Rectangle {
+                                id: savedPasswordCard
+                                visible: root.passwordPromptSsid === modelData.ssid
+                                Layout.fillWidth: true
+                                implicitHeight: 46
+                                radius: Constants.sizeSm
+                                color: Theme.bgSecondary
+                                border.width: 1
+                                border.color: Theme.accent
+
+                                FocusScope {
+                                    anchors.fill: parent
+                                    focus: true
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: Constants.sizeSm
+                                        anchors.rightMargin: Constants.sizeSm
+                                        spacing: Constants.sizeSm
+
+                                        SvgIcon {
+                                            icon: "lock"
+                                            iconSize: Constants.sizeSm + 2
+                                            iconColor: Theme.accent
+                                            flat: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
+
+                                        TextField {
+                                            id: savedPwField
+                                            Layout.fillWidth: true
+                                            Layout.fillHeight: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            placeholderText: "Enter New Wi-Fi Password"
+                                            echoMode: savedRevealPass ? TextInput.Normal : TextInput.Password
+                                            color: Theme.fg
+                                            placeholderTextColor: Theme.muted
+                                            background: null
+                                            font.pixelSize: Constants.sizeSm
+                                            selectByMouse: true
+                                            focus: true
+
+                                            property bool savedRevealPass: false
+
+                                            Component.onCompleted: {
+                                                if (savedPasswordCard.visible) {
+                                                    forceActiveFocus();
+                                                    Qt.callLater(() => forceActiveFocus());
+                                                }
+                                            }
+
+                                            Connections {
+                                                target: savedPasswordCard
+                                                function onVisibleChanged() {
+                                                    if (savedPasswordCard.visible) {
+                                                        savedPwField.text = "";
+                                                        savedPwField.forceActiveFocus();
+                                                        Qt.callLater(() => savedPwField.forceActiveFocus());
+                                                    }
+                                                }
+                                            }
+
+                                            Keys.priority: Keys.BeforeItem
+                                            Keys.onEscapePressed: function(event) {
+                                                root.passwordPromptSsid = "";
+                                                event.accepted = true;
+                                            }
+                                            Keys.onReturnPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
+                                            Keys.onEnterPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
+
+                                            onAccepted: {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                }
+                                            }
+                                        }
+
+                                        SvgIconButton {
+                                            icon: savedPwField.savedRevealPass ? "eye" : "eye-off"
+                                            iconSize: Constants.sizeSm
+                                            iconColor: Theme.muted
+                                            hoverColor: Theme.accent
+                                            flat: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            onClicked: {
+                                                savedPwField.savedRevealPass = !savedPwField.savedRevealPass;
+                                                savedPwField.forceActiveFocus();
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            implicitWidth: 64
+                                            implicitHeight: 28
+                                            radius: Constants.sizeXs
+                                            color: savedPwField.text.length > 0 ? Theme.accent : Theme.bgTertiary
+                                            Layout.alignment: Qt.AlignVCenter
+
+                                            ThemedText {
+                                                anchors.centerIn: parent
+                                                text: (root.isConnecting && root.connectingSsid === modelData.ssid) ? "..." : "Save"
+                                                customSize: Constants.sizeXs + 2
+                                                font.bold: true
+                                                color: savedPwField.text.length > 0 ? Theme.bg : Theme.muted
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (savedPwField.text.length > 0) {
+                                                        root.lastAttemptedSsid = modelData.ssid;
+                                                        root.connect(modelData.ssid, savedPwField.text);
+                                                        root.passwordPromptSsid = "";
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        SvgIconButton {
+                                            icon: "x"
+                                            iconSize: Constants.sizeSm
+                                            flat: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            onClicked: {
+                                                root.passwordPromptSsid = "";
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -208,20 +391,33 @@ Rectangle {
                                 Layout.fillWidth: true
                                 width: parent.width
                                 titleText: modelData.ssid
-                                subtitleText: (modelData.security && modelData.security !== "--" && modelData.security !== "none") ? ("Secured (" + modelData.security + ")") : ((modelData.signal || modelData.strength) > 75 ? "Excellent signal" : ((modelData.signal || modelData.strength) > 50 ? "Good signal" : "Weak signal"))
+                                subtitleText: {
+                                    if (root.isConnecting && root.connectingSsid === modelData.ssid)
+                                        return "Connecting...";
+                                    if (root.errorMessage !== "" && root.lastAttemptedSsid === modelData.ssid)
+                                        return root.errorMessage;
+                                    let isSecured = (modelData.security && modelData.security !== "--" && modelData.security !== "none");
+                                    let sec = isSecured ? ("Secured (" + modelData.security + ") • ") : "";
+                                    let sig = (modelData.signal || modelData.strength);
+                                    let quality = sig > 75 ? "Excellent signal" : (sig > 50 ? "Good signal" : "Weak signal");
+                                    return sec + quality;
+                                }
                                 iconName: root.getWifiIcon(modelData.signal || modelData.strength)
                                 isActive: false
+                                isConnecting: root.isConnecting && root.connectingSsid === modelData.ssid
                                 onClicked: {
                                     if (modelData.security && modelData.security !== "--" && modelData.security !== "none") {
                                         root.passwordPromptSsid = (root.passwordPromptSsid === modelData.ssid) ? "" : modelData.ssid;
                                     } else {
+                                        root.lastAttemptedSsid = modelData.ssid;
                                         root.connect(modelData.ssid, "");
                                     }
                                 }
                             }
 
-                            // Inline password card for secured network
+                            // Inline password card for secured available network
                             Rectangle {
+                                id: availablePasswordCard
                                 visible: root.passwordPromptSsid === modelData.ssid
                                 Layout.fillWidth: true
                                 implicitHeight: 46
@@ -230,62 +426,139 @@ Rectangle {
                                 border.width: 1
                                 border.color: Theme.accent
 
-                                RowLayout {
+                                FocusScope {
                                     anchors.fill: parent
-                                    anchors.leftMargin: Constants.sizeSm
-                                    anchors.rightMargin: Constants.sizeSm
-                                    spacing: Constants.sizeSm
+                                    focus: true
 
-                                    TextField {
-                                        id: pwField
-                                        Layout.fillWidth: true
-                                        placeholderText: "Enter Wi-Fi Password"
-                                        echoMode: TextInput.Password
-                                        color: Theme.fg
-                                        placeholderTextColor: Theme.muted
-                                        background: null
-                                        font.pixelSize: Constants.sizeSm
-                                        onAccepted: {
-                                            if (text.length > 0) {
-                                                root.connect(modelData.ssid, text);
-                                                root.passwordPromptSsid = "";
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: Constants.sizeSm
+                                        anchors.rightMargin: Constants.sizeSm
+                                        spacing: Constants.sizeSm
+
+                                        SvgIcon {
+                                            icon: "lock"
+                                            iconSize: Constants.sizeSm + 2
+                                            iconColor: Theme.accent
+                                            flat: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
+
+                                        TextField {
+                                            id: pwField
+                                            Layout.fillWidth: true
+                                            Layout.fillHeight: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            placeholderText: "Enter Wi-Fi Password"
+                                            echoMode: revealPass ? TextInput.Normal : TextInput.Password
+                                            color: Theme.fg
+                                            placeholderTextColor: Theme.muted
+                                            background: null
+                                            font.pixelSize: Constants.sizeSm
+                                            selectByMouse: true
+                                            focus: true
+
+                                            property bool revealPass: false
+
+                                            Component.onCompleted: {
+                                                if (availablePasswordCard.visible) {
+                                                    forceActiveFocus();
+                                                    Qt.callLater(() => forceActiveFocus());
+                                                }
                                             }
-                                        }
-                                    }
 
-                                    Rectangle {
-                                        implicitWidth: 64
-                                        implicitHeight: 28
-                                        radius: Constants.sizeXs
-                                        color: pwField.text.length > 0 ? Theme.accent : Theme.bgTertiary
-                                        Layout.alignment: Qt.AlignVCenter
+                                            Connections {
+                                                target: availablePasswordCard
+                                                function onVisibleChanged() {
+                                                    if (availablePasswordCard.visible) {
+                                                        pwField.text = "";
+                                                        pwField.forceActiveFocus();
+                                                        Qt.callLater(() => pwField.forceActiveFocus());
+                                                    }
+                                                }
+                                            }
 
-                                        ThemedText {
-                                            anchors.centerIn: parent
-                                            text: "Join"
-                                            customSize: Constants.sizeXs + 2
-                                            font.bold: true
-                                            color: pwField.text.length > 0 ? Theme.bg : Theme.muted
-                                        }
+                                            Keys.priority: Keys.BeforeItem
+                                            Keys.onEscapePressed: function(event) {
+                                                root.passwordPromptSsid = "";
+                                                event.accepted = true;
+                                            }
+                                            Keys.onReturnPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
+                                            Keys.onEnterPressed: function(event) {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
+                                                    root.passwordPromptSsid = "";
+                                                    event.accepted = true;
+                                                }
+                                            }
 
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                if (pwField.text.length > 0) {
-                                                    root.connect(modelData.ssid, pwField.text);
+                                            onAccepted: {
+                                                if (text.length > 0) {
+                                                    root.lastAttemptedSsid = modelData.ssid;
+                                                    root.connect(modelData.ssid, text);
                                                     root.passwordPromptSsid = "";
                                                 }
                                             }
                                         }
-                                    }
 
-                                    SvgIconButton {
-                                        icon: "x"
-                                        iconSize: Constants.sizeSm
-                                        flat: true
-                                        onClicked: {
-                                            root.passwordPromptSsid = "";
+                                        SvgIconButton {
+                                            icon: pwField.revealPass ? "eye" : "eye-off"
+                                            iconSize: Constants.sizeSm
+                                            iconColor: Theme.muted
+                                            hoverColor: Theme.accent
+                                            flat: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            onClicked: {
+                                                pwField.revealPass = !pwField.revealPass;
+                                                pwField.forceActiveFocus();
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            implicitWidth: 64
+                                            implicitHeight: 28
+                                            radius: Constants.sizeXs
+                                            color: pwField.text.length > 0 ? Theme.accent : Theme.bgTertiary
+                                            Layout.alignment: Qt.AlignVCenter
+
+                                            ThemedText {
+                                                anchors.centerIn: parent
+                                                text: (root.isConnecting && root.connectingSsid === modelData.ssid) ? "..." : "Join"
+                                                customSize: Constants.sizeXs + 2
+                                                font.bold: true
+                                                color: pwField.text.length > 0 ? Theme.bg : Theme.muted
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (pwField.text.length > 0) {
+                                                        root.lastAttemptedSsid = modelData.ssid;
+                                                        root.connect(modelData.ssid, pwField.text);
+                                                        root.passwordPromptSsid = "";
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        SvgIconButton {
+                                            icon: "x"
+                                            iconSize: Constants.sizeSm
+                                            flat: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            onClicked: {
+                                                root.passwordPromptSsid = "";
+                                            }
                                         }
                                     }
                                 }

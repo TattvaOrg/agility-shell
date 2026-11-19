@@ -11,6 +11,7 @@ import qs.Modules.Bar
 import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
 import qs.Modules.OSD
+import qs.Modules.DesktopWidgets
 
 ShellRoot {
     id: root
@@ -44,6 +45,10 @@ ShellRoot {
                 SettingsService.edgeLightingEnabled = !SettingsService.edgeLightingEnabled;
                 return;
             }
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+                SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
+                return;
+            }
             AppState.toggleWidget(widgetId);
         }
 
@@ -52,12 +57,20 @@ ShellRoot {
                 SettingsService.edgeLightingEnabled = true;
                 return;
             }
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+                SettingsService.desktopWidgetsEnabled = true;
+                return;
+            }
             AppState.openWidget(widgetId);
         }
 
         function close(widgetId: string) {
             if (widgetId === "edgelight" || widgetId === "edgelighting") {
                 SettingsService.edgeLightingEnabled = false;
+                return;
+            }
+            if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
+                SettingsService.desktopWidgetsEnabled = false;
                 return;
             }
             AppState.closeWidget(widgetId);
@@ -196,6 +209,11 @@ ShellRoot {
                 }
             }
         }
+    }
+
+    DesktopWidgetsLayer {
+        id: desktopWidgetsLayer
+        visible: SettingsService.settingsLoaded && SettingsService.desktopWidgetsEnabled && !root.isGaming
     }
 
     OsdPill {

@@ -17,13 +17,14 @@ import qs.Modules.Settings.PersonalizationSettings
 import qs.Modules.Settings.SystemInfo
 import qs.Modules.Settings.WallpaperSettings
 import qs.Modules.Settings.WindowSettings
+import qs.Modules.Settings.WidgetsSettings
 
 AppWindow {
     id: root
 
-    property var pageComponents: [personalizationComp, barSettingsComp, effectsComp, windowComp, integrationsComp, mouseComp, inputAndClipboardComp, systemInfoComp, wallpaperComp, barAppletsComp]
+    property var pageComponents: [personalizationComp, barSettingsComp, effectsComp, windowComp, integrationsComp, mouseComp, inputAndClipboardComp, systemInfoComp, wallpaperComp, barAppletsComp, widgetsComp]
     property int activeTab: 0
-    readonly property var navOrder: [0, 8, 1, 9, 2, 3, 5, 6, 4, 7]
+    readonly property var navOrder: [0, 8, 1, 9, 10, 2, 3, 5, 6, 4, 7]
     readonly property var tabMetadata: ({
         "0": {
             "title": "Appearance",
@@ -73,6 +74,11 @@ AppWindow {
         "9": {
             "title": "Bar Applets",
             "subtitle": "Active window, media visualizer, weather, battery, and status pills",
+            "category": "DESKTOP"
+        },
+        "10": {
+            "title": "Widgets",
+            "subtitle": "Material 3 floating desktop widgets, themes, visibility, and layout",
             "category": "DESKTOP"
         }
     })
@@ -325,6 +331,15 @@ AppWindow {
         id: barAppletsComp
 
         BarAppletsSettings {
+            anchors.fill: parent
+        }
+
+    }
+
+    Component {
+        id: widgetsComp
+
+        WidgetsSettings {
             anchors.fill: parent
         }
 

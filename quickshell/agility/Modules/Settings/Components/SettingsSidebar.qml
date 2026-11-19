@@ -133,6 +133,22 @@ AppSidebar {
 
     }
 
+    // Widgets (Tab 10)
+    Item {
+        Layout.fillWidth: true
+        Layout.leftMargin: Constants.sizeSm
+        Layout.rightMargin: Constants.sizeSm
+        Layout.preferredHeight: 34
+
+        SidebarNavRow {
+            anchors.fill: parent
+            iconName: "widgets"
+            labelText: "Widgets"
+            isActive: sidebarRoot.activeTab === 10
+            onRowClicked: sidebarRoot.tabClicked(10)
+        }
+    }
+
     // Visual Effects (Tab 2)
     Item {
         Layout.fillWidth: true

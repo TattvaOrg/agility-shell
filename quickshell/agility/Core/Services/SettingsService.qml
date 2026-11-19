@@ -60,6 +60,9 @@ Item {
     property bool appletNetwork: false
     property bool appletDnd: false
     property bool dndEnabled: false
+    // Desktop Widgets (Awe suite)
+    property bool desktopWidgetsEnabled: true
+    property bool widgetManagerNotchEnabled: true
     readonly property int barWidgetHeight: {
         if (barPillMode) {
             return Math.max(18, Math.min(44, Math.round(pillBarThickness - 10)));
@@ -278,6 +281,8 @@ Item {
     onEdgeLightingGlowChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingAudioOnlyChanged: { if (settingsLoaded) saveSettings(); }
     onEdgeLightingDirectionChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopWidgetsEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onWidgetManagerNotchEnabledChanged: { if (settingsLoaded) saveSettings(); }
 
     Timer {
         id: saveTimer
@@ -368,7 +373,9 @@ Item {
                 "edgeLightingThickness": settingsService.edgeLightingThickness,
                 "edgeLightingGlow": settingsService.edgeLightingGlow,
                 "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly,
-                "edgeLightingDirection": settingsService.edgeLightingDirection
+                "edgeLightingDirection": settingsService.edgeLightingDirection,
+                "desktopWidgetsEnabled": settingsService.desktopWidgetsEnabled,
+                "widgetManagerNotchEnabled": settingsService.widgetManagerNotchEnabled
             };
             syncShortcuts();
             settingsSaver.command = ["python3", Quickshell.shellDir + "/Core/Services/scripts/save_settings.py", JSON.stringify(data)];
@@ -644,6 +651,10 @@ Item {
                             settingsService.edgeLightingAudioOnly = prefs.edgeLightingAudioOnly;
                         if (prefs.edgeLightingDirection !== undefined)
                             settingsService.edgeLightingDirection = prefs.edgeLightingDirection;
+                        if (prefs.desktopWidgetsEnabled !== undefined)
+                            settingsService.desktopWidgetsEnabled = prefs.desktopWidgetsEnabled;
+                        if (prefs.widgetManagerNotchEnabled !== undefined)
+                            settingsService.widgetManagerNotchEnabled = prefs.widgetManagerNotchEnabled;
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);

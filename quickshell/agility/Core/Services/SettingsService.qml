@@ -63,6 +63,22 @@ Item {
     // Desktop Widgets (Awe suite)
     property bool desktopWidgetsEnabled: true
     property bool widgetManagerNotchEnabled: true
+
+    // Dock (macOS / iPadOS dynamic magnification dock)
+    property bool dockEnabled: true
+    property string dockPosition: "bottom" // "bottom", "left", "right"
+    property bool dockAutoHide: true
+    property int dockIconSize: 48
+    property bool dockMagnification: true
+
+    // Omni Spotlight Launcher
+    property bool omniLauncherEnabled: true
+
+    // Dynamic Island / Live Activities Hub
+    property bool dynamicIslandEnabled: true
+
+    // Mission Control / Visual Workspace Overview
+    property bool missionControlEnabled: true
     readonly property int barWidgetHeight: {
         if (barPillMode) {
             return Math.max(18, Math.min(44, Math.round(pillBarThickness - 10)));
@@ -87,7 +103,11 @@ Item {
         {"id": "clipboard", "title": "Clipboard History", "key": "Mod+V", "cmd": ["agl", "toggle", "clipboard"]},
         {"id": "screenshot", "title": "Screenshot Tool", "key": "Mod+Shift+S", "cmd": ["agl", "toggle", "screenshot"]},
         {"id": "powerMenu", "title": "Power Menu", "key": "Mod+Shift+E", "cmd": ["agl", "toggle", "power"]},
-        {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]}
+        {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]},
+        {"id": "omni", "title": "Omni Spotlight Launcher", "key": "Mod+K", "cmd": ["agl", "toggle", "omni"]},
+        {"id": "missioncontrol", "title": "Mission Control", "key": "Mod+Tab", "cmd": ["agl", "toggle", "missioncontrol"]},
+        {"id": "dock", "title": "Toggle Dock", "key": "Mod+Alt+D", "cmd": ["agl", "toggle", "dock"]},
+        {"id": "dynamicIsland", "title": "Toggle Dynamic Island", "key": "Mod+Alt+I", "cmd": ["agl", "toggle", "island"]}
     ]
     property var customShortcuts: []
 
@@ -375,7 +395,15 @@ Item {
                 "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly,
                 "edgeLightingDirection": settingsService.edgeLightingDirection,
                 "desktopWidgetsEnabled": settingsService.desktopWidgetsEnabled,
-                "widgetManagerNotchEnabled": settingsService.widgetManagerNotchEnabled
+                "widgetManagerNotchEnabled": settingsService.widgetManagerNotchEnabled,
+                "dockEnabled": settingsService.dockEnabled,
+                "dockPosition": settingsService.dockPosition,
+                "dockAutoHide": settingsService.dockAutoHide,
+                "dockIconSize": settingsService.dockIconSize,
+                "dockMagnification": settingsService.dockMagnification,
+                "omniLauncherEnabled": settingsService.omniLauncherEnabled,
+                "dynamicIslandEnabled": settingsService.dynamicIslandEnabled,
+                "missionControlEnabled": settingsService.missionControlEnabled
             };
             syncShortcuts();
             settingsSaver.command = ["python3", Quickshell.shellDir + "/Core/Services/scripts/save_settings.py", JSON.stringify(data)];
@@ -655,6 +683,22 @@ Item {
                             settingsService.desktopWidgetsEnabled = prefs.desktopWidgetsEnabled;
                         if (prefs.widgetManagerNotchEnabled !== undefined)
                             settingsService.widgetManagerNotchEnabled = prefs.widgetManagerNotchEnabled;
+                        if (prefs.dockEnabled !== undefined)
+                            settingsService.dockEnabled = prefs.dockEnabled;
+                        if (prefs.dockPosition !== undefined)
+                            settingsService.dockPosition = prefs.dockPosition;
+                        if (prefs.dockAutoHide !== undefined)
+                            settingsService.dockAutoHide = prefs.dockAutoHide;
+                        if (prefs.dockIconSize !== undefined)
+                            settingsService.dockIconSize = prefs.dockIconSize;
+                        if (prefs.dockMagnification !== undefined)
+                            settingsService.dockMagnification = prefs.dockMagnification;
+                        if (prefs.omniLauncherEnabled !== undefined)
+                            settingsService.omniLauncherEnabled = prefs.omniLauncherEnabled;
+                        if (prefs.dynamicIslandEnabled !== undefined)
+                            settingsService.dynamicIslandEnabled = prefs.dynamicIslandEnabled;
+                        if (prefs.missionControlEnabled !== undefined)
+                            settingsService.missionControlEnabled = prefs.missionControlEnabled;
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);

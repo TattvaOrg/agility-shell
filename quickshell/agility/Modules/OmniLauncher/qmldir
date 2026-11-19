@@ -1,0 +1,3 @@
+module qs.Modules.OmniLauncher
+OmniLauncher 1.0 OmniLauncher.qml
+OmniLauncherContent 1.0 OmniLauncherContent.qml

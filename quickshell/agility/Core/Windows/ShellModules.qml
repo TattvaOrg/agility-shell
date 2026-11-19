@@ -15,6 +15,8 @@ import qs.Modules.PackageManager
 import qs.Modules.PowerMenu
 import qs.Modules.Settings
 import qs.Modules.WallpaperSelector
+import qs.Modules.OmniLauncher
+import qs.Modules.MissionControl
 
 Item {
     id: root
@@ -97,6 +99,24 @@ Item {
 
         sourceComponent: Component {
             PowerMenu {
+            }
+        }
+    }
+
+    WidgetLoader {
+        widgetId: "omni"
+
+        sourceComponent: Component {
+            OmniLauncher {
+            }
+        }
+    }
+
+    WidgetLoader {
+        widgetId: "missioncontrol"
+
+        sourceComponent: Component {
+            MissionControl {
             }
         }
     }

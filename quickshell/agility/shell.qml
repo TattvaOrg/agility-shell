@@ -12,6 +12,8 @@ import qs.Modules.Bar.Styles.Convex
 import qs.Modules.Bar.Styles.Gaming
 import qs.Modules.OSD
 import qs.Modules.DesktopWidgets
+import qs.Modules.Dock
+import qs.Modules.DynamicIsland
 
 ShellRoot {
     id: root
@@ -49,6 +51,14 @@ ShellRoot {
                 SettingsService.desktopWidgetsEnabled = !SettingsService.desktopWidgetsEnabled;
                 return;
             }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = !SettingsService.dockEnabled;
+                return;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = !SettingsService.dynamicIslandEnabled;
+                return;
+            }
             AppState.toggleWidget(widgetId);
         }
 
@@ -61,6 +71,14 @@ ShellRoot {
                 SettingsService.desktopWidgetsEnabled = true;
                 return;
             }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = true;
+                return;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = true;
+                return;
+            }
             AppState.openWidget(widgetId);
         }
 
@@ -71,6 +89,14 @@ ShellRoot {
             }
             if (widgetId === "desktopwidgets" || widgetId === "desktop-widgets") {
                 SettingsService.desktopWidgetsEnabled = false;
+                return;
+            }
+            if (widgetId === "dock") {
+                SettingsService.dockEnabled = false;
+                return;
+            }
+            if (widgetId === "island" || widgetId === "dynamicisland" || widgetId === "dynamic-island") {
+                SettingsService.dynamicIslandEnabled = false;
                 return;
             }
             AppState.closeWidget(widgetId);
@@ -214,6 +240,16 @@ ShellRoot {
     DesktopWidgetsLayer {
         id: desktopWidgetsLayer
         visible: SettingsService.settingsLoaded && SettingsService.desktopWidgetsEnabled && !root.isGaming
+    }
+
+    Dock {
+        id: dockLayer
+        visible: SettingsService.settingsLoaded && SettingsService.dockEnabled && !root.isGaming
+    }
+
+    DynamicIsland {
+        id: dynamicIslandLayer
+        visible: SettingsService.settingsLoaded && SettingsService.dynamicIslandEnabled && !root.isGaming
     }
 
     OsdPill {

@@ -621,6 +621,11 @@ async fn handle_toggle(target: &str) -> Result<()> {
         "keybinds" | "minflair_keybinds" => toggle_widget("minflair_keybinds"),
         "packages" | "packagemanager" => toggle_widget("packagemanager"),
         "edgelight" | "edgelighting" | "edge-lighting" | "ambient" => toggle_widget("edgelight"),
+        "dock" => toggle_widget("dock"),
+        "omni" | "omnilauncher" | "spotlight" | "raycast" => toggle_widget("omni"),
+        "missioncontrol" | "mission-control" | "overview" => toggle_widget("missioncontrol"),
+        "island" | "dynamicisland" | "dynamic-island" => toggle_widget("island"),
+        "desktopwidgets" | "desktop-widgets" | "widgets" => toggle_widget("desktopwidgets"),
         "suits" => dispatch_qs_ipc("suits", "reload", &[]),
         "osd" => dispatch_qs_ipc("osd", "volume", &["50"]),
         other => {

@@ -35,18 +35,19 @@ Item {
     }
 
     function applyCaffeine(state) {
-        caffeineProc.running = false;
         if (state) {
             pauseIdleProc.running = false;
             pauseIdleProc.running = true;
+            caffeineProc.running = false;
             caffeineProc.running = true;
         } else {
+            caffeineProc.running = false;
             stopInhibitProc.running = false;
             stopInhibitProc.running = true;
             resumeIdleProc.running = false;
             resumeIdleProc.running = true;
         }
-        syncCaffeineProc.command = ["sh", "-c", "if command -v agl >/dev/null 2>&1; then agl caffeine >/dev/null 2>&1 & fi"];
+        syncCaffeineProc.command = ["sh", "-c", "if command -v agl >/dev/null 2>&1; then agl caffeine " + (state ? "on" : "off") + " >/dev/null 2>&1 & fi"];
         syncCaffeineProc.running = false;
         syncCaffeineProc.running = true;
     }
@@ -71,7 +72,8 @@ Item {
     Component.onCompleted: {
         if (gameModeActive)
             applyGameMode(true);
-
+        // Ensure any leftover systemd-inhibit processes from previous sessions are killed on startup
+        stopInhibitProc.running = true;
     }
     onNightLightActiveChanged: {
         if (SettingsService.settingsLoaded)
@@ -173,7 +175,7 @@ Item {
     Process {
         id: caffeineProc
 
-        command: ["systemd-inhibit", "--what=idle:sleep:shutdown:handle-lid-switch", "--who=quickshell", "--why=Keep screen and system active", "--mode=block", "sleep", "infinity"]
+        command: ["systemd-inhibit", "--what=idle:sleep:handle-lid-switch", "--who=quickshell", "--why=Keep screen and system active", "--mode=block", "sleep", "infinity"]
     }
 
     Process {
@@ -191,10 +193,11 @@ Item {
     Process {
         id: stopInhibitProc
 
-        command: ["sh", "-c", "pkill -f 'systemd-inhibit.*Keep screen and system active' 2>/dev/null; exit 0"]
+        command: ["sh", "-c", "pkill -9 -f 'systemd-inhibit.*quickshell' 2>/dev/null; pkill -9 -f 'systemd-inhibit.*Caffeine' 2>/dev/null; pkill -9 -f 'systemd-inhibit.*Keep screen' 2>/dev/null; exit 0"]
     }
 
     Process {
         id: syncCaffeineProc
     }
+
 }

@@ -13,8 +13,8 @@ Item {
     property real scaleFactor: 1.0
     property string clockStyle: "cookie" // "cookie", "nothing", "androidStacked", "digital"
 
-    x: Math.max(10, Math.min(root.screenWidth - root.width - 10, posX))
-    y: Math.max(10, Math.min(root.screenHeight - root.height - 10, posY))
+    x: (root.screenWidth > root.width + 20) ? Math.max(10, Math.min(root.screenWidth - root.width - 10, posX)) : posX
+    y: (root.screenHeight > root.height + 20) ? Math.max(10, Math.min(root.screenHeight - root.height - 10, posY)) : posY
     width: Math.round((clockStyle === "cookie" || clockStyle === "nothing" ? 320 : clockStyle === "androidStacked" ? 220 : 420) * scaleFactor)
     height: Math.round((clockStyle === "cookie" || clockStyle === "nothing" ? 320 : clockStyle === "androidStacked" ? 360 : 180) * scaleFactor)
 
@@ -32,8 +32,8 @@ Item {
                         if (data.clock.style !== undefined) root.clockStyle = data.clock.style
                         var w = Math.round((root.clockStyle === "cookie" || root.clockStyle === "nothing" ? 320 : root.clockStyle === "androidStacked" ? 220 : 420) * root.scaleFactor)
                         var h = Math.round((root.clockStyle === "cookie" || root.clockStyle === "nothing" ? 320 : root.clockStyle === "androidStacked" ? 360 : 180) * root.scaleFactor)
-                        if (data.clock.x !== undefined) root.posX = Math.max(10, Math.min(root.screenWidth - w - 10, data.clock.x))
-                        if (data.clock.y !== undefined) root.posY = Math.max(10, Math.min(root.screenHeight - h - 10, data.clock.y))
+                        if (data.clock.x !== undefined) { var maxW = (root.screenWidth > 100) ? Math.max(10, root.screenWidth - 40) : 99999; root.posX = Math.max(10, Math.min(maxW, data.clock.x)); root.x = root.posX; }
+                        if (data.clock.y !== undefined) { var maxH = (root.screenHeight > 100) ? Math.max(10, root.screenHeight - 40) : 99999; root.posY = Math.max(10, Math.min(maxH, data.clock.y)); root.y = root.posY; }
                     }
                 } catch (e) {}
             }
@@ -46,7 +46,7 @@ Item {
     }
 
     function saveSettings() {
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"clock\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"style\":\"" + root.clockStyle + "\"}; open(p,\"w\").write(json.dumps(d,indent=2))'"
+        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"clock\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"style\":\"" + root.clockStyle + "\"}; open(p,\"w\").write(json.dumps(d,indent=2))'"
         saveSettingsProc.command = ["sh", "-c", script]
         saveSettingsProc.running = true
     }

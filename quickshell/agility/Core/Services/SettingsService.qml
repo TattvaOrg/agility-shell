@@ -324,7 +324,7 @@ Item {
                 "musicPlayer": settingsService.musicPlayer,
                 "musicPlayerCommand": settingsService.musicPlayerCommand,
                 "nightLightActive": DisplayProfileService.nightLightActive,
-                "caffeineActive": DisplayProfileService.caffeineActive,
+                "caffeineActive": false,
                 "gameModeActive": DisplayProfileService.gameModeActive,
                 "nightLightTemperature": DisplayProfileService.nightLightTemperature,
                 "keyboardLayout": HyprlandService.keyboardLayout,
@@ -461,8 +461,8 @@ Item {
                         if (prefs.nightLightActive !== undefined)
                             DisplayProfileService.nightLightActive = prefs.nightLightActive;
 
-                        if (prefs.caffeineActive !== undefined)
-                            DisplayProfileService.caffeineActive = prefs.caffeineActive;
+                        // Caffeine always starts as OFF on fresh boot
+                        DisplayProfileService.caffeineActive = false;
 
                         if (prefs.gameModeActive !== undefined)
                             DisplayProfileService.gameModeActive = prefs.gameModeActive;

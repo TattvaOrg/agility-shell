@@ -20,13 +20,12 @@ AppContainer {
         // ─────────────────────────────────────────────
         // 1. DESKTOP THEMES & COLOR STYLE
         // ─────────────────────────────────────────────
-        SettingGroup {
+        AppGroup {
             title: "DESKTOP THEMES & COLOR STYLE"
 
             SettingToggle {
-                labelText: "Dynamic Wallpaper Colors (Matugen)"
-                descriptionText: "Automatically extract accent and palette colors from the active wallpaper"
-                iconName: "sparkles"
+                label: "Dynamic Wallpaper Colors (Matugen)"
+                description: "Automatically extract accent and palette colors from the active wallpaper"
                 checked: Theme.generateFromWallpaper
                 onToggled: function(val) {
                     Theme.generateFromWallpaper = val;
@@ -49,9 +48,8 @@ AppContainer {
             }
 
             SettingToggle {
-                labelText: "Dark Color Scheme"
-                descriptionText: "Use dark palette variant for shell surfaces, dock, and widgets"
-                iconName: "moon"
+                label: "Dark Color Scheme"
+                description: "Use dark palette variant for shell surfaces, dock, and widgets"
                 checked: dockSettingsRoot.isDarkTheme
                 onToggled: function(val) {
                     if (Theme.generateFromWallpaper) {
@@ -175,13 +173,12 @@ AppContainer {
         // ─────────────────────────────────────────────
         // 2. FLOATING DOCK CONFIGURATION
         // ─────────────────────────────────────────────
-        SettingGroup {
+        AppGroup {
             title: "FLOATING DOCK"
 
             SettingToggle {
-                labelText: "Enable Dynamic Dock"
-                descriptionText: "Show a floating macOS / iPadOS-style app dock with smooth magnification"
-                iconName: "apps"
+                label: "Enable Dynamic Dock"
+                description: "Show a floating macOS / iPadOS-style app dock with smooth magnification"
                 checked: SettingsService.dockEnabled
                 onToggled: function(val) {
                     SettingsService.dockEnabled = val;
@@ -190,28 +187,23 @@ AppContainer {
             }
 
             SettingSegmented {
-                labelText: "Dock Screen Edge Position"
-                descriptionText: "Pin the dock along the bottom, left, or right display boundary"
-                iconName: "layout"
-                options: ["Bottom", "Left", "Right"]
-                currentIndex: {
-                    if (SettingsService.dockPosition === "left") return 1;
-                    if (SettingsService.dockPosition === "right") return 2;
-                    return 0;
-                }
-                onIndexSelected: function(idx) {
-                    let pos = "bottom";
-                    if (idx === 1) pos = "left";
-                    if (idx === 2) pos = "right";
-                    SettingsService.dockPosition = pos;
+                label: "Dock Screen Edge Position"
+                description: "Pin the dock along the bottom, left, or right display boundary"
+                model: [
+                    { "text": "Bottom", "value": "bottom" },
+                    { "text": "Left", "value": "left" },
+                    { "text": "Right", "value": "right" }
+                ]
+                currentValue: SettingsService.dockPosition
+                onActivated: function(val) {
+                    SettingsService.dockPosition = val;
                     SettingsService.saveSettings();
                 }
             }
 
             SettingToggle {
-                labelText: "Auto-Hide Dock"
-                descriptionText: "Hide dock when idle and smoothly reveal when hovering screen edge"
-                iconName: "eye"
+                label: "Auto-Hide Dock"
+                description: "Hide dock when idle and smoothly reveal when hovering screen edge"
                 checked: SettingsService.dockAutoHide
                 onToggled: function(val) {
                     SettingsService.dockAutoHide = val;
@@ -220,9 +212,8 @@ AppContainer {
             }
 
             SettingToggle {
-                labelText: "Dynamic Magnification Zoom"
-                descriptionText: "Magnify hovered app icon and neighboring icons using parabolic physics"
-                iconName: "sparkles"
+                label: "Dynamic Magnification Zoom"
+                description: "Magnify hovered app icon and neighboring icons using parabolic physics"
                 checked: SettingsService.dockMagnification
                 onToggled: function(val) {
                     SettingsService.dockMagnification = val;
@@ -231,27 +222,24 @@ AppContainer {
             }
 
             SettingSegmented {
-                labelText: "Base Icon Size"
-                descriptionText: "Standard size for application icons resting in the dock"
-                iconName: "settings"
-                options: ["36px", "44px", "48px", "56px"]
-                currentIndex: {
-                    if (SettingsService.dockIconSize === 36) return 0;
-                    if (SettingsService.dockIconSize === 44) return 1;
-                    if (SettingsService.dockIconSize === 56) return 3;
-                    return 2; // 48px
-                }
-                onIndexSelected: function(idx) {
-                    let sizes = [36, 44, 48, 56];
-                    SettingsService.dockIconSize = sizes[idx];
+                label: "Base Icon Size"
+                description: "Standard size for application icons resting in the dock"
+                model: [
+                    { "text": "36px", "value": 36 },
+                    { "text": "44px", "value": 44 },
+                    { "text": "48px", "value": 48 },
+                    { "text": "56px", "value": 56 }
+                ]
+                currentValue: SettingsService.dockIconSize
+                onActivated: function(val) {
+                    SettingsService.dockIconSize = val;
                     SettingsService.saveSettings();
                 }
             }
 
             SettingRowTemplate {
-                labelText: "Toggle Dock"
-                descriptionText: "Quickly toggle the dock visibility now"
-                iconName: "layout"
+                label: "Toggle Dock"
+                description: "Quickly toggle the dock visibility now"
 
                 Rectangle {
                     Layout.preferredHeight: 32
@@ -287,13 +275,12 @@ AppContainer {
         // ─────────────────────────────────────────────
         // 3. SPOTLIGHT COMMAND BAR
         // ─────────────────────────────────────────────
-        SettingGroup {
+        AppGroup {
             title: "SPOTLIGHT COMMAND BAR"
 
             SettingToggle {
-                labelText: "Enable Spotlight (Mod + K)"
-                descriptionText: "Raycast/Spotlight unified command bar for math, apps, window switching, and web"
-                iconName: "search"
+                label: "Enable Spotlight (Mod + K)"
+                description: "Raycast/Spotlight unified command bar for math, apps, window switching, and web"
                 checked: SettingsService.spotlightEnabled
                 onToggled: function(val) {
                     SettingsService.spotlightEnabled = val;
@@ -333,9 +320,8 @@ AppContainer {
             }
 
             SettingRowTemplate {
-                labelText: "Open Spotlight"
-                descriptionText: "Trigger the Spotlight modal now to search apps, calculate math, or switch windows"
-                iconName: "command"
+                label: "Open Spotlight"
+                description: "Trigger the Spotlight modal now to search apps, calculate math, or switch windows"
 
                 Rectangle {
                     Layout.preferredHeight: 32
@@ -368,13 +354,12 @@ AppContainer {
         // ─────────────────────────────────────────────
         // 4. DYNAMIC ISLAND & LIVE ACTIVITIES HUB
         // ─────────────────────────────────────────────
-        SettingGroup {
+        AppGroup {
             title: "DYNAMIC ISLAND & LIVE ACTIVITIES"
 
             SettingToggle {
-                labelText: "Enable Dynamic Island Capsule"
-                descriptionText: "Expanding floating capsule at top center for live music, timer, and toasts"
-                iconName: "music"
+                label: "Enable Dynamic Island Capsule"
+                description: "Expanding floating capsule at top center for live music, timer, and toasts"
                 checked: SettingsService.dynamicIslandEnabled
                 onToggled: function(val) {
                     SettingsService.dynamicIslandEnabled = val;
@@ -417,13 +402,12 @@ AppContainer {
         // ─────────────────────────────────────────────
         // 5. MISSION CONTROL / VISUAL WORKSPACE OVERVIEW
         // ─────────────────────────────────────────────
-        SettingGroup {
+        AppGroup {
             title: "MISSION CONTROL & WORKSPACE OVERVIEW"
 
             SettingToggle {
-                labelText: "Enable Mission Control (Mod + Tab)"
-                descriptionText: "Fullscreen visual overview of all workspaces and open windows"
-                iconName: "window"
+                label: "Enable Mission Control (Mod + Tab)"
+                description: "Fullscreen visual overview of all workspaces and open windows"
                 checked: SettingsService.missionControlEnabled
                 onToggled: function(val) {
                     SettingsService.missionControlEnabled = val;
@@ -432,9 +416,8 @@ AppContainer {
             }
 
             SettingRowTemplate {
-                labelText: "Open Mission Control"
-                descriptionText: "View all occupied workspaces, filter windows, and switch between them"
-                iconName: "layout"
+                label: "Open Mission Control"
+                description: "View all occupied workspaces, filter windows, and switch between them"
 
                 Rectangle {
                     Layout.preferredHeight: 32

@@ -143,7 +143,7 @@ AppContainer {
             let textStr = JSON.stringify(widgetsSettingsRoot.pillText);
             let themeStr = JSON.stringify(widgetsSettingsRoot.currentTheme);
             let showStr = widgetsSettingsRoot.showPill ? "True" : "False";
-            let pyScript = "import json, os; p=os.path.expanduser('~/.config/quickshell/widget_settings.json'); d=json.load(open(p)) if os.path.exists(p) else {}; m=d.setdefault('manager', {}); m['visibility']=json.loads(" + JSON.stringify(visJson) + "); m['position']=" + posStr + "; m['pillText']=" + textStr + "; m['theme']=" + themeStr + "; m['showPill']=" + showStr + "; open(p,'w').write(json.dumps(d,indent=2))";
+            let pyScript = "import json, os; p=os.path.expanduser('~/.config/quickshell/widget_settings.json'); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; m=d.setdefault('manager', {}); m['visibility']=json.loads(" + JSON.stringify(visJson) + "); m['position']=" + posStr + "; m['pillText']=" + textStr + "; m['theme']=" + themeStr + "; m['showPill']=" + showStr + "; open(p,'w').write(json.dumps(d,indent=2))";
             saveSettingsProc.command = ["python3", "-c", pyScript];
             saveSettingsProc.running = true;
         }
@@ -188,13 +188,13 @@ AppContainer {
 
     function applyGlobalScale(scaleVal) {
         widgetsSettingsRoot.globalScaleValue = scaleVal;
-        let script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; widgets=[\"clock\",\"poster\",\"calendar\",\"media\",\"sysinfo\",\"battery\",\"weather\",\"quickcontrols\",\"network\",\"notes\",\"todo\",\"timer\",\"thermal\",\"quote\",\"clipboard\",\"crypto\",\"worldclock\",\"git\",\"resourcewheel\",\"visualizer\",\"habits\",\"ping\",\"storagemap\",\"calc\"]; [d.setdefault(w, {}).update({\"scale\": round(" + scaleVal + ", 2)}) for w in widgets]; open(p,\"w\").write(json.dumps(d,indent=2))'";
+        let script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; widgets=[\"clock\",\"poster\",\"calendar\",\"media\",\"sysinfo\",\"battery\",\"weather\",\"quickcontrols\",\"network\",\"notes\",\"todo\",\"timer\",\"thermal\",\"quote\",\"clipboard\",\"crypto\",\"worldclock\",\"git\",\"resourcewheel\",\"visualizer\",\"habits\",\"ping\",\"storagemap\",\"calc\"]; [d.setdefault(w, {}).update({\"scale\": round(" + scaleVal + ", 2)}) for w in widgets]; open(p,\"w\").write(json.dumps(d,indent=2))'";
         saveSettingsProc.command = ["sh", "-c", script];
         saveSettingsProc.running = true;
     }
 
     function resetLayoutPositions() {
-        let script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; pos={\"poster\":(30,30),\"calendar\":(30,230),\"visualizer\":(30,460),\"media\":(30,620),\"clipboard\":(30,800),\"sysinfo\":(400,30),\"thermal\":(400,160),\"timer\":(640,160),\"quote\":(400,370),\"todo\":(400,520),\"notes\":(660,520),\"git\":(400,730),\"habits\":(660,730),\"resourcewheel\":(400,890),\"storagemap\":(660,890),\"clock\":(1120,40),\"battery\":(1120,300),\"weather\":(1120,430),\"network\":(1120,580),\"ping\":(1120,730),\"quickcontrols\":(1120,880),\"calc\":(1400,40),\"crypto\":(1400,330),\"worldclock\":(1400,500)}; [d.setdefault(k, {}).update({\"x\": v[0], \"y\": v[1]}) for k, v in pos.items()]; open(p,\"w\").write(json.dumps(d,indent=2))'";
+        let script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; pos={\"poster\":(30,30),\"calendar\":(30,230),\"visualizer\":(30,460),\"media\":(30,620),\"clipboard\":(30,800),\"sysinfo\":(400,30),\"thermal\":(400,160),\"timer\":(640,160),\"quote\":(400,370),\"todo\":(400,520),\"notes\":(660,520),\"git\":(400,730),\"habits\":(660,730),\"resourcewheel\":(400,890),\"storagemap\":(660,890),\"clock\":(1120,40),\"battery\":(1120,300),\"weather\":(1120,430),\"network\":(1120,580),\"ping\":(1120,730),\"quickcontrols\":(1120,880),\"calc\":(1400,40),\"crypto\":(1400,330),\"worldclock\":(1400,500)}; [d.setdefault(k, {}).update({\"x\": v[0], \"y\": v[1]}) for k, v in pos.items()]; open(p,\"w\").write(json.dumps(d,indent=2))'";
         saveSettingsProc.command = ["sh", "-c", script];
         saveSettingsProc.running = true;
         loadSettingsProc.running = true;

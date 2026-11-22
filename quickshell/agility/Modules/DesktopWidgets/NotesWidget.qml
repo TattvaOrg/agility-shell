@@ -12,8 +12,8 @@ Item {
     property real posY: 520
     property real scaleFactor: 0.88
 
-    x: Math.max(10, Math.min(root.screenWidth - root.width - 10, posX))
-    y: Math.max(10, Math.min(root.screenHeight - root.height - 10, posY))
+    x: (root.screenWidth > root.width + 20) ? Math.max(10, Math.min(root.screenWidth - root.width - 10, posX)) : posX
+    y: (root.screenHeight > root.height + 20) ? Math.max(10, Math.min(root.screenHeight - root.height - 10, posY)) : posY
     width: Math.round(270 * scaleFactor)
     height: Math.round(220 * scaleFactor)
 
@@ -38,8 +38,8 @@ Item {
                         if (data.notes.scale !== undefined) root.scaleFactor = Math.max(0.5, Math.min(2.5, data.notes.scale))
                         var w = Math.round(270 * root.scaleFactor)
                         var h = Math.round(220 * root.scaleFactor)
-                        if (data.notes.x !== undefined) root.posX = Math.max(10, Math.min(root.screenWidth - w - 10, data.notes.x))
-                        if (data.notes.y !== undefined) root.posY = Math.max(10, Math.min(root.screenHeight - h - 10, data.notes.y))
+                        if (data.notes.x !== undefined) { var maxW = (root.screenWidth > 100) ? Math.max(10, root.screenWidth - 40) : 99999; root.posX = Math.max(10, Math.min(maxW, data.notes.x)); root.x = root.posX; }
+                        if (data.notes.y !== undefined) { var maxH = (root.screenHeight > 100) ? Math.max(10, root.screenHeight - 40) : 99999; root.posY = Math.max(10, Math.min(maxH, data.notes.y)); root.y = root.posY; }
                         if (data.notes.list && Array.isArray(data.notes.list) && data.notes.list.length > 0) {
                             root.notesList = data.notes.list
                             if (root.currentNoteIndex >= root.notesList.length) root.currentNoteIndex = 0
@@ -65,7 +65,7 @@ Item {
 
     function saveSettings() {
         var jsonStr = JSON.stringify(root.notesList).replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"notes\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"list\":" + jsonStr + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
+        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"notes\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"list\":" + jsonStr + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
         saveSettingsProc.command = ["sh", "-c", script]
         saveSettingsProc.running = true
     }

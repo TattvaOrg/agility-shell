@@ -13,8 +13,8 @@ Item {
     property real posY: 40
     property real scaleFactor: 0.85
 
-    x: Math.max(10, Math.min(root.screenWidth - root.width - 10, posX))
-    y: Math.max(10, Math.min(root.screenHeight - root.height - 10, posY))
+    x: (root.screenWidth > root.width + 20) ? Math.max(10, Math.min(root.screenWidth - root.width - 10, posX)) : posX
+    y: (root.screenHeight > root.height + 20) ? Math.max(10, Math.min(root.screenHeight - root.height - 10, posY)) : posY
     width: Math.round(210 * scaleFactor)
     height: Math.round(210 * scaleFactor)
 
@@ -34,8 +34,8 @@ Item {
                     if (data.poster) {
                         if (data.poster.scale !== undefined) root.scaleFactor = Math.max(0.5, Math.min(2.5, data.poster.scale))
                         var size = Math.round(210 * root.scaleFactor)
-                        if (data.poster.x !== undefined) root.posX = Math.max(10, Math.min(root.screenWidth - size - 10, data.poster.x))
-                        if (data.poster.y !== undefined) root.posY = Math.max(10, Math.min(root.screenHeight - size - 10, data.poster.y))
+                        if (data.poster.x !== undefined) { var maxW = (root.screenWidth > 100) ? Math.max(10, root.screenWidth - 40) : 99999; root.posX = Math.max(10, Math.min(maxW, data.poster.x)); root.x = root.posX; }
+                        if (data.poster.y !== undefined) { var maxH = (root.screenHeight > 100) ? Math.max(10, root.screenHeight - 40) : 99999; root.posY = Math.max(10, Math.min(maxH, data.poster.y)); root.y = root.posY; }
                         if (data.poster.imagePath !== undefined) root.imagePath = data.poster.imagePath
                         if (data.poster.shapeIndex !== undefined) root.shapeIndex = data.poster.shapeIndex
                     }
@@ -51,7 +51,7 @@ Item {
 
     function saveSettings() {
         var safePath = root.imagePath.replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"poster\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"imagePath\":\"" + safePath + "\",\"shapeIndex\":" + root.shapeIndex + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
+        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"poster\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"imagePath\":\"" + safePath + "\",\"shapeIndex\":" + root.shapeIndex + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
         saveSettingsProc.command = ["sh", "-c", script]
         saveSettingsProc.running = true
     }

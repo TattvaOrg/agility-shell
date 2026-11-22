@@ -12,8 +12,8 @@ Item {
     property real posY: 640
     property real scaleFactor: 0.88
 
-    x: Math.max(10, Math.min(root.screenWidth - root.width - 10, posX))
-    y: Math.max(10, Math.min(root.screenHeight - root.height - 10, posY))
+    x: (root.screenWidth > root.width + 20) ? Math.max(10, Math.min(root.screenWidth - root.width - 10, posX)) : posX
+    y: (root.screenHeight > root.height + 20) ? Math.max(10, Math.min(root.screenHeight - root.height - 10, posY)) : posY
     width: Math.round(280 * scaleFactor)
     height: Math.round(150 * scaleFactor)
 
@@ -44,8 +44,8 @@ Item {
                         if (data.crypto.activeCoin !== undefined) root.activeCoin = data.crypto.activeCoin
                         var w = Math.round(280 * root.scaleFactor)
                         var h = Math.round(150 * root.scaleFactor)
-                        if (data.crypto.x !== undefined) root.posX = Math.max(10, Math.min(root.screenWidth - w - 10, data.crypto.x))
-                        if (data.crypto.y !== undefined) root.posY = Math.max(10, Math.min(root.screenHeight - h - 10, data.crypto.y))
+                        if (data.crypto.x !== undefined) { var maxW = (root.screenWidth > 100) ? Math.max(10, root.screenWidth - 40) : 99999; root.posX = Math.max(10, Math.min(maxW, data.crypto.x)); root.x = root.posX; }
+                        if (data.crypto.y !== undefined) { var maxH = (root.screenHeight > 100) ? Math.max(10, root.screenHeight - 40) : 99999; root.posY = Math.max(10, Math.min(maxH, data.crypto.y)); root.y = root.posY; }
                     }
                 } catch (e) {}
             }
@@ -58,7 +58,7 @@ Item {
     }
 
     function saveSettings() {
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"crypto\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"activeCoin\":\"" + root.activeCoin + "\"}; open(p,\"w\").write(json.dumps(d,indent=2))'"
+        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"crypto\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"activeCoin\":\"" + root.activeCoin + "\"}; open(p,\"w\").write(json.dumps(d,indent=2))'"
         saveSettingsProc.command = ["sh", "-c", script]
         saveSettingsProc.running = true
     }

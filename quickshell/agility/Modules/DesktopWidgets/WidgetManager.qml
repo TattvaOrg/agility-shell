@@ -117,7 +117,7 @@ Item {
             var posStr = JSON.stringify(root.pillPosition)
             var textStr = JSON.stringify(root.pillText)
             var showStr = root.showPill ? "True" : "False"
-            var pyScript = "import json, os; p=os.path.expanduser('~/.config/quickshell/widget_settings.json'); d=json.load(open(p)) if os.path.exists(p) else {}; m=d.setdefault('manager', {}); m['visibility']=json.loads(" + JSON.stringify(visJson) + "); m['position']=" + posStr + "; m['pillText']=" + textStr + "; m['showPill']=" + showStr + "; open(p,'w').write(json.dumps(d,indent=2))"
+            var pyScript = "import json, os; p=os.path.expanduser('~/.config/quickshell/widget_settings.json'); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; m=d.setdefault('manager', {}); m['visibility']=json.loads(" + JSON.stringify(visJson) + "); m['position']=" + posStr + "; m['pillText']=" + textStr + "; m['showPill']=" + showStr + "; open(p,'w').write(json.dumps(d,indent=2))"
             saveSettingsProc.command = ["python3", "-c", pyScript]
             saveSettingsProc.running = true
         }

@@ -12,8 +12,8 @@ Item {
     property real posY: 730
     property real scaleFactor: 0.88
 
-    x: Math.max(10, Math.min(root.screenWidth - root.width - 10, posX))
-    y: Math.max(10, Math.min(root.screenHeight - root.height - 10, posY))
+    x: (root.screenWidth > root.width + 20) ? Math.max(10, Math.min(root.screenWidth - root.width - 10, posX)) : posX
+    y: (root.screenHeight > root.height + 20) ? Math.max(10, Math.min(root.screenHeight - root.height - 10, posY)) : posY
     width: Math.round(290 * scaleFactor)
     height: Math.round(155 * scaleFactor)
 
@@ -38,8 +38,8 @@ Item {
                         if (data.git.scale !== undefined) root.scaleFactor = Math.max(0.5, Math.min(2.5, data.git.scale))
                         var w = Math.round(290 * root.scaleFactor)
                         var h = Math.round(155 * root.scaleFactor)
-                        if (data.git.x !== undefined) root.posX = Math.max(10, Math.min(root.screenWidth - w - 10, data.git.x))
-                        if (data.git.y !== undefined) root.posY = Math.max(10, Math.min(root.screenHeight - h - 10, data.git.y))
+                        if (data.git.x !== undefined) { var maxW = (root.screenWidth > 100) ? Math.max(10, root.screenWidth - 40) : 99999; root.posX = Math.max(10, Math.min(maxW, data.git.x)); root.x = root.posX; }
+                        if (data.git.y !== undefined) { var maxH = (root.screenHeight > 100) ? Math.max(10, root.screenHeight - 40) : 99999; root.posY = Math.max(10, Math.min(maxH, data.git.y)); root.y = root.posY; }
                     }
                 } catch (e) {}
             }
@@ -52,7 +52,7 @@ Item {
     }
 
     function saveSettings() {
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"git\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
+        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"git\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
         saveSettingsProc.command = ["sh", "-c", script]
         saveSettingsProc.running = true
     }

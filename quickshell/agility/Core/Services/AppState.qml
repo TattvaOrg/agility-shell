@@ -184,8 +184,6 @@ Item {
         else
             openWidgetInternal(targetId);
     }
-            openWidgetInternal(widgetId);
-    }
 
     onActiveWidgetChanged: {
         if (activeWidget === "") {

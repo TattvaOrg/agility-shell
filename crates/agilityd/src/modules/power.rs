@@ -55,6 +55,11 @@ impl PowerService {
             on_battery: on_bat,
         };
 
+        // Clean up any stale systemd-inhibit processes on daemon startup
+        let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*quickshell"]).status();
+        let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*Caffeine"]).status();
+        let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*Keep screen"]).status();
+
         // Attempt to load persisted state from cache
         let state_path = cache_dir.join("power_state.json");
         if state_path.is_file() {
@@ -64,7 +69,8 @@ impl PowerService {
                         .night_light_temperature
                         .clamp(MIN_NIGHT_LIGHT_TEMP, MAX_NIGHT_LIGHT_TEMP);
                     initial_state.night_light_active = saved.night_light_active;
-                    initial_state.caffeine_active = saved.caffeine_active;
+                    // Caffeine always starts as false on fresh reboot/startup
+                    initial_state.caffeine_active = false;
                     if VALID_POWER_PROFILES.contains(&saved.power_profile.as_str()) {
                         initial_state.power_profile = saved.power_profile;
                     }
@@ -160,6 +166,9 @@ impl PowerService {
             info!("Caffeine idle inhibitor enabled.");
         } else {
             kill_child(&self.inhibit_child);
+            let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*quickshell"]).status();
+            let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*Caffeine"]).status();
+            let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*Keep screen"]).status();
             let _ = Command::new("pkill").args(["-CONT", "swayidle"]).status();
             let _ = Command::new("pkill").args(["-CONT", "hypridle"]).status();
             self.start_idle_monitor();
@@ -285,7 +294,8 @@ impl PowerService {
 
         if Self::has_binary("systemd-inhibit") {
             match Command::new("systemd-inhibit")
-                .arg("--what=idle:sleep:shutdown:handle-lid-switch")
+                .arg("--what=idle:sleep:handle-lid-switch")
+                .arg("--who=agilityd")
                 .arg("--why=Caffeine keep-awake")
                 .arg("--mode=block")
                 .arg("sleep")
@@ -801,7 +811,8 @@ mod tests {
         let service2 = PowerService::new(service1.config_dir.clone(), service1.cache_dir.clone());
         let state2 = service2.get_power_state();
 
-        assert!(state2.caffeine_active);
+        // Caffeine is deliberately reset to false on restart per UX design
+        assert!(!state2.caffeine_active);
         assert!(state2.night_light_active);
         assert_eq!(state2.night_light_temperature, 3200);
         assert_eq!(state2.power_profile, "performance");

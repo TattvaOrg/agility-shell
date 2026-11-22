@@ -17,8 +17,8 @@ Item {
     property int shapeStyleIndex: 0
     property var styleNames: ["Classic Card", "Floating Pills", "Grid Tiles", "Arch Expressive"]
 
-    x: Math.max(10, Math.min(root.screenWidth - root.width - 10, posX))
-    y: Math.max(10, Math.min(root.screenHeight - root.height - 10, posY))
+    x: (root.screenWidth > root.width + 20) ? Math.max(10, Math.min(root.screenWidth - root.width - 10, posX)) : posX
+    y: (root.screenHeight > root.height + 20) ? Math.max(10, Math.min(root.screenHeight - root.height - 10, posY)) : posY
     width: Math.round(290 * scaleFactor)
     height: Math.round((root.shapeStyleIndex === 2 ? 80 + Math.ceil(root.cities.length / 2) * 68 : (root.shapeStyleIndex === 1 ? 60 + root.cities.length * 42 : 70 + Math.max(2, root.cities.length) * 34)) * scaleFactor)
 
@@ -61,8 +61,8 @@ Item {
                         if (data.worldclock.shapeStyle !== undefined) root.shapeStyleIndex = data.worldclock.shapeStyle % 4
                         var w = Math.round(290 * root.scaleFactor)
                         var h = Math.round((70 + Math.max(2, root.cities.length) * 34) * root.scaleFactor)
-                        if (data.worldclock.x !== undefined) root.posX = Math.max(10, Math.min(root.screenWidth - w - 10, data.worldclock.x))
-                        if (data.worldclock.y !== undefined) root.posY = Math.max(10, Math.min(root.screenHeight - h - 10, data.worldclock.y))
+                        if (data.worldclock.x !== undefined) { var maxW = (root.screenWidth > 100) ? Math.max(10, root.screenWidth - 40) : 99999; root.posX = Math.max(10, Math.min(maxW, data.worldclock.x)); root.x = root.posX; }
+                        if (data.worldclock.y !== undefined) { var maxH = (root.screenHeight > 100) ? Math.max(10, root.screenHeight - 40) : 99999; root.posY = Math.max(10, Math.min(maxH, data.worldclock.y)); root.y = root.posY; }
                         if (data.worldclock.cities && Array.isArray(data.worldclock.cities) && data.worldclock.cities.length > 0) {
                             root.cities = data.worldclock.cities
                         }
@@ -79,7 +79,7 @@ Item {
 
     function saveSettings() {
         var jsonCities = JSON.stringify(root.cities).replace(/'/g, "'\\''")
-        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"worldclock\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"shapeStyle\":" + root.shapeStyleIndex + ",\"cities\":" + jsonCities + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
+        var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d[\"worldclock\"]={\"x\":" + Math.round(root.x) + ",\"y\":" + Math.round(root.y) + ",\"scale\":" + root.scaleFactor.toFixed(2) + ",\"shapeStyle\":" + root.shapeStyleIndex + ",\"cities\":" + jsonCities + "}; open(p,\"w\").write(json.dumps(d,indent=2))'"
         saveSettingsProc.command = ["sh", "-c", script]
         saveSettingsProc.running = true
     }

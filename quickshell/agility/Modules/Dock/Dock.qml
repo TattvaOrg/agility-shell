@@ -86,7 +86,6 @@ Item {
                 ThemedShadow {
                     anchors.fill: parent
                     radius: parent.radius
-                    elevation: 16
                     opacity: 0.5
                 }
 

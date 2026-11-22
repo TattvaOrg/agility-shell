@@ -200,7 +200,7 @@ async fn main() -> Result<()> {
         Commands::Brightness { action, step } => handle_brightness(&action, step).await?,
         Commands::Screenshot { mode } => handle_screenshot(&mode).await?,
         Commands::Record { action, with_audio } => handle_record(&action, with_audio).await?,
-        Commands::Caffeine { action: _ } => handle_caffeine().await?,
+        Commands::Caffeine { action } => handle_caffeine(&action).await?,
         Commands::Sound { action, name } => handle_sound(&action, name.as_deref()).await?,
         Commands::BarData => handle_bar_data().await?,
         Commands::Deps => handle_deps().await?,
@@ -393,11 +393,13 @@ async fn handle_start(legacy: bool) -> Result<()> {
 async fn handle_stop() -> Result<()> {
     println!("🛑 Stopping Agility Shell...");
 
-    if is_systemd_service_active("agility-shell.service") {
-        let _ = Command::new("systemctl")
-            .args(["--user", "stop", "agility-shell.service"])
-            .status();
-    }
+    // Unconditionally stop systemd service if available to clear any restart loops
+    let _ = Command::new("systemctl")
+        .args(["--user", "stop", "agility-shell.service"])
+        .status();
+    let _ = Command::new("systemctl")
+        .args(["--user", "reset-failed", "agility-shell.service"])
+        .status();
 
     // Gracefully terminate daemon and agility frontend
     for pid in get_agility_quickshell_pids() {
@@ -436,6 +438,11 @@ async fn handle_stop() -> Result<()> {
         .args(["-c", "rm -f /tmp/quickshell_* 2>/dev/null"])
         .status();
 
+    // Kill any remaining background systemd-inhibit idle inhibitors
+    let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*quickshell"]).status();
+    let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*Caffeine"]).status();
+    let _ = Command::new("pkill").args(["-9", "-f", "systemd-inhibit.*Keep screen"]).status();
+
     println!("✓ Agility Shell stopped.");
     Ok(())
 }
@@ -443,21 +450,8 @@ async fn handle_stop() -> Result<()> {
 async fn handle_restart() -> Result<()> {
     println!("🔄 Gracefully restarting Agility Shell...");
 
-    if is_systemd_service_active("agility-shell.service") {
-        let out = Command::new("systemctl")
-            .args(["--user", "restart", "agility-shell.service"])
-            .status();
-        if let Ok(s) = out {
-            if s.success() {
-                println!("✓ Restarted agility-shell.service.");
-                return Ok(());
-            }
-        }
-    }
-
-    // Clean full restart
     handle_stop().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     handle_start(false).await?;
     println!("✓ Restart complete.");
     Ok(())
@@ -1005,23 +999,67 @@ async fn handle_record(action: &str, with_audio: bool) -> Result<()> {
     Ok(())
 }
 
-async fn handle_caffeine() -> Result<()> {
+async fn handle_caffeine(action: &str) -> Result<()> {
     let conn = Connection::session()
         .await
         .context("Failed to connect to D-Bus session bus")?;
 
-    let reply = conn
-        .call_method(
-            Some(DAEMON_BUS),
-            "/org/agility/Daemon/Power",
-            Some("org.agility.Daemon.Power"),
-            "ToggleCaffeine",
-            &(),
-        )
-        .await
-        .context("D-Bus ToggleCaffeine call failed")?;
+    let action_clean = action.trim().to_lowercase();
+    let state: bool = match action_clean.as_str() {
+        "on" | "enable" | "1" | "true" => {
+            let reply = conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    "/org/agility/Daemon/Power",
+                    Some("org.agility.Daemon.Power"),
+                    "SetCaffeine",
+                    &(true,),
+                )
+                .await
+                .context("D-Bus SetCaffeine call failed")?;
+            reply.body().deserialize()?
+        }
+        "off" | "disable" | "0" | "false" => {
+            let reply = conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    "/org/agility/Daemon/Power",
+                    Some("org.agility.Daemon.Power"),
+                    "SetCaffeine",
+                    &(false,),
+                )
+                .await
+                .context("D-Bus SetCaffeine call failed")?;
+            reply.body().deserialize()?
+        }
+        "status" | "get" => {
+            let reply = conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    "/org/agility/Daemon/Power",
+                    Some("org.agility.Daemon.Power"),
+                    "CaffeineActive",
+                    &(),
+                )
+                .await
+                .context("D-Bus CaffeineActive call failed")?;
+            reply.body().deserialize()?
+        }
+        _ => {
+            let reply = conn
+                .call_method(
+                    Some(DAEMON_BUS),
+                    "/org/agility/Daemon/Power",
+                    Some("org.agility.Daemon.Power"),
+                    "ToggleCaffeine",
+                    &(),
+                )
+                .await
+                .context("D-Bus ToggleCaffeine call failed")?;
+            reply.body().deserialize()?
+        }
+    };
 
-    let state: bool = reply.body().deserialize()?;
     println!(
         "☕ Caffeine state: {}",
         if state {

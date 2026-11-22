@@ -347,11 +347,11 @@ Item {
         if (newTheme === "system") {
             loadSysColorsProc.running = false
             loadSysColorsProc.running = true
-            var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d.setdefault(\"manager\", {})[\"theme\"]=\"system\"; open(p,\"w\").write(json.dumps(d,indent=2))'"
+            var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d.setdefault(\"manager\", {})[\"theme\"]=\"system\"; open(p,\"w\").write(json.dumps(d,indent=2))'"
             saveSettingsProc.command = ["sh", "-c", "awe theme system 2>/dev/null || true; " + script]
             saveSettingsProc.running = true
         } else {
-            var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); d=json.load(open(p)) if os.path.exists(p) else {}; d.setdefault(\"manager\", {})[\"theme\"]=\"" + newTheme + "\"; open(p,\"w\").write(json.dumps(d,indent=2))'"
+            var script = "python3 -c 'import json, os; p=os.path.expanduser(\"~/.config/quickshell/widget_settings.json\"); os.makedirs(os.path.dirname(p), exist_ok=True); d=json.load(open(p)) if os.path.exists(p) else {}; d.setdefault(\"manager\", {})[\"theme\"]=\"" + newTheme + "\"; open(p,\"w\").write(json.dumps(d,indent=2))'"
             saveSettingsProc.command = ["sh", "-c", script]
             saveSettingsProc.running = true
         }

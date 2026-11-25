@@ -413,7 +413,7 @@ impl MediaService {
 
             let status: String = status_msg
                 .ok()
-                .and_then(|m| m.body().deserialize::<zbus::zvariant::OwnedValue>().ok())
+                .and_then(|m| m.body().deserialize::<zbus::OwnedVariant>().ok())
                 .and_then(|v| String::try_from(v).ok())
                 .unwrap_or_else(|| "Stopped".into());
 
@@ -435,8 +435,8 @@ impl MediaService {
             let mut length: i64 = 0;
 
             if let Ok(m) = meta_msg {
-                if let Ok(val) = m.body().deserialize::<zbus::zvariant::OwnedValue>() {
-                    if let Ok(dict) = HashMap::<String, zbus::zvariant::OwnedValue>::try_from(val) {
+                if let Ok(val) = m.body().deserialize::<zbus::OwnedVariant>() {
+                    if let Ok(dict) = HashMap::<String, zbus::OwnedVariant>::try_from(val) {
                         if let Some(t) = dict.get("xesam:title") {
                             if let Ok(s) = <&str>::try_from(t) {
                                 title = s.to_string();

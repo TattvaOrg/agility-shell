@@ -108,37 +108,30 @@ pub async fn establish_dbus_connection(
     let sounds_iface = crate::modules::sounds::SoundsInterface::new(Arc::clone(&sounds_service));
     let lock_iface = crate::modules::lock::LockInterface::new(Arc::clone(&lock_service));
 
-    let builder_res = Builder::session();
-    let builder = match builder_res {
-        Ok(b) => b,
-        Err(e) => {
-            warn!("Failed to initiate D-Bus session connection: {e:#}");
-            return Ok(None);
-        }
-    };
+    let builder = Builder::session();
 
     match builder
-        .name(DBUS_NAME)?
-        .serve_at(paths::DAEMON, daemon_iface)?
-        .serve_at(paths::WORKSPACES, workspaces_iface)?
-        .serve_at(paths::HARDWARE, hardware_iface)?
-        .serve_at(paths::SYSTEM, system_iface)?
-        .serve_at(paths::AUDIO, audio_iface)?
-        .serve_at(paths::MEDIA, media_iface)?
-        .serve_at(paths::CONNECTIVITY, connectivity_iface)?
-        .serve_at(paths::LAUNCHER, launcher_iface)?
-        .serve_at(paths::SUITS, suits_iface)?
-        .serve_at(paths::THEME, theme_iface)?
-        .serve_at("/org/freedesktop/portal/desktop", portal_iface)?
-        .serve_at(paths::NOTIFICATIONS, notifications_iface)?
-        .serve_at("/org/agility/Daemon/Notifications", notif_drawer_iface)?
-        .serve_at(paths::CLIPBOARD, clipboard_iface)?
-        .serve_at(paths::POWER, power_iface)?
-        .serve_at(paths::WEATHER, weather_iface)?
-        .serve_at(paths::MEDIA_CAPTURE, media_capture_iface)?
-        .serve_at(paths::STATUS_NOTIFIER_WATCHER, watcher_iface)?
-        .serve_at(paths::SOUNDS, sounds_iface)?
-        .serve_at(paths::LOCK, lock_iface)?
+        .name(DBUS_NAME)
+        .serve_at(paths::DAEMON, daemon_iface)
+        .serve_at(paths::WORKSPACES, workspaces_iface)
+        .serve_at(paths::HARDWARE, hardware_iface)
+        .serve_at(paths::SYSTEM, system_iface)
+        .serve_at(paths::AUDIO, audio_iface)
+        .serve_at(paths::MEDIA, media_iface)
+        .serve_at(paths::CONNECTIVITY, connectivity_iface)
+        .serve_at(paths::LAUNCHER, launcher_iface)
+        .serve_at(paths::SUITS, suits_iface)
+        .serve_at(paths::THEME, theme_iface)
+        .serve_at("/org/freedesktop/portal/desktop", portal_iface)
+        .serve_at(paths::NOTIFICATIONS, notifications_iface)
+        .serve_at("/org/agility/Daemon/Notifications", notif_drawer_iface)
+        .serve_at(paths::CLIPBOARD, clipboard_iface)
+        .serve_at(paths::POWER, power_iface)
+        .serve_at(paths::WEATHER, weather_iface)
+        .serve_at(paths::MEDIA_CAPTURE, media_capture_iface)
+        .serve_at(paths::STATUS_NOTIFIER_WATCHER, watcher_iface)
+        .serve_at(paths::SOUNDS, sounds_iface)
+        .serve_at(paths::LOCK, lock_iface)
         .build()
         .await
     {

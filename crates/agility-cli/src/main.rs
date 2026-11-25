@@ -1214,7 +1214,7 @@ async fn handle_bar_data() -> Result<()> {
     });
 
     if let Ok(conn) = Connection::session().await {
-        async fn get_prop<T: TryFrom<zbus::zvariant::OwnedValue>>(
+        async fn get_prop<T: TryFrom<zbus::OwnedVariant>>(
             conn: &Connection,
             path: &str,
             iface: &str,
@@ -1230,7 +1230,7 @@ async fn handle_bar_data() -> Result<()> {
                 )
                 .await
                 .ok()?;
-            let val: zbus::zvariant::OwnedValue = reply.body().deserialize().ok()?;
+            let val: zbus::OwnedVariant = reply.body().deserialize().ok()?;
             T::try_from(val).ok()
         }
 

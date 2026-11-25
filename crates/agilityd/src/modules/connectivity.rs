@@ -540,7 +540,7 @@ async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResul
 
     let wifi_enabled = wifi_enabled_msg
         .body()
-        .deserialize::<zbus::zvariant::OwnedValue>()
+        .deserialize::<zbus::OwnedVariant>()
         .ok()
         .and_then(|v| bool::try_from(v).ok())
         .unwrap_or(true);
@@ -558,7 +558,7 @@ async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResul
 
     let primary_type: String = primary_msg
         .body()
-        .deserialize::<zbus::zvariant::OwnedValue>()
+        .deserialize::<zbus::OwnedVariant>()
         .ok()
         .and_then(|v| String::try_from(v).ok())
         .unwrap_or_default();
@@ -592,8 +592,8 @@ async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResul
         .await;
 
     if let Ok(msg) = prim_conn_obj_msg {
-        if let Ok(val) = msg.body().deserialize::<zbus::zvariant::OwnedValue>() {
-            if let Ok(obj_path) = zbus::zvariant::OwnedObjectPath::try_from(val) {
+        if let Ok(val) = msg.body().deserialize::<zbus::OwnedVariant>() {
+            if let Ok(obj_path) = zbus::OwnedObjectPath::try_from(val) {
                 let path_str = obj_path.as_str();
                 if path_str != "/" {
                     // Query Connection Id
@@ -608,7 +608,7 @@ async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResul
                         .await;
 
                     if let Ok(im) = id_msg {
-                        if let Ok(v) = im.body().deserialize::<zbus::zvariant::OwnedValue>() {
+                        if let Ok(v) = im.body().deserialize::<zbus::OwnedVariant>() {
                             if let Ok(s) = String::try_from(v) {
                                 ssid = s;
                                 wifi_connected = is_wifi_primary;
@@ -632,9 +632,8 @@ async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResul
                             .await;
 
                         if let Ok(ap_msg) = ap_obj_msg {
-                            if let Ok(v) = ap_msg.body().deserialize::<zbus::zvariant::OwnedValue>()
-                            {
-                                if let Ok(ap_path) = zbus::zvariant::OwnedObjectPath::try_from(v) {
+                            if let Ok(v) = ap_msg.body().deserialize::<zbus::OwnedVariant>() {
+                                if let Ok(ap_path) = zbus::OwnedObjectPath::try_from(v) {
                                     let ap_str = ap_path.as_str();
                                     if ap_str != "/" {
                                         let str_msg = conn
@@ -651,9 +650,8 @@ async fn poll_network_dbus(conn: &Connection) -> anyhow::Result<NetworkPollResul
                                             .await;
 
                                         if let Ok(sm) = str_msg {
-                                            if let Ok(sv) = sm
-                                                .body()
-                                                .deserialize::<zbus::zvariant::OwnedValue>()
+                                            if let Ok(sv) =
+                                                sm.body().deserialize::<zbus::OwnedVariant>()
                                             {
                                                 if let Ok(st) = u8::try_from(sv) {
                                                     strength = st as u32;
@@ -817,8 +815,8 @@ async fn poll_bluetooth_dbus(conn: &Connection) -> anyhow::Result<BluetoothPollR
     // ManagedObjects returns a{oa{sa{sv}}}
     let body = objects_msg.body();
     let objects: HashMap<
-        zbus::zvariant::OwnedObjectPath,
-        HashMap<String, HashMap<String, zbus::zvariant::OwnedValue>>,
+        zbus::OwnedObjectPath,
+        HashMap<String, HashMap<String, zbus::OwnedVariant>>,
     > = body.deserialize()?;
 
     let mut powered = false;

@@ -12,7 +12,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use tracing::{error, info, warn};
 use zbus::object_server::SignalEmitter;
-use zbus::zvariant::OwnedValue;
+use zbus::{OwnedVariant, Variant};
 
 /// Default Gaussian blur radius for the lockscreen & glass backgrounds.
 pub const DEFAULT_BLUR_RADIUS: f32 = 16.0;
@@ -1147,7 +1147,7 @@ impl PortalSettingsInterface {
     async fn read_all(
         &self,
         namespaces: Vec<String>,
-    ) -> HashMap<String, HashMap<String, OwnedValue>> {
+    ) -> HashMap<String, HashMap<String, OwnedVariant>> {
         let mut result = HashMap::new();
         let query_appearance = namespaces.is_empty()
             || namespaces
@@ -1158,10 +1158,10 @@ impl PortalSettingsInterface {
             let mut appearance_map = HashMap::new();
             // 0 = default, 1 = prefer-dark, 2 = prefer-light
             let scheme_code: u32 = if self.service.is_dark() { 1 } else { 2 };
-            appearance_map.insert("color-scheme".to_string(), OwnedValue::from(scheme_code));
+            appearance_map.insert("color-scheme".to_string(), OwnedVariant::from(scheme_code));
 
             let primary = self.service.tokens().primary_color;
-            if let Ok(val) = OwnedValue::try_from(zbus::zvariant::Value::from(primary.clone())) {
+            if let Ok(val) = OwnedVariant::try_from(Variant::from(primary.clone())) {
                 appearance_map.insert("accent-color".to_string(), val);
             }
 
@@ -1172,15 +1172,15 @@ impl PortalSettingsInterface {
     }
 
     /// Read single portal setting value.
-    async fn read(&self, namespace: String, key: String) -> zbus::fdo::Result<OwnedValue> {
+    async fn read(&self, namespace: String, key: String) -> zbus::fdo::Result<OwnedVariant> {
         if namespace == "org.freedesktop.appearance" {
             if key == "color-scheme" {
                 let code: u32 = if self.service.is_dark() { 1 } else { 2 };
-                return Ok(OwnedValue::from(code));
+                return Ok(OwnedVariant::from(code));
             }
             if key == "accent-color" {
                 let primary = self.service.tokens().primary_color;
-                return OwnedValue::try_from(zbus::zvariant::Value::from(primary))
+                return OwnedVariant::try_from(Variant::from(primary))
                     .map_err(|e| zbus::fdo::Error::Failed(e.to_string()));
             }
         }
@@ -1195,7 +1195,7 @@ impl PortalSettingsInterface {
         emitter: &SignalEmitter<'_>,
         namespace: &str,
         key: &str,
-        value: zbus::zvariant::Value<'_>,
+        value: Variant<'_>,
     ) -> zbus::Result<()>;
 }
 

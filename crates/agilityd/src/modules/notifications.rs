@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use zbus::object_server::SignalEmitter;
-use zbus::zvariant::OwnedValue;
+use zbus::OwnedVariant;
 
 /// Maximum notifications kept in the persistent history store.
 pub const MAX_HISTORY_ITEMS: usize = 200;
@@ -150,7 +150,7 @@ impl NotificationService {
         summary: String,
         body: String,
         actions: Vec<String>,
-        hints: HashMap<String, OwnedValue>,
+        hints: HashMap<String, OwnedVariant>,
         expire_timeout: i32,
     ) -> (NotificationItem, bool) {
         let id = if replaces_id != 0 {
@@ -293,7 +293,7 @@ impl NotificationService {
         Ok(())
     }
 
-    fn parse_urgency(hint: &OwnedValue) -> NotificationUrgency {
+    fn parse_urgency(hint: &OwnedVariant) -> NotificationUrgency {
         if let Ok(v) = u8::try_from(hint) {
             return NotificationUrgency::from(v);
         }
@@ -309,11 +309,11 @@ impl NotificationService {
         NotificationUrgency::Normal
     }
 
-    fn parse_string(hint: &OwnedValue) -> Option<String> {
+    fn parse_string(hint: &OwnedVariant) -> Option<String> {
         <&str>::try_from(hint).map(|s| s.to_string()).ok()
     }
 
-    fn parse_bool(hint: &OwnedValue) -> bool {
+    fn parse_bool(hint: &OwnedVariant) -> bool {
         bool::try_from(hint).unwrap_or(false)
     }
 }
@@ -350,7 +350,7 @@ impl NotificationsInterface {
         summary: String,
         body: String,
         actions: Vec<String>,
-        hints: HashMap<String, OwnedValue>,
+        hints: HashMap<String, OwnedVariant>,
         expire_timeout: i32,
     ) -> zbus::fdo::Result<u32> {
         let (item, toast_allowed) = self.service.process_notification(
@@ -519,7 +519,7 @@ mod tests {
         let (service, _guard) = create_test_service();
 
         let mut hints = HashMap::new();
-        hints.insert("urgency".to_string(), OwnedValue::from(2u8)); // Critical
+        hints.insert("urgency".to_string(), OwnedVariant::from(2u8)); // Critical
 
         let (item, toast_allowed) = service.process_notification(
             "TestApp".to_string(),

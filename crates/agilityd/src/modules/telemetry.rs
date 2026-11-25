@@ -100,7 +100,7 @@ impl Default for HardwareSnapshot {
 pub struct TelemetryEngine {
     prev_total_cpu: CpuTick,
     prev_core_cpus: Vec<CpuTick>,
-    disks: Disks,
+    disks: Option<Disks>,
 }
 
 impl Default for TelemetryEngine {
@@ -114,7 +114,7 @@ impl TelemetryEngine {
         let mut engine = Self {
             prev_total_cpu: CpuTick::default(),
             prev_core_cpus: Vec::new(),
-            disks: Disks::new_with_refreshed_list(),
+            disks: Disks::new_with_refreshed_list().ok(),
         };
 
         // Seed initial CPU ticks
@@ -324,10 +324,13 @@ impl TelemetryEngine {
 
     /// Sample storage mounts with used/total space in GB.
     pub fn sample_storage(&mut self) -> Vec<StorageDevice> {
-        self.disks.refresh(true);
         let mut devices = Vec::new();
+        let Some(ref mut disks) = self.disks else {
+            return devices;
+        };
+        disks.refresh(true);
 
-        for disk in &self.disks {
+        for disk in disks.iter() {
             let mount = disk.mount_point().to_string_lossy().to_string();
             // Focus on root, home, and standard mounts
             if mount == "/" || mount.starts_with("/home") || mount.starts_with("/run/media") {

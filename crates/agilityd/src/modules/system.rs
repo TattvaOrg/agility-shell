@@ -27,9 +27,13 @@ pub struct SystemService {
 
 impl SystemService {
     pub fn new() -> Arc<Self> {
-        let mut sys = System::new();
-        sys.refresh_processes(ProcessesToUpdate::All, true);
-        let initial_procs = Self::sample_top_processes(&mut sys);
+        let initial_procs = match System::new() {
+            Ok(mut sys) => {
+                sys.refresh_processes(ProcessesToUpdate::All, true);
+                Self::sample_top_processes(&mut sys)
+            }
+            Err(_) => Vec::new(),
+        };
 
         Arc::new(Self {
             top_processes: Arc::new(RwLock::new(initial_procs)),
@@ -72,7 +76,7 @@ impl SystemService {
         let procs_ref = Arc::clone(&self.top_processes);
 
         tokio::spawn(async move {
-            let mut sys = System::new();
+            let mut sys = System::new().ok();
             let mut ticker = tokio::time::interval(interval);
 
             debug!("System processes background poller started");
@@ -84,9 +88,11 @@ impl SystemService {
                         break;
                     }
                     _ = ticker.tick() => {
-                        let top = Self::sample_top_processes(&mut sys);
-                        if let Ok(mut lock) = procs_ref.write() {
-                            *lock = top;
+                        if let Some(ref mut s) = sys {
+                            let top = Self::sample_top_processes(s);
+                            if let Ok(mut lock) = procs_ref.write() {
+                                *lock = top;
+                            }
                         }
                     }
                 }
@@ -132,7 +138,9 @@ impl SystemService {
     /// Gracefully terminate (SIGTERM) or kill target process by PID.
     async fn kill_process(&self, pid: u32) -> zbus::fdo::Result<bool> {
         info!("Requesting termination for process PID {pid}");
-        let mut sys = System::new();
+        let Ok(mut sys) = System::new() else {
+            return Ok(false);
+        };
         sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(pid)]), true);
 
         if let Some(proc_info) = sys.process(Pid::from_u32(pid)) {

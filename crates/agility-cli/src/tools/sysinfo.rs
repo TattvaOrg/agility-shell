@@ -33,11 +33,13 @@ pub struct ProcessItem {
 }
 
 pub fn get_system_specs() -> SystemSpecs {
-    let mut sys = System::new_all();
-    sys.refresh_all();
+    let sys = System::new_all().ok().map(|mut s| {
+        s.refresh_all();
+        s
+    });
 
     // OS Name
-    let os_name = System::name().unwrap_or_else(|| "Linux".to_string());
+    let os_name = System::name().unwrap_or_else(|_| "Linux".to_string());
     let os_version = System::os_version().unwrap_or_default();
     let os = if !os_version.is_empty() {
         format!("{os_name} {os_version}")
@@ -78,14 +80,15 @@ pub fn get_system_specs() -> SystemSpecs {
 
     // CPU info
     let cpu_model = sys
-        .cpus()
-        .first()
+        .as_ref()
+        .and_then(|s| s.cpus().first())
         .map(|c| c.brand().trim().to_string())
         .unwrap_or_else(|| "Unknown CPU".to_string());
-    let cpu_cores = sys.cpus().len();
+    let cpu_cores = sys.as_ref().map(|s| s.cpus().len()).unwrap_or(0);
 
     // RAM Total
-    let total_ram_gb = sys.total_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
+    let total_ram_gb =
+        sys.as_ref().map(|s| s.total_memory()).unwrap_or(0) as f64 / (1024.0 * 1024.0 * 1024.0);
     let ram_total = format!("{total_ram_gb:.1} GB");
 
     // Root disk total
@@ -297,7 +300,9 @@ fn get_wm() -> String {
 }
 
 pub fn get_processes() -> Vec<ProcessItem> {
-    let mut sys = System::new_all();
+    let Ok(mut sys) = System::new_all() else {
+        return Vec::new();
+    };
     sys.refresh_all();
 
     let mut list = Vec::new();

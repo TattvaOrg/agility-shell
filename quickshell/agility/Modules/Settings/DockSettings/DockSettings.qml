@@ -76,162 +76,7 @@ AppContainer {
         spacing: Constants.sizeLg
 
         // ─────────────────────────────────────────────
-        // 1. DESKTOP THEMES & COLOR STYLE
-        // ─────────────────────────────────────────────
-        AppGroup {
-            title: "DESKTOP THEMES & COLOR STYLE"
-            icon: "color-palette"
-
-            SettingToggle {
-                label: "Dynamic Wallpaper Colors (Matugen)"
-                description: "Automatically extract accent and palette colors from the active wallpaper"
-                Binding on checked { value: Theme.generateFromWallpaper }
-                onToggled: function(val) {
-                    Theme.generateFromWallpaper = val;
-                    if (val) {
-                        if (WallpaperManager.currentWallpaperPath !== "")
-                            Theme.generateTheme(WallpaperManager.currentWallpaperPath);
-                    } else {
-                        let t = Theme.themes[0];
-                        let baseName = Theme.currentScheme.replace(" Light", "");
-                        for (let i = 0; i < Theme.themes.length; i++) {
-                            if (Theme.themes[i].name === baseName) {
-                                t = Theme.themes[i];
-                                break;
-                            }
-                        }
-                        let scheme = dockSettingsRoot.isDarkTheme ? t.dark : t.light;
-                        Theme.applyScheme(scheme);
-                    }
-                }
-            }
-
-            SettingToggle {
-                label: "Dark Color Scheme"
-                description: "Use dark palette variant for shell surfaces, dock, and widgets"
-                Binding on checked { value: dockSettingsRoot.isDarkTheme }
-                onToggled: function(val) {
-                    if (Theme.generateFromWallpaper) {
-                        Theme.applyWallpaperTheme(val);
-                    } else {
-                        let baseName = Theme.currentScheme.replace(" Light", "");
-                        let t = Theme.themes[0];
-                        for (let i = 0; i < Theme.themes.length; i++) {
-                            if (Theme.themes[i].name === baseName) {
-                                t = Theme.themes[i];
-                                break;
-                            }
-                        }
-                        let scheme = val ? t.dark : t.light;
-                        Theme.applyScheme(scheme);
-                    }
-                }
-            }
-
-            // Theme Cards Grid
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 8
-                opacity: Theme.generateFromWallpaper ? 0.45 : 1.0
-                enabled: !Theme.generateFromWallpaper
-
-                ThemedText {
-                    text: "Curated Shell Themes"
-                    customSize: Constants.sizeSm
-                    font.weight: Font.DemiBold
-                    color: Theme.muted
-                }
-
-                Flow {
-                    Layout.fillWidth: true
-                    spacing: 10
-
-                    Repeater {
-                        model: Theme.themes
-
-                        Rectangle {
-                            id: themeCard
-                            required property var modelData
-                            required property int index
-                            readonly property var activeSchemeData: dockSettingsRoot.isDarkTheme ? modelData.dark : modelData.light
-                            readonly property bool isSelected: {
-                                let cur = Theme.currentScheme.replace(" Light", "");
-                                return cur === modelData.name || Theme.currentScheme === activeSchemeData.name;
-                            }
-
-                            width: 140
-                            height: 64
-                            radius: Constants.sizeMd
-                            color: activeSchemeData.bg
-                            border.width: isSelected ? 2 : 1
-                            border.color: isSelected ? Theme.accent : Theme.border
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 8
-                                spacing: 4
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    ThemedText {
-                                        Layout.fillWidth: true
-                                        text: themeCard.modelData.name
-                                        customSize: 11
-                                        font.weight: Font.Bold
-                                        color: themeCard.activeSchemeData.fg
-                                        elide: Text.ElideRight
-                                    }
-
-                                    Rectangle {
-                                        width: 8
-                                        height: 8
-                                        radius: 4
-                                        color: Theme.accent
-                                        visible: themeCard.isSelected
-                                    }
-                                }
-
-                                // Color Palette Swatches
-                                RowLayout {
-                                    spacing: 4
-
-                                    Rectangle {
-                                        width: 14; height: 14; radius: 7
-                                        color: themeCard.activeSchemeData.bg
-                                        border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.2)
-                                    }
-                                    Rectangle {
-                                        width: 14; height: 14; radius: 7
-                                        color: themeCard.activeSchemeData.accent
-                                    }
-                                    Rectangle {
-                                        width: 14; height: 14; radius: 7
-                                        color: themeCard.activeSchemeData.accentComplementary
-                                    }
-                                    Rectangle {
-                                        width: 14; height: 14; radius: 7
-                                        color: themeCard.activeSchemeData.fg
-                                    }
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    let s = dockSettingsRoot.isDarkTheme ? themeCard.modelData.dark : themeCard.modelData.light;
-                                    Theme.applyScheme(s);
-                                    SoundService.play("click");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ─────────────────────────────────────────────
-        // 2. FLOATING DOCK CONFIGURATION
+        // 1. FLOATING DOCK CONFIGURATION
         // ─────────────────────────────────────────────
         AppGroup {
             title: "FLOATING DOCK"
@@ -239,7 +84,7 @@ AppContainer {
 
             SettingToggle {
                 label: "Enable Dynamic Dock"
-                description: "Show a floating macOS / iPadOS-style app dock with smooth magnification"
+                description: "Show a compact floating app dock with smooth magnification"
                 Binding on checked { value: SettingsService.dockEnabled }
                 onToggled: function(val) {
                     SettingsService.dockEnabled = val;
@@ -303,7 +148,7 @@ AppContainer {
 
             SettingToggle {
                 label: "Dynamic Magnification Zoom"
-                description: "Magnify hovered app icon and neighboring icons using parabolic physics"
+                description: "Smoothly magnify hovered app icon and neighboring icons"
                 enabled: SettingsService.dockEnabled
                 opacity: SettingsService.dockEnabled ? 1.0 : 0.45
                 Binding on checked { value: SettingsService.dockMagnification }
@@ -314,14 +159,14 @@ AppContainer {
             }
 
             SettingSpinBox {
-                label: "Dock Icon Size & Width"
-                description: "Adjust dock icon size between 28px and 84px (also controllable via scroll wheel on the dock)"
+                label: "Dock Icon Size"
+                description: "Adjust dock icon size between 24px and 64px (or scroll on the dock)"
                 enabled: SettingsService.dockEnabled
                 opacity: SettingsService.dockEnabled ? 1.0 : 0.45
-                from: 28
-                to: 84
-                stepSize: 4
-                defaultValue: 48
+                from: 24
+                to: 64
+                stepSize: 2
+                defaultValue: 38
                 suffix: "px"
                 value: SettingsService.dockIconSize
                 onMoved: function(val) {
@@ -331,14 +176,14 @@ AppContainer {
             }
 
             SettingSpinBox {
-                label: "Dock Icon Spacing / Spread"
-                description: "Adjust horizontal/vertical spacing between dock icons (2px to 24px)"
+                label: "Dock Icon Spacing"
+                description: "Adjust spacing between dock icons (2px to 20px)"
                 enabled: SettingsService.dockEnabled
                 opacity: SettingsService.dockEnabled ? 1.0 : 0.45
                 from: 2
-                to: 24
+                to: 20
                 stepSize: 2
-                defaultValue: 8
+                defaultValue: 6
                 suffix: "px"
                 value: SettingsService.dockItemSpacing
                 onMoved: function(val) {
@@ -383,7 +228,7 @@ AppContainer {
         }
 
         // ─────────────────────────────────────────────
-        // 3. PINNED DOCK APPLICATIONS
+        // 2. PINNED DOCK APPLICATIONS
         // ─────────────────────────────────────────────
         AppGroup {
             title: "PINNED DOCK APPLICATIONS"
@@ -713,7 +558,7 @@ AppContainer {
         }
 
         // ─────────────────────────────────────────────
-        // 4. SPOTLIGHT COMMAND BAR
+        // 3. SPOTLIGHT COMMAND BAR
         // ─────────────────────────────────────────────
         AppGroup {
             title: "SPOTLIGHT COMMAND BAR"
@@ -729,7 +574,6 @@ AppContainer {
                 }
             }
 
-            // Overview Info Card
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: spotlightInfoCol.implicitHeight + 24
@@ -795,7 +639,7 @@ AppContainer {
         }
 
         // ─────────────────────────────────────────────
-        // 5. DYNAMIC ISLAND & LIVE ACTIVITIES HUB
+        // 4. DYNAMIC ISLAND & LIVE ACTIVITIES HUB
         // ─────────────────────────────────────────────
         AppGroup {
             title: "DYNAMIC ISLAND & LIVE ACTIVITIES"
@@ -811,7 +655,6 @@ AppContainer {
                 }
             }
 
-            // Overview Info Card
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: islandInfoCol.implicitHeight + 24
@@ -846,7 +689,7 @@ AppContainer {
         }
 
         // ─────────────────────────────────────────────
-        // 6. MISSION CONTROL / VISUAL WORKSPACE OVERVIEW
+        // 5. MISSION CONTROL / VISUAL WORKSPACE OVERVIEW
         // ─────────────────────────────────────────────
         AppGroup {
             title: "WINDOW SWITCHER & MISSION CONTROL"
@@ -889,6 +732,159 @@ AppContainer {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: AppState.toggleWidget("missioncontrol")
+                    }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // 6. DESKTOP THEMES & COLOR STYLE
+        // ─────────────────────────────────────────────
+        AppGroup {
+            title: "DESKTOP THEMES & COLOR STYLE"
+            icon: "color-palette"
+
+            SettingToggle {
+                label: "Dynamic Wallpaper Colors (Matugen)"
+                description: "Automatically extract accent and palette colors from the active wallpaper"
+                Binding on checked { value: Theme.generateFromWallpaper }
+                onToggled: function(val) {
+                    Theme.generateFromWallpaper = val;
+                    if (val) {
+                        if (WallpaperManager.currentWallpaperPath !== "")
+                            Theme.generateTheme(WallpaperManager.currentWallpaperPath);
+                    } else {
+                        let t = Theme.themes[0];
+                        let baseName = Theme.currentScheme.replace(" Light", "");
+                        for (let i = 0; i < Theme.themes.length; i++) {
+                            if (Theme.themes[i].name === baseName) {
+                                t = Theme.themes[i];
+                                break;
+                            }
+                        }
+                        let scheme = dockSettingsRoot.isDarkTheme ? t.dark : t.light;
+                        Theme.applyScheme(scheme);
+                    }
+                }
+            }
+
+            SettingToggle {
+                label: "Dark Color Scheme"
+                description: "Use dark palette variant for shell surfaces, dock, and widgets"
+                Binding on checked { value: dockSettingsRoot.isDarkTheme }
+                onToggled: function(val) {
+                    if (Theme.generateFromWallpaper) {
+                        Theme.applyWallpaperTheme(val);
+                    } else {
+                        let baseName = Theme.currentScheme.replace(" Light", "");
+                        let t = Theme.themes[0];
+                        for (let i = 0; i < Theme.themes.length; i++) {
+                            if (Theme.themes[i].name === baseName) {
+                                t = Theme.themes[i];
+                                break;
+                            }
+                        }
+                        let scheme = val ? t.dark : t.light;
+                        Theme.applyScheme(scheme);
+                    }
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                opacity: Theme.generateFromWallpaper ? 0.45 : 1.0
+                enabled: !Theme.generateFromWallpaper
+
+                ThemedText {
+                    text: "Curated Shell Themes"
+                    customSize: Constants.sizeSm
+                    font.weight: Font.DemiBold
+                    color: Theme.muted
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Repeater {
+                        model: Theme.themes
+
+                        Rectangle {
+                            id: themeCard
+                            required property var modelData
+                            required property int index
+                            readonly property var activeSchemeData: dockSettingsRoot.isDarkTheme ? modelData.dark : modelData.light
+                            readonly property bool isSelected: {
+                                let cur = Theme.currentScheme.replace(" Light", "");
+                                return cur === modelData.name || Theme.currentScheme === activeSchemeData.name;
+                            }
+
+                            width: 140
+                            height: 64
+                            radius: Constants.sizeMd
+                            color: activeSchemeData.bg
+                            border.width: isSelected ? 2 : 1
+                            border.color: isSelected ? Theme.accent : Theme.border
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 4
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    ThemedText {
+                                        Layout.fillWidth: true
+                                        text: themeCard.modelData.name
+                                        customSize: 11
+                                        font.weight: Font.Bold
+                                        color: themeCard.activeSchemeData.fg
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: Theme.accent
+                                        visible: themeCard.isSelected
+                                    }
+                                }
+
+                                RowLayout {
+                                    spacing: 4
+
+                                    Rectangle {
+                                        width: 14; height: 14; radius: 7
+                                        color: themeCard.activeSchemeData.bg
+                                        border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.2)
+                                    }
+                                    Rectangle {
+                                        width: 14; height: 14; radius: 7
+                                        color: themeCard.activeSchemeData.accent
+                                    }
+                                    Rectangle {
+                                        width: 14; height: 14; radius: 7
+                                        color: themeCard.activeSchemeData.accentComplementary
+                                    }
+                                    Rectangle {
+                                        width: 14; height: 14; radius: 7
+                                        color: themeCard.activeSchemeData.fg
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    let s = dockSettingsRoot.isDarkTheme ? themeCard.modelData.dark : themeCard.modelData.light;
+                                    Theme.applyScheme(s);
+                                    SoundService.play("click");
+                                }
+                            }
+                        }
                     }
                 }
             }

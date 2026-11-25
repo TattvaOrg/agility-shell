@@ -75,8 +75,8 @@ Item {
     property bool dockEnabled: true
     property string dockPosition: "bottom" // "bottom", "left", "right", "top"
     property bool dockAutoHide: true
-    property int dockIconSize: 48
-    property int dockItemSpacing: 8
+    property int dockIconSize: 38
+    property int dockItemSpacing: 6
     property bool dockMagnification: true
     property var dockPinnedApps: [] // [{ id, name, icon, exec, desktopId, terminal }]
     property bool dockShowLauncher: true
@@ -241,22 +241,22 @@ Item {
     }
 
     function increaseDockSize() {
-        if (dockIconSize < 84) {
-            dockIconSize = Math.min(84, dockIconSize + 4);
+        if (dockIconSize < 64) {
+            dockIconSize = Math.min(64, dockIconSize + 2);
             if (settingsLoaded) saveSettings();
         }
     }
 
     function decreaseDockSize() {
-        if (dockIconSize > 28) {
-            dockIconSize = Math.max(28, dockIconSize - 4);
+        if (dockIconSize > 24) {
+            dockIconSize = Math.max(24, dockIconSize - 2);
             if (settingsLoaded) saveSettings();
         }
     }
 
     function increaseDockSpacing() {
-        if (dockItemSpacing < 24) {
-            dockItemSpacing = Math.min(24, dockItemSpacing + 2);
+        if (dockItemSpacing < 20) {
+            dockItemSpacing = Math.min(20, dockItemSpacing + 2);
             if (settingsLoaded) saveSettings();
         }
     }
@@ -852,12 +852,12 @@ Item {
                         if (prefs.dockIconSize !== undefined) {
                             let dis = parseInt(prefs.dockIconSize);
                             if (!isNaN(dis))
-                                settingsService.dockIconSize = Math.max(28, Math.min(84, dis));
+                                settingsService.dockIconSize = Math.max(24, Math.min(64, dis));
                         }
                         if (prefs.dockItemSpacing !== undefined) {
                             let dsp = parseInt(prefs.dockItemSpacing);
                             if (!isNaN(dsp))
-                                settingsService.dockItemSpacing = Math.max(2, Math.min(24, dsp));
+                                settingsService.dockItemSpacing = Math.max(2, Math.min(20, dsp));
                         }
                         if (prefs.dockMagnification !== undefined)
                             settingsService.dockMagnification = Boolean(prefs.dockMagnification);

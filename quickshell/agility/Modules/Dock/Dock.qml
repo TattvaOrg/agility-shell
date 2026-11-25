@@ -128,16 +128,23 @@ Item {
                 return !(SettingsService.barAutoHide && (SettingsService.barIslandMode || SettingsService.barPillMode));
             }
 
+            readonly property int barVisualThickness: SettingsService.isBarVertical
+                ? 48
+                : (BarStyleConfig.barHeight(SettingsService.barStyle) + BarStyleConfig.barMarginTop(SettingsService.barStyle) + 4)
+
+            // Offset cleanly past the bar when both share an edge and the bar is visible
+            // (except when compositor already stacks ExclusionMode.Normal below a reserving bar)
             readonly property int barOffsetMargin: {
                 if (!sharesEdgeWithBar) return 0;
-                // When dock is fixed (ExclusionMode.Normal) and bar reserves space, the compositor
-                // already stacks dockPanel after barSurface; avoid double-offsetting.
                 if (!SettingsService.dockAutoHide && barReservesSpace) return 0;
-                if (SettingsService.dockAutoHide && !barReservesSpace) return 0;
-                return SettingsService.isBarVertical
-                    ? 48
-                    : (BarStyleConfig.barHeight(SettingsService.barStyle) + BarStyleConfig.barMarginTop(SettingsService.barStyle) + 4);
+                if (barReservesSpace) return barVisualThickness;
+                // Auto-hiding bar on same edge: offset while bar is visible (empty workspace or dock revealing at edge)
+                if (!AppState.hasWindowOnScreen || (SettingsService.dockAutoHide && revealed)) return barVisualThickness;
+                return 0;
             }
+
+            readonly property int edgeGap: 6
+            readonly property int capsuleThickness: SettingsService.dockIconSize + 10
 
             // Per-monitor context menu state
             property var activeMenuApp: null
@@ -147,8 +154,8 @@ Item {
             // Auto-hide state with smooth debounce
             property bool revealed: !SettingsService.dockAutoHide
             readonly property bool rawHovered: stripHoverHandler.hovered || edgeHoverHandler.hovered || activeMenuApp !== null
-            readonly property real slideDistance: (isHorizontal ? (dockStrip.height + dockPanel.barOffsetMargin + 28) : (dockStrip.width + dockPanel.barOffsetMargin + 28))
-            readonly property real hideOffset: (SettingsService.dockAutoHide && !revealed)
+            readonly property real slideDistance: (isHorizontal ? (dockStrip.height + dockPanel.barOffsetMargin + 18) : (dockStrip.width + dockPanel.barOffsetMargin + 18))
+            property real hideOffset: (SettingsService.dockAutoHide && !revealed)
                 ? (isBottom ? slideDistance : (isTop ? -slideDistance : (isLeft ? -slideDistance : slideDistance)))
                 : 0
 
@@ -184,7 +191,7 @@ Item {
 
             Timer {
                 id: hideDebounceTimer
-                interval: 280
+                interval: 260
                 repeat: false
                 onTriggered: {
                     if (SettingsService.dockAutoHide && !dockPanel.rawHovered) {
@@ -204,7 +211,7 @@ Item {
             WlrLayershell.namespace: "quickshell:dock"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             WlrLayershell.exclusionMode: SettingsService.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
-            WlrLayershell.exclusiveZone: SettingsService.dockAutoHide ? 0 : (isHorizontal ? (dockStrip.height + 18) : (dockStrip.width + 18))
+            WlrLayershell.exclusiveZone: SettingsService.dockAutoHide ? 0 : (dockPanel.capsuleThickness + dockPanel.edgeGap + 4)
             color: "transparent"
             focusable: false
             visible: SettingsService.settingsLoaded && SettingsService.dockEnabled && !DisplayProfileService.gameModeActive
@@ -218,9 +225,13 @@ Item {
 
             implicitWidth: isHorizontal
                 ? 0
-                : Math.max(dockStrip.width + dockPanel.barOffsetMargin + 260, 340)
+                : (dockPanel.activeMenuApp !== null
+                    ? Math.max(dockStrip.width + dockPanel.barOffsetMargin + 250, 320)
+                    : (dockStrip.width + dockPanel.barOffsetMargin + 56))
             implicitHeight: isHorizontal
-                ? Math.max(dockStrip.height + dockPanel.barOffsetMargin + 360, 420)
+                ? (dockPanel.activeMenuApp !== null
+                    ? Math.max(dockStrip.height + dockPanel.barOffsetMargin + 380, 420)
+                    : (dockStrip.height + dockPanel.barOffsetMargin + 52))
                 : 0
 
             mask: Region {
@@ -274,6 +285,10 @@ Item {
                 z: 2
                 visible: SettingsService.dockAutoHide
 
+                readonly property int triggerOffset: (dockPanel.sharesEdgeWithBar && dockPanel.barReservesSpace)
+                    ? dockPanel.barVisualThickness
+                    : 0
+
                 anchors {
                     bottom: dockPanel.isBottom ? parent.bottom : undefined
                     top: dockPanel.isTop ? parent.top : undefined
@@ -281,18 +296,31 @@ Item {
                     right: dockPanel.isRight ? parent.right : undefined
                     horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
                     verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
-                    bottomMargin: dockPanel.isBottom ? dockPanel.barOffsetMargin : 0
-                    topMargin: dockPanel.isTop ? dockPanel.barOffsetMargin : 0
-                    leftMargin: dockPanel.isLeft ? dockPanel.barOffsetMargin : 0
-                    rightMargin: dockPanel.isRight ? dockPanel.barOffsetMargin : 0
+                    bottomMargin: dockPanel.isBottom ? triggerOffset : 0
+                    topMargin: dockPanel.isTop ? triggerOffset : 0
+                    leftMargin: dockPanel.isLeft ? triggerOffset : 0
+                    rightMargin: dockPanel.isRight ? triggerOffset : 0
                 }
 
-                width: dockPanel.isHorizontal ? Math.max(220, dockStrip.width + 40) : 6
-                height: dockPanel.isHorizontal ? 6 : Math.max(220, dockStrip.height + 40)
+                width: dockPanel.isHorizontal ? Math.max(240, dockStrip.width + 64) : 6
+                height: dockPanel.isHorizontal ? 6 : Math.max(240, dockStrip.height + 64)
 
                 HoverHandler {
                     id: edgeHoverHandler
                     enabled: SettingsService.dockAutoHide
+                }
+            }
+
+            // Drop shadow rendered strictly BEHIND dockStrip
+            ThemedShadow {
+                anchors.fill: dockStrip
+                radius: dockStrip.radius
+                opacity: dockStrip.opacity * 0.40
+                active: dockStrip.opacity > 0.01
+                z: 9
+                transform: Translate {
+                    y: dockPanel.isHorizontal ? dockPanel.hideOffset : 0
+                    x: !dockPanel.isHorizontal ? dockPanel.hideOffset : 0
                 }
             }
 
@@ -316,10 +344,15 @@ Item {
                     right: dockPanel.isRight ? parent.right : undefined
                     horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
                     verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
-                    bottomMargin: dockPanel.isBottom ? (10 + dockPanel.barOffsetMargin) : 0
-                    topMargin: dockPanel.isTop ? (10 + dockPanel.barOffsetMargin) : 0
-                    leftMargin: dockPanel.isLeft ? (10 + dockPanel.barOffsetMargin) : 0
-                    rightMargin: dockPanel.isRight ? (10 + dockPanel.barOffsetMargin) : 0
+                    bottomMargin: dockPanel.isBottom ? (dockPanel.edgeGap + dockPanel.barOffsetMargin) : 0
+                    topMargin: dockPanel.isTop ? (dockPanel.edgeGap + dockPanel.barOffsetMargin) : 0
+                    leftMargin: dockPanel.isLeft ? (dockPanel.edgeGap + dockPanel.barOffsetMargin) : 0
+                    rightMargin: dockPanel.isRight ? (dockPanel.edgeGap + dockPanel.barOffsetMargin) : 0
+
+                    Behavior on bottomMargin { NumberAnimation { duration: Constants.animNormal; easing.type: Easing.OutCubic } }
+                    Behavior on topMargin { NumberAnimation { duration: Constants.animNormal; easing.type: Easing.OutCubic } }
+                    Behavior on leftMargin { NumberAnimation { duration: Constants.animNormal; easing.type: Easing.OutCubic } }
+                    Behavior on rightMargin { NumberAnimation { duration: Constants.animNormal; easing.type: Easing.OutCubic } }
                 }
 
                 transform: Translate {
@@ -327,19 +360,15 @@ Item {
                     x: !dockPanel.isHorizontal ? dockPanel.hideOffset : 0
                 }
 
-                width: dockPanel.isHorizontal ? Math.max(48, dockContentGrid.implicitWidth + 24) : (SettingsService.dockIconSize + 22)
-                height: dockPanel.isHorizontal ? (SettingsService.dockIconSize + 22) : Math.max(48, dockContentGrid.implicitHeight + 24)
-                radius: dockPanel.isHorizontal ? (height / 2) : (width / 2)
+                width: dockPanel.isHorizontal ? Math.max(40, dockContentGrid.implicitWidth + 14) : dockPanel.capsuleThickness
+                height: dockPanel.isHorizontal ? dockPanel.capsuleThickness : Math.max(40, dockContentGrid.implicitHeight + 14)
+                radius: Math.min(18, Math.round((dockPanel.isHorizontal ? height : width) / 2))
 
-                color: Theme.isDark ? Qt.rgba(0.06, 0.07, 0.10, 0.92) : Qt.rgba(0.96, 0.96, 0.98, 0.92)
+                color: Theme.isDark
+                    ? Qt.rgba(Theme._rawBg.r * 0.65 + 0.03, Theme._rawBg.g * 0.65 + 0.03, Theme._rawBg.b * 0.65 + 0.05, 0.88)
+                    : Qt.rgba(0.97, 0.97, 0.99, 0.90)
                 border.width: 1
-                border.color: Theme.border
-
-                ThemedShadow {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    opacity: 0.5
-                }
+                border.color: Theme.isDark ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(0, 0, 0, 0.09)
 
                 // HoverHandler never gets blocked by child MouseAreas
                 HoverHandler {
@@ -378,7 +407,6 @@ Item {
                     id: dockContentGrid
                     anchors.centerIn: parent
                     columns: dockPanel.isHorizontal ? 999 : 1
-                    rows: dockPanel.isHorizontal ? 1 : 999
                     spacing: SettingsService.dockItemSpacing
                     horizontalItemAlignment: Grid.AlignHCenter
                     verticalItemAlignment: Grid.AlignVCenter
@@ -392,15 +420,17 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: width / 2
+                            radius: Math.round(width * 0.30)
                             color: launcherHover.hovered ? Theme.bgSecondary : "transparent"
+
+                            Behavior on color { ColorAnimation { duration: Constants.animFast } }
 
                             HoverHandler { id: launcherHover }
 
                             SvgIcon {
                                 anchors.centerIn: parent
                                 icon: "apps"
-                                iconSize: Math.max(14, SettingsService.dockIconSize - 18)
+                                iconSize: Math.max(14, Math.round(SettingsService.dockIconSize * 0.56))
                                 iconColor: launcherHover.hovered ? Theme.accent : Theme.fg
                                 flat: true
                             }
@@ -459,10 +489,10 @@ Item {
                     // Divider after Launcher
                     Rectangle {
                         visible: SettingsService.dockShowLauncher && (root.dockAppList.length > 0 || SettingsService.dockShowTrash)
-                        width: dockPanel.isHorizontal ? 1 : Math.max(16, SettingsService.dockIconSize - 16)
-                        height: dockPanel.isHorizontal ? Math.max(16, SettingsService.dockIconSize - 16) : 1
+                        width: dockPanel.isHorizontal ? 1 : Math.max(14, SettingsService.dockIconSize - 10)
+                        height: dockPanel.isHorizontal ? Math.max(14, SettingsService.dockIconSize - 10) : 1
                         color: Theme.border
-                        opacity: 0.7
+                        opacity: 0.65
                     }
 
                     // 2. Apps Central Section (Pinned + Running)
@@ -486,104 +516,57 @@ Item {
                                 return Math.abs(pointerAxis - itemCenter);
                             }
                             property real magScale: {
-                                if (cursorDist > 90) return 1.0;
-                                let ratio = Math.cos((cursorDist / 90) * (Math.PI / 2));
-                                return 1.0 + (0.35 * ratio);
+                                if (cursorDist > 80) return 1.0;
+                                let ratio = Math.cos((cursorDist / 80) * (Math.PI / 2));
+                                return 1.0 + (0.22 * ratio);
                             }
 
                             Behavior on magScale {
-                                NumberAnimation { duration: 70; easing.type: Easing.OutQuad }
+                                NumberAnimation { duration: 85; easing.type: Easing.OutCubic }
                             }
 
-                            width: dockPanel.isHorizontal ? Math.round(baseSlotSize * magScale) : baseSlotSize
-                            height: dockPanel.isHorizontal ? baseSlotSize : Math.round(baseSlotSize * magScale)
+                            width: baseSlotSize
+                            height: baseSlotSize
+                            z: itemHover.hovered ? 25 : Math.round(magScale * 10)
 
                             Rectangle {
                                 id: iconBox
-                                width: Math.round(itemWrapper.baseSlotSize * itemWrapper.magScale)
-                                height: width
-                                radius: width / 2
-                                color: (itemHover.hovered || (dockPanel.activeMenuApp && dockPanel.activeMenuApp.id === itemWrapper.modelData.id)) ? Theme.bgSecondary : "transparent"
+                                width: itemWrapper.baseSlotSize
+                                height: itemWrapper.baseSlotSize
+                                radius: Math.round(width * 0.30)
+                                color: (itemHover.hovered || (dockPanel.activeMenuApp && dockPanel.activeMenuApp.id === itemWrapper.modelData.id))
+                                    ? Theme.bgSecondary
+                                    : (itemWrapper.modelData.isFocused ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : "transparent")
 
-                                anchors.bottom: dockPanel.isBottom ? parent.bottom : undefined
-                                anchors.top: dockPanel.isTop ? parent.top : undefined
-                                anchors.left: dockPanel.isLeft ? parent.left : undefined
-                                anchors.right: dockPanel.isRight ? parent.right : undefined
-                                anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
-                                anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                Behavior on color { ColorAnimation { duration: Constants.animFast } }
+
+                                transformOrigin: dockPanel.isBottom
+                                    ? Item.Bottom
+                                    : (dockPanel.isTop ? Item.Top : (dockPanel.isLeft ? Item.Left : Item.Right))
+                                scale: itemWrapper.magScale
 
                                 HoverHandler { id: itemHover }
 
-                                // App Icon
+                                // App Icon (crisp, proportional to slot)
                                 Image {
                                     id: desktopIconImage
                                     anchors.centerIn: parent
-                                    width: Math.round(Math.max(16, itemWrapper.baseSlotSize - 16) * itemWrapper.magScale)
+                                    width: Math.max(16, itemWrapper.baseSlotSize - 6)
                                     height: width
                                     sourceSize: Qt.size(64, 64)
                                     source: root.resolveIconSource(itemWrapper.modelData.icon)
                                     fillMode: Image.PreserveAspectFit
+                                    smooth: true
                                     visible: status === Image.Ready
                                 }
 
                                 SvgIcon {
                                     anchors.centerIn: parent
                                     icon: "rocket"
-                                    iconSize: Math.round(Math.max(16, itemWrapper.baseSlotSize - 16) * itemWrapper.magScale)
+                                    iconSize: Math.max(14, Math.round(itemWrapper.baseSlotSize * 0.60))
                                     iconColor: (itemHover.hovered || itemWrapper.modelData.isFocused) ? Theme.accent : Theme.fg
                                     flat: true
-                                    visible: !desktopIconImage.visible
-                                }
-
-                                // Running Dots Indicator (Supports 1, 2, or 3+ dots on outer edge)
-                                Grid {
-                                    visible: itemWrapper.modelData.isRunning
-                                    columns: dockPanel.isHorizontal ? 3 : 1
-                                    rows: dockPanel.isHorizontal ? 1 : 3
-                                    spacing: 2
-                                    anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
-                                    anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
-                                    anchors.bottom: dockPanel.isBottom ? parent.bottom : undefined
-                                    anchors.top: dockPanel.isTop ? parent.top : undefined
-                                    anchors.left: dockPanel.isLeft ? parent.left : undefined
-                                    anchors.right: dockPanel.isRight ? parent.right : undefined
-                                    anchors.margins: 2
-
-                                    Repeater {
-                                        model: Math.min(3, Math.max(1, itemWrapper.modelData.windowCount))
-                                        Rectangle {
-                                            width: 4; height: 4; radius: 2
-                                            color: itemWrapper.modelData.isFocused ? Theme.accent : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.7)
-                                        }
-                                    }
-                                }
-
-                                // Tooltip popup (always inward toward desktop)
-                                Rectangle {
-                                    visible: itemHover.hovered && dockPanel.activeMenuApp === null
-                                    anchors.bottom: dockPanel.isBottom ? parent.top : undefined
-                                    anchors.top: dockPanel.isTop ? parent.bottom : undefined
-                                    anchors.left: dockPanel.isLeft ? parent.right : undefined
-                                    anchors.right: dockPanel.isRight ? parent.left : undefined
-                                    anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
-                                    anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
-                                    anchors.margins: 8
-                                    width: tooltipText.implicitWidth + 14
-                                    height: 22
-                                    radius: 6
-                                    color: Theme.isDark ? "#12151D" : "#FFFFFF"
-                                    border.width: 1
-                                    border.color: Theme.border
-                                    z: 200
-
-                                    ThemedText {
-                                        id: tooltipText
-                                        anchors.centerIn: parent
-                                        text: itemWrapper.modelData.name + (itemWrapper.modelData.windowCount > 1 ? (" (" + itemWrapper.modelData.windowCount + ")") : "")
-                                        customSize: 10
-                                        font.weight: Font.Bold
-                                        color: Theme.fg
-                                    }
+                                    visible: desktopIconImage.status !== Image.Ready && desktopIconImage.status !== Image.Loading
                                 }
 
                                 MouseArea {
@@ -592,7 +575,7 @@ Item {
                                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                                     onClicked: function(mouse) {
                                         if (mouse.button === Qt.RightButton) {
-                                            dockPanel.openContextMenuFor(iconBox, itemWrapper.modelData);
+                                            dockPanel.openContextMenuFor(itemWrapper, itemWrapper.modelData);
                                         } else {
                                             dockPanel.activeMenuApp = null;
                                             SoundService.play("click");
@@ -605,16 +588,71 @@ Item {
                                     }
                                 }
                             }
+
+                            // Running Pill/Dots Indicator along outer edge
+                            Grid {
+                                visible: itemWrapper.modelData.isRunning
+                                columns: dockPanel.isHorizontal ? 3 : 1
+                                spacing: 2
+                                anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                anchors.top: dockPanel.isBottom ? parent.bottom : undefined
+                                anchors.bottom: dockPanel.isTop ? parent.top : undefined
+                                anchors.right: dockPanel.isLeft ? parent.left : undefined
+                                anchors.left: dockPanel.isRight ? parent.right : undefined
+                                anchors.topMargin: dockPanel.isBottom ? 1 : 0
+                                anchors.bottomMargin: dockPanel.isTop ? 1 : 0
+                                anchors.rightMargin: dockPanel.isLeft ? 1 : 0
+                                anchors.leftMargin: dockPanel.isRight ? 1 : 0
+
+                                Repeater {
+                                    model: Math.min(3, Math.max(1, itemWrapper.modelData.windowCount))
+                                    Rectangle {
+                                        width: dockPanel.isHorizontal ? (itemWrapper.modelData.isFocused ? 8 : 4) : 3
+                                        height: dockPanel.isHorizontal ? 3 : (itemWrapper.modelData.isFocused ? 8 : 4)
+                                        radius: 1.5
+                                        color: itemWrapper.modelData.isFocused ? Theme.accent : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.65)
+                                    }
+                                }
+                            }
+
+                            // Tooltip popup (unscaled, always inward toward desktop)
+                            Rectangle {
+                                visible: itemHover.hovered && dockPanel.activeMenuApp === null
+                                anchors.bottom: dockPanel.isBottom ? parent.top : undefined
+                                anchors.top: dockPanel.isTop ? parent.bottom : undefined
+                                anchors.left: dockPanel.isLeft ? parent.right : undefined
+                                anchors.right: dockPanel.isRight ? parent.left : undefined
+                                anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                anchors.margins: Math.round(8 + (itemWrapper.magScale - 1.0) * itemWrapper.baseSlotSize)
+                                width: tooltipText.implicitWidth + 14
+                                height: 22
+                                radius: 6
+                                color: Theme.isDark ? "#12151D" : "#FFFFFF"
+                                border.width: 1
+                                border.color: Theme.border
+                                z: 200
+
+                                ThemedText {
+                                    id: tooltipText
+                                    anchors.centerIn: parent
+                                    text: itemWrapper.modelData.name + (itemWrapper.modelData.windowCount > 1 ? (" (" + itemWrapper.modelData.windowCount + ")") : "")
+                                    customSize: 10
+                                    font.weight: Font.Bold
+                                    color: Theme.fg
+                                }
+                            }
                         }
                     }
 
                     // Divider before Trash
                     Rectangle {
                         visible: SettingsService.dockShowTrash && (root.dockAppList.length > 0 || SettingsService.dockShowLauncher)
-                        width: dockPanel.isHorizontal ? 1 : Math.max(16, SettingsService.dockIconSize - 16)
-                        height: dockPanel.isHorizontal ? Math.max(16, SettingsService.dockIconSize - 16) : 1
+                        width: dockPanel.isHorizontal ? 1 : Math.max(14, SettingsService.dockIconSize - 10)
+                        height: dockPanel.isHorizontal ? Math.max(14, SettingsService.dockIconSize - 10) : 1
                         color: Theme.border
-                        opacity: 0.7
+                        opacity: 0.65
                     }
 
                     // 3. Trash Slot (Trailing slot)
@@ -626,15 +664,17 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: width / 2
+                            radius: Math.round(width * 0.30)
                             color: trashHover.hovered ? Theme.bgSecondary : "transparent"
+
+                            Behavior on color { ColorAnimation { duration: Constants.animFast } }
 
                             HoverHandler { id: trashHover }
 
                             SvgIcon {
                                 anchors.centerIn: parent
                                 icon: "trash"
-                                iconSize: Math.max(14, SettingsService.dockIconSize - 18)
+                                iconSize: Math.max(14, Math.round(SettingsService.dockIconSize * 0.54))
                                 iconColor: trashHover.hovered ? Theme.accent : Theme.fg
                                 flat: true
                             }
@@ -698,7 +738,7 @@ Item {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: width / 2
+                            radius: Math.round(width * 0.30)
                             color: emptyHover.hovered ? Theme.bgSecondary : "transparent"
 
                             HoverHandler { id: emptyHover }
@@ -706,7 +746,7 @@ Item {
                             SvgIcon {
                                 anchors.centerIn: parent
                                 icon: "dock"
-                                iconSize: Math.max(14, SettingsService.dockIconSize - 18)
+                                iconSize: Math.max(14, Math.round(SettingsService.dockIconSize * 0.54))
                                 iconColor: emptyHover.hovered ? Theme.accent : Theme.muted
                                 flat: true
                             }
@@ -733,6 +773,14 @@ Item {
             // ─────────────────────────────────────────────
             // QUICK SELECTOR & RIGHT-CLICK CONTEXT MENU
             // ─────────────────────────────────────────────
+            ThemedShadow {
+                anchors.fill: contextMenuBox
+                radius: contextMenuBox.radius
+                opacity: 0.55
+                visible: active && contextMenuBox.visible && HyprlandService.hyprShadow && !DisplayProfileService.gameModeActive && (SystemInfoService.powerProfile !== "power-saver")
+                z: 999
+            }
+
             Rectangle {
                 id: contextMenuBox
                 visible: dockPanel.activeMenuApp !== null
@@ -764,12 +812,6 @@ Item {
                 color: Theme.isDark ? Qt.rgba(0.08, 0.09, 0.13, 0.96) : Qt.rgba(0.98, 0.98, 1.0, 0.96)
                 border.width: 1
                 border.color: Theme.border
-
-                ThemedShadow {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    opacity: 0.6
-                }
 
                 // Prevent clicks inside menu from hitting dismiss MouseArea
                 MouseArea {
@@ -827,6 +869,7 @@ Item {
                             model: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.windows) ? dockPanel.activeMenuApp.windows : []
 
                             Rectangle {
+                                id: winItemRow
                                 required property var modelData
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 28
@@ -839,7 +882,7 @@ Item {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        WindowTrackerService.focusWindow(parent.modelData);
+                                        WindowTrackerService.focusWindow(winItemRow.modelData);
                                         dockPanel.activeMenuApp = null;
                                     }
                                 }
@@ -851,15 +894,15 @@ Item {
 
                                     Rectangle {
                                         width: 4; height: 4; radius: 2
-                                        color: parent.parent.modelData.isFocused ? Theme.accent : "transparent"
+                                        color: winItemRow.modelData.isFocused ? Theme.accent : "transparent"
                                     }
 
                                     ThemedText {
                                         Layout.fillWidth: true
-                                        text: parent.parent.modelData.title || "Window"
+                                        text: winItemRow.modelData.title || "Window"
                                         customSize: 10
                                         elide: Text.ElideRight
-                                        color: parent.parent.modelData.isFocused ? Theme.accent : Theme.fg
+                                        color: winItemRow.modelData.isFocused ? Theme.accent : Theme.fg
                                     }
 
                                     // Close single window button
@@ -880,7 +923,7 @@ Item {
                                             anchors.fill: parent
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: {
-                                                WindowTrackerService.closeWindow(parent.parent.parent.modelData);
+                                                WindowTrackerService.closeWindow(winItemRow.modelData);
                                                 dockPanel.activeMenuApp = null;
                                             }
                                         }

@@ -41,14 +41,17 @@ Item {
     Connections {
         target: Hyprland
         enabled: !root.isNiri
-        function onToplevelsChanged() {
-            root.queryWindows();
-        }
         function onFocusedWorkspaceChanged() {
             root.queryWindows();
         }
         function onActiveToplevelChanged() {
             root.queryWindows();
+        }
+        function onRawEvent(event) {
+            if (!event || !event.name) return;
+            if (event.name === "openwindow" || event.name === "closewindow" || event.name === "movewindow" || event.name === "activewindow" || event.name === "windowtitle") {
+                root.queryWindows();
+            }
         }
     }
 
@@ -148,6 +151,7 @@ Item {
         let norm = normalizeAppId(appId);
         if (!norm) return null;
         let normTail = lastSegment(norm);
+        let hyphenHead = norm.split("-")[0];
 
         let partialMatch = null;
         for (let i = 0; i < AppState.launcherApps.length; i++) {
@@ -169,11 +173,15 @@ Item {
                 return item;
             }
 
-            // Tail segment matches (e.g. "org.gnome.nautilus" <-> "nautilus")
-            if (!partialMatch && normTail.length >= 3) {
-                if ((itemExecBin && itemExecBin === normTail)
+            // Tail segment or hyphen-prefix matches (e.g. "org.gnome.nautilus" <-> "nautilus", "brave-browser" <-> "brave")
+            if (!partialMatch) {
+                if (normTail.length >= 3 && ((itemExecBin && itemExecBin === normTail)
                     || (itemIcon && lastSegment(itemIcon) === normTail)
-                    || (itemName && itemName === normTail)) {
+                    || (itemName && itemName === normTail))) {
+                    partialMatch = item;
+                } else if (hyphenHead.length >= 3 && ((itemExecBin && itemExecBin === hyphenHead)
+                    || (itemName && itemName === hyphenHead)
+                    || (itemIcon && itemIcon.startsWith(hyphenHead + "-")))) {
                     partialMatch = item;
                 }
             }

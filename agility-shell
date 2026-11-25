@@ -30,6 +30,7 @@ SELF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" 2>/dev/null && 
 SHELL_QML=""
 for cand in \
     "$USER_CONFIG/quickshell/agility/shell.qml" \
+    "${XDG_DATA_HOME:-$HOME/.local/share}/agility-shell/quickshell/agility/shell.qml" \
     "$SELF_DIR/quickshell/agility/shell.qml" \
     "$SYSTEM_DATA/quickshell/agility/shell.qml"; do
     if [[ -f "$cand" ]]; then

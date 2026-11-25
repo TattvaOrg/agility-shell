@@ -355,121 +355,75 @@ AppContainer {
         icon: "color-palette"
         badge: widgetsSettingsRoot.currentTheme.replace("_", " ").toUpperCase()
 
-        GridLayout {
+        Flow {
             Layout.fillWidth: true
-            columns: 2
-            rowSpacing: Constants.sizeSm
-            columnSpacing: Constants.sizeSm
+            spacing: 8
 
             Repeater {
                 model: widgetsSettingsRoot.allThemes
 
                 Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 68
-                    radius: Constants.sizeSm
-                    property bool isSelected: widgetsSettingsRoot.currentTheme === modelData.id
-                    color: isSelected ? Theme.bgAccent : Theme.bgSecondary
-                    border.width: isSelected ? 1.5 : 1
+                    required property var modelData
+                    required property int index
+                    readonly property bool isSelected: widgetsSettingsRoot.currentTheme === modelData.id
+
+                    width: 125
+                    height: 56
+                    radius: Constants.sizeMd
+                    color: modelData.bg
+                    border.width: isSelected ? 2 : 1
                     border.color: isSelected ? Theme.accent : Theme.border
 
-                    RowLayout {
+                    ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: Constants.sizeSm
-                        spacing: Constants.sizeMd
+                        anchors.margins: 6
+                        spacing: 3
 
-                        // Swatch palette circles
-                        Row {
-                            spacing: -6
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Rectangle {
-                                width: 22
-                                height: 22
-                                radius: 11
-                                color: modelData.bg
-                                border.width: 1
-                                border.color: "#33FFFFFF"
-                            }
-                            Rectangle {
-                                width: 22
-                                height: 22
-                                radius: 11
-                                color: modelData.tile
-                                border.width: 1
-                                border.color: "#33FFFFFF"
-                            }
-                            Rectangle {
-                                width: 22
-                                height: 22
-                                radius: 11
-                                color: modelData.acc
-                                border.width: 1
-                                border.color: "#FFFFFF"
-                            }
-                        }
-
-                        ColumnLayout {
+                        RowLayout {
                             Layout.fillWidth: true
-                            spacing: 2
-                            Layout.alignment: Qt.AlignVCenter
+                            spacing: 4
 
-                            RowLayout {
-                                spacing: Constants.sizeXs
-                                ThemedText {
-                                    text: modelData.name
-                                    customSize: Constants.sizeSm
-                                    font.weight: Font.Bold
-                                    color: parent.parent.parent.parent.isSelected ? Theme.accent : Theme.fg
-                                }
-                                Rectangle {
-                                    visible: modelData.id === "system"
-                                    Layout.preferredWidth: 54
-                                    Layout.preferredHeight: 16
-                                    radius: 3
-                                    color: Theme.bgAccent
-                                    ThemedText {
-                                        anchors.centerIn: parent
-                                        text: "MATUGEN"
-                                        customSize: 8
-                                        font.weight: Font.Bold
-                                        color: Theme.accent
-                                    }
-                                }
-                            }
-
-                            ThemedText {
-                                text: modelData.desc
-                                customSize: 10
-                                color: Theme.muted
+                            Text {
                                 Layout.fillWidth: true
+                                text: modelData.name
+                                font.pixelSize: 10
+                                font.weight: Font.Bold
+                                color: isSelected ? Theme.accent : (modelData.id === "oled" ? "#ffffff" : (modelData.acc || Theme.text))
                                 elide: Text.ElideRight
                             }
+
+                            Rectangle {
+                                visible: modelData.id === "system"
+                                width: 28
+                                height: 12
+                                radius: 3
+                                color: Theme.accent
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "AUTO"
+                                    font.pixelSize: 7
+                                    font.weight: Font.Bold
+                                    color: Theme.bg
+                                }
+                            }
                         }
 
-                        Rectangle {
-                            width: 18
-                            height: 18
-                            radius: 9
-                            color: parent.parent.isSelected ? Theme.accent : "transparent"
-                            border.width: parent.parent.isSelected ? 0 : 1.5
-                            border.color: Theme.muted
-                            Layout.alignment: Qt.AlignVCenter
-
-                            DesktopWidgets.AweIcon {
-                                anchors.centerIn: parent
-                                name: "check"
-                                size: 10
-                                color: "#000000"
-                                visible: parent.parent.parent.isSelected
-                            }
+                        RowLayout {
+                            spacing: 3
+                            Rectangle { width: 12; height: 12; radius: 6; color: modelData.bg; border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.2) }
+                            Rectangle { width: 12; height: 12; radius: 6; color: modelData.tile; border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.15) }
+                            Rectangle { width: 12; height: 12; radius: 6; color: modelData.acc }
+                            Rectangle { width: 12; height: 12; radius: 6; color: isSelected ? Theme.accent : Qt.rgba(1, 1, 1, 0.7) }
                         }
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: widgetsSettingsRoot.setTheme(modelData.id)
+                        onClicked: {
+                            widgetsSettingsRoot.setTheme(modelData.id);
+                            SoundService.play("click");
+                        }
                     }
                 }
             }

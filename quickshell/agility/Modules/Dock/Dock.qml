@@ -7,9 +7,98 @@ import Quickshell.Wayland
 import qs.Core
 import qs.Core.Components
 import qs.Core.Services
+import qs.Modules.Bar
 
 Item {
     id: root
+
+    // Reactive Combined Dock App Model (Pinned + Running)
+    readonly property var dockAppList: {
+        let list = [];
+        let seenRunningIds = {};
+        let seenKeys = {};
+
+        // 1. Pinned Apps from Settings
+        let pinned = Array.isArray(SettingsService.dockPinnedApps) ? SettingsService.dockPinnedApps : [];
+        for (let i = 0; i < pinned.length; i++) {
+            let p = pinned[i];
+            if (!p) continue;
+
+            let running = WindowTrackerService.findRunningForPinned(p);
+            let pId = (p.id || p.desktopId || p.rawClass || p.name || "").toLowerCase().replace(/\.desktop$/, "");
+            if (running && running.id) {
+                seenRunningIds[running.id] = true;
+            }
+
+            let resolvedIcon = p.icon;
+            if (!resolvedIcon || resolvedIcon === "application-x-executable" || resolvedIcon === "applications-other") {
+                if (running && running.icon) resolvedIcon = running.icon;
+            }
+
+            let entry = {
+                "id": running ? running.id : pId,
+                "desktopId": p.desktopId || p.id || pId,
+                "rawClass": p.rawClass || (running ? running.rawClass : ""),
+                "name": p.name || (running ? running.name : pId),
+                "icon": resolvedIcon || "application-x-executable",
+                "exec": p.exec || (running ? running.exec : pId),
+                "terminal": Boolean(p.terminal || (running && running.terminal)),
+                "isPinned": true,
+                "isRunning": Boolean(running && running.windowCount > 0),
+                "isFocused": Boolean(running && running.isFocused),
+                "windows": running ? running.windows : [],
+                "windowCount": running ? running.windowCount : 0
+            };
+            list.push(entry);
+            if (pId) seenKeys[pId] = true;
+            if (p.name) seenKeys[p.name.toLowerCase()] = true;
+        }
+
+        // 2. Open / Running Apps from Compositor Window Tracker
+        let runningList = WindowTrackerService.runningApps || [];
+        for (let j = 0; j < runningList.length; j++) {
+            let r = runningList[j];
+            if (!r) continue;
+            let rId = (r.id || "").toLowerCase().replace(/\.desktop$/, "");
+            let rName = (r.name || "").toLowerCase();
+
+            if (!seenRunningIds[rId] && !seenKeys[rId] && !seenKeys[rName]) {
+                let entry = {
+                    "id": rId,
+                    "desktopId": rId,
+                    "rawClass": r.rawClass || rId,
+                    "name": r.name || rId,
+                    "icon": r.icon || "application-x-executable",
+                    "exec": r.exec || rId,
+                    "terminal": Boolean(r.terminal),
+                    "isPinned": false,
+                    "isRunning": true,
+                    "isFocused": Boolean(r.isFocused),
+                    "windows": r.windows || [],
+                    "windowCount": r.windowCount || 1
+                };
+                list.push(entry);
+                seenRunningIds[rId] = true;
+            }
+        }
+
+        return list;
+    }
+
+    function resolveIconSource(iconName) {
+        if (!iconName) return "";
+        let path = String(iconName);
+        let home = Quickshell.env("HOME") || "";
+        if (path.startsWith("$HOME")) {
+            path = home + path.substring(5);
+        } else if (path.startsWith("~")) {
+            path = home + path.substring(1);
+        }
+        if (path.startsWith("/") || path.startsWith("file://")) {
+            return path.startsWith("file://") ? path : ("file://" + path);
+        }
+        return Quickshell.iconPath(path, true);
+    }
 
     Variants {
         model: Quickshell.screens
@@ -19,33 +108,90 @@ Item {
             required property var modelData
             screen: modelData
 
-            WlrLayershell.layer: WlrLayer.Top
-            WlrLayershell.namespace: "quickshell:dock"
-            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-            WlrLayershell.exclusionMode: SettingsService.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Auto
-            color: "transparent"
-            focusable: false
-            visible: SettingsService.settingsLoaded && SettingsService.dockEnabled && !DisplayProfileService.gameModeActive
-
             readonly property bool isBottom: SettingsService.dockPosition === "bottom" || SettingsService.dockPosition === ""
+            readonly property bool isTop: SettingsService.dockPosition === "top"
             readonly property bool isLeft: SettingsService.dockPosition === "left"
             readonly property bool isRight: SettingsService.dockPosition === "right"
+            readonly property bool isHorizontal: isBottom || isTop
 
-            anchors {
-                bottom: dockPanel.isBottom
-                left: dockPanel.isLeft
-                right: dockPanel.isRight
+            readonly property bool sharesEdgeWithBar: {
+                if (isBottom && SettingsService.isBarBottom) return true;
+                if (isTop && SettingsService.isBarTop) return true;
+                if (isLeft && SettingsService.isBarLeft) return true;
+                if (isRight && SettingsService.isBarRight) return true;
+                return false;
             }
 
-            implicitWidth: dockPanel.isBottom ? dockStrip.width + 40 : (dockStrip.width + 20)
-            implicitHeight: dockPanel.isBottom ? (dockStrip.height + 24) : (dockStrip.height + 40)
-
-            mask: Region {
-                item: dockStrip
+            readonly property bool barReservesSpace: {
+                if (!sharesEdgeWithBar) return false;
+                if (SettingsService.isBarVertical) return true;
+                return !(SettingsService.barAutoHide && (SettingsService.barIslandMode || SettingsService.barPillMode));
             }
 
-            property bool isHovered: dockMouseArea.containsMouse || edgeTriggerArea.containsMouse
-            property real hideOffset: (SettingsService.dockAutoHide && !dockPanel.isHovered) ? (dockPanel.isBottom ? 70 : (dockPanel.isLeft ? -70 : 70)) : 0
+            readonly property int barOffsetMargin: {
+                if (!sharesEdgeWithBar) return 0;
+                // When dock is fixed (ExclusionMode.Normal) and bar reserves space, the compositor
+                // already stacks dockPanel after barSurface; avoid double-offsetting.
+                if (!SettingsService.dockAutoHide && barReservesSpace) return 0;
+                if (SettingsService.dockAutoHide && !barReservesSpace) return 0;
+                return SettingsService.isBarVertical
+                    ? 48
+                    : (BarStyleConfig.barHeight(SettingsService.barStyle) + BarStyleConfig.barMarginTop(SettingsService.barStyle) + 4);
+            }
+
+            // Per-monitor context menu state
+            property var activeMenuApp: null
+            property real menuAnchorCenterX: dockPanel.width / 2
+            property real menuAnchorCenterY: dockPanel.height / 2
+
+            // Auto-hide state with smooth debounce
+            property bool revealed: !SettingsService.dockAutoHide
+            readonly property bool rawHovered: stripHoverHandler.hovered || edgeHoverHandler.hovered || activeMenuApp !== null
+            readonly property real slideDistance: (isHorizontal ? (dockStrip.height + dockPanel.barOffsetMargin + 28) : (dockStrip.width + dockPanel.barOffsetMargin + 28))
+            readonly property real hideOffset: (SettingsService.dockAutoHide && !revealed)
+                ? (isBottom ? slideDistance : (isTop ? -slideDistance : (isLeft ? -slideDistance : slideDistance)))
+                : 0
+
+            function syncAutoHideState() {
+                if (!SettingsService.dockAutoHide) {
+                    hideDebounceTimer.stop();
+                    revealed = true;
+                } else if (rawHovered) {
+                    hideDebounceTimer.stop();
+                    revealed = true;
+                } else {
+                    hideDebounceTimer.restart();
+                }
+            }
+
+            onRawHoveredChanged: syncAutoHideState()
+
+            Connections {
+                target: SettingsService
+                function onDockAutoHideChanged() {
+                    dockPanel.syncAutoHideState();
+                }
+                function onDockPositionChanged() {
+                    dockPanel.activeMenuApp = null;
+                    dockPanel.syncAutoHideState();
+                }
+                function onDockEnabledChanged() {
+                    if (!SettingsService.dockEnabled) {
+                        dockPanel.activeMenuApp = null;
+                    }
+                }
+            }
+
+            Timer {
+                id: hideDebounceTimer
+                interval: 280
+                repeat: false
+                onTriggered: {
+                    if (SettingsService.dockAutoHide && !dockPanel.rawHovered) {
+                        dockPanel.revealed = false;
+                    }
+                }
+            }
 
             Behavior on hideOffset {
                 NumberAnimation {
@@ -54,69 +200,290 @@ Item {
                 }
             }
 
-            // Screen edge trigger zone for auto-hide
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "quickshell:dock"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            WlrLayershell.exclusionMode: SettingsService.dockAutoHide ? ExclusionMode.Ignore : ExclusionMode.Normal
+            WlrLayershell.exclusiveZone: SettingsService.dockAutoHide ? 0 : (isHorizontal ? (dockStrip.height + 18) : (dockStrip.width + 18))
+            color: "transparent"
+            focusable: false
+            visible: SettingsService.settingsLoaded && SettingsService.dockEnabled && !DisplayProfileService.gameModeActive
+
+            anchors {
+                bottom: isBottom || !isHorizontal
+                top: isTop || !isHorizontal
+                left: isLeft || isHorizontal
+                right: isRight || isHorizontal
+            }
+
+            implicitWidth: isHorizontal
+                ? 0
+                : Math.max(dockStrip.width + dockPanel.barOffsetMargin + 260, 340)
+            implicitHeight: isHorizontal
+                ? Math.max(dockStrip.height + dockPanel.barOffsetMargin + 360, 420)
+                : 0
+
+            mask: Region {
+                // 1. Dock capsule region (only interactive when revealed or auto-hide is off)
+                Region {
+                    readonly property bool stripInteractive: !SettingsService.dockAutoHide || dockPanel.revealed
+                    x: stripInteractive ? dockStrip.x : 0
+                    y: stripInteractive ? dockStrip.y : 0
+                    width: stripInteractive ? dockStrip.width : 0
+                    height: stripInteractive ? dockStrip.height : 0
+                }
+                // 2. Thin screen-edge hover trigger when auto-hide is active
+                Region {
+                    x: SettingsService.dockAutoHide ? edgeTrigger.x : 0
+                    y: SettingsService.dockAutoHide ? edgeTrigger.y : 0
+                    width: SettingsService.dockAutoHide ? edgeTrigger.width : 0
+                    height: SettingsService.dockAutoHide ? edgeTrigger.height : 0
+                }
+                // 3. Full-panel dismiss overlay when context menu is open
+                Region {
+                    readonly property bool menuOpen: dockPanel.activeMenuApp !== null
+                    x: 0
+                    y: 0
+                    width: menuOpen ? dockPanel.width : 0
+                    height: menuOpen ? dockPanel.height : 0
+                }
+            }
+
+            function openContextMenuFor(anchorItem, appData) {
+                if (!anchorItem) return;
+                let centerPt = anchorItem.mapToItem(dockPanel.contentItem, anchorItem.width / 2, anchorItem.height / 2);
+                dockPanel.menuAnchorCenterX = centerPt.x;
+                dockPanel.menuAnchorCenterY = centerPt.y;
+                dockPanel.activeMenuApp = appData;
+            }
+
+            // Dismiss context menu when clicking outside
             MouseArea {
-                id: edgeTriggerArea
                 anchors.fill: parent
-                hoverEnabled: true
-                acceptedButtons: Qt.NoButton
-                z: 0
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                enabled: dockPanel.activeMenuApp !== null
+                z: 500
+                onClicked: {
+                    dockPanel.activeMenuApp = null;
+                }
+            }
+
+            // Screen edge trigger zone for auto-hide
+            Item {
+                id: edgeTrigger
+                z: 2
+                visible: SettingsService.dockAutoHide
+
+                anchors {
+                    bottom: dockPanel.isBottom ? parent.bottom : undefined
+                    top: dockPanel.isTop ? parent.top : undefined
+                    left: dockPanel.isLeft ? parent.left : undefined
+                    right: dockPanel.isRight ? parent.right : undefined
+                    horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                    verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                    bottomMargin: dockPanel.isBottom ? dockPanel.barOffsetMargin : 0
+                    topMargin: dockPanel.isTop ? dockPanel.barOffsetMargin : 0
+                    leftMargin: dockPanel.isLeft ? dockPanel.barOffsetMargin : 0
+                    rightMargin: dockPanel.isRight ? dockPanel.barOffsetMargin : 0
+                }
+
+                width: dockPanel.isHorizontal ? Math.max(220, dockStrip.width + 40) : 6
+                height: dockPanel.isHorizontal ? 6 : Math.max(220, dockStrip.height + 40)
+
+                HoverHandler {
+                    id: edgeHoverHandler
+                    enabled: SettingsService.dockAutoHide
+                }
             }
 
             // Floating Capsule Container
             Rectangle {
                 id: dockStrip
-                anchors.centerIn: parent
-                z: 1
+                z: 10
+                opacity: (!SettingsService.dockAutoHide || dockPanel.revealed) ? 1.0 : 0.0
 
-                transform: Translate {
-                    y: dockPanel.isBottom ? dockPanel.hideOffset : 0
-                    x: !dockPanel.isBottom ? dockPanel.hideOffset : 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Constants.animFast
+                        easing.type: Easing.OutQuad
+                    }
                 }
 
-                width: dockPanel.isBottom ? (dockContentRow.implicitWidth + 24) : (SettingsService.dockIconSize + 24)
-                height: dockPanel.isBottom ? (SettingsService.dockIconSize + 22) : (dockContentCol.implicitHeight + 24)
-                radius: dockPanel.isBottom ? (height / 2) : (width / 2)
+                anchors {
+                    bottom: dockPanel.isBottom ? parent.bottom : undefined
+                    top: dockPanel.isTop ? parent.top : undefined
+                    left: dockPanel.isLeft ? parent.left : undefined
+                    right: dockPanel.isRight ? parent.right : undefined
+                    horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                    verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                    bottomMargin: dockPanel.isBottom ? (10 + dockPanel.barOffsetMargin) : 0
+                    topMargin: dockPanel.isTop ? (10 + dockPanel.barOffsetMargin) : 0
+                    leftMargin: dockPanel.isLeft ? (10 + dockPanel.barOffsetMargin) : 0
+                    rightMargin: dockPanel.isRight ? (10 + dockPanel.barOffsetMargin) : 0
+                }
 
-                color: Theme.isDark ? Qt.rgba(0.06, 0.07, 0.10, 0.88) : Qt.rgba(0.96, 0.96, 0.98, 0.90)
+                transform: Translate {
+                    y: dockPanel.isHorizontal ? dockPanel.hideOffset : 0
+                    x: !dockPanel.isHorizontal ? dockPanel.hideOffset : 0
+                }
+
+                width: dockPanel.isHorizontal ? Math.max(48, dockContentGrid.implicitWidth + 24) : (SettingsService.dockIconSize + 22)
+                height: dockPanel.isHorizontal ? (SettingsService.dockIconSize + 22) : Math.max(48, dockContentGrid.implicitHeight + 24)
+                radius: dockPanel.isHorizontal ? (height / 2) : (width / 2)
+
+                color: Theme.isDark ? Qt.rgba(0.06, 0.07, 0.10, 0.92) : Qt.rgba(0.96, 0.96, 0.98, 0.92)
                 border.width: 1
                 border.color: Theme.border
 
-                // Ambient Drop Shadow
                 ThemedShadow {
                     anchors.fill: parent
                     radius: parent.radius
                     opacity: 0.5
                 }
 
-                // Mouse interaction area for magnification
-                MouseArea {
-                    id: dockMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.NoButton
+                // HoverHandler never gets blocked by child MouseAreas
+                HoverHandler {
+                    id: stripHoverHandler
+                    margin: 6
                 }
 
-                // Horizontal Layout (Bottom Dock)
-                Row {
-                    id: dockContentRow
-                    visible: dockPanel.isBottom
-                    anchors.centerIn: parent
-                    spacing: 8
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: function(event) {
+                        if (event.angleDelta.y > 0) {
+                            SettingsService.increaseDockSize();
+                        } else if (event.angleDelta.y < 0) {
+                            SettingsService.decreaseDockSize();
+                        }
+                    }
+                }
 
+                // Right-click background capsule to open Dock Controls
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: function(mouse) {
+                        dockPanel.openContextMenuFor(dockStrip, {
+                            "id": "dock_settings",
+                            "name": "Dock Controls",
+                            "isPinned": false,
+                            "isRunning": false,
+                            "windows": []
+                        });
+                    }
+                }
+
+                // Unified Horizontal/Vertical Dock Content Grid
+                Grid {
+                    id: dockContentGrid
+                    anchors.centerIn: parent
+                    columns: dockPanel.isHorizontal ? 999 : 1
+                    rows: dockPanel.isHorizontal ? 1 : 999
+                    spacing: SettingsService.dockItemSpacing
+                    horizontalItemAlignment: Grid.AlignHCenter
+                    verticalItemAlignment: Grid.AlignVCenter
+
+                    // 1. Applications Launcher Button (Leading slot)
+                    Item {
+                        id: launcherBtnSlot
+                        visible: SettingsService.dockShowLauncher
+                        width: SettingsService.dockIconSize
+                        height: SettingsService.dockIconSize
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            color: launcherHover.hovered ? Theme.bgSecondary : "transparent"
+
+                            HoverHandler { id: launcherHover }
+
+                            SvgIcon {
+                                anchors.centerIn: parent
+                                icon: "apps"
+                                iconSize: Math.max(14, SettingsService.dockIconSize - 18)
+                                iconColor: launcherHover.hovered ? Theme.accent : Theme.fg
+                                flat: true
+                            }
+
+                            // Tooltip
+                            Rectangle {
+                                visible: launcherHover.hovered && dockPanel.activeMenuApp === null
+                                anchors.bottom: dockPanel.isBottom ? parent.top : undefined
+                                anchors.top: dockPanel.isTop ? parent.bottom : undefined
+                                anchors.left: dockPanel.isLeft ? parent.right : undefined
+                                anchors.right: dockPanel.isRight ? parent.left : undefined
+                                anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                anchors.margins: 8
+                                width: launcherTipText.implicitWidth + 14
+                                height: 22
+                                radius: 6
+                                color: Theme.isDark ? "#12151D" : "#FFFFFF"
+                                border.width: 1
+                                border.color: Theme.border
+                                z: 200
+
+                                ThemedText {
+                                    id: launcherTipText
+                                    anchors.centerIn: parent
+                                    text: "Applications"
+                                    customSize: 10
+                                    font.weight: Font.Bold
+                                    color: Theme.fg
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: function(mouse) {
+                                    if (mouse.button === Qt.RightButton) {
+                                        dockPanel.openContextMenuFor(launcherBtnSlot, {
+                                            "id": "dock_settings",
+                                            "name": "Dock Controls",
+                                            "isPinned": false,
+                                            "isRunning": false,
+                                            "windows": []
+                                        });
+                                    } else {
+                                        dockPanel.activeMenuApp = null;
+                                        SoundService.play("click");
+                                        AppState.toggleWidget("launcher");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Divider after Launcher
+                    Rectangle {
+                        visible: SettingsService.dockShowLauncher && (root.dockAppList.length > 0 || SettingsService.dockShowTrash)
+                        width: dockPanel.isHorizontal ? 1 : Math.max(16, SettingsService.dockIconSize - 16)
+                        height: dockPanel.isHorizontal ? Math.max(16, SettingsService.dockIconSize - 16) : 1
+                        color: Theme.border
+                        opacity: 0.7
+                    }
+
+                    // 2. Apps Central Section (Pinned + Running)
                     Repeater {
-                        model: dockAppList
+                        model: root.dockAppList
 
                         Item {
                             id: itemWrapper
-                            width: iconBox.width
-                            height: iconBox.height
+                            required property var modelData
+                            required property int index
 
-                            // Magnification math
-                            property real cursorDist: {
-                                if (!dockMouseArea.containsMouse || !SettingsService.dockMagnification) return 999;
-                                let itemGlobalCenter = itemWrapper.x + (itemWrapper.width / 2);
-                                return Math.abs(dockMouseArea.mouseX - 12 - itemGlobalCenter);
+                            readonly property real baseSlotSize: SettingsService.dockIconSize
+                            readonly property real cursorDist: {
+                                if (!stripHoverHandler.hovered || !SettingsService.dockMagnification) return 999;
+                                let pointerAxis = dockPanel.isHorizontal
+                                    ? stripHoverHandler.point.position.x
+                                    : stripHoverHandler.point.position.y;
+                                let itemCenter = (dockPanel.isHorizontal
+                                    ? (dockContentGrid.x + itemWrapper.x)
+                                    : (dockContentGrid.y + itemWrapper.y)) + (baseSlotSize / 2);
+                                return Math.abs(pointerAxis - itemCenter);
                             }
                             property real magScale: {
                                 if (cursorDist > 90) return 1.0;
@@ -125,57 +492,94 @@ Item {
                             }
 
                             Behavior on magScale {
-                                NumberAnimation { duration: 60; easing.type: Easing.OutQuad }
+                                NumberAnimation { duration: 70; easing.type: Easing.OutQuad }
                             }
+
+                            width: dockPanel.isHorizontal ? Math.round(baseSlotSize * magScale) : baseSlotSize
+                            height: dockPanel.isHorizontal ? baseSlotSize : Math.round(baseSlotSize * magScale)
 
                             Rectangle {
                                 id: iconBox
-                                width: Math.round(SettingsService.dockIconSize * itemWrapper.magScale)
-                                height: Math.round(SettingsService.dockIconSize * itemWrapper.magScale)
+                                width: Math.round(itemWrapper.baseSlotSize * itemWrapper.magScale)
+                                height: width
                                 radius: width / 2
-                                color: itemHover.hovered ? Theme.bgSecondary : "transparent"
-                                anchors.bottom: parent.bottom
+                                color: (itemHover.hovered || (dockPanel.activeMenuApp && dockPanel.activeMenuApp.id === itemWrapper.modelData.id)) ? Theme.bgSecondary : "transparent"
+
+                                anchors.bottom: dockPanel.isBottom ? parent.bottom : undefined
+                                anchors.top: dockPanel.isTop ? parent.top : undefined
+                                anchors.left: dockPanel.isLeft ? parent.left : undefined
+                                anchors.right: dockPanel.isRight ? parent.right : undefined
+                                anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
 
                                 HoverHandler { id: itemHover }
 
+                                // App Icon
+                                Image {
+                                    id: desktopIconImage
+                                    anchors.centerIn: parent
+                                    width: Math.round(Math.max(16, itemWrapper.baseSlotSize - 16) * itemWrapper.magScale)
+                                    height: width
+                                    sourceSize: Qt.size(64, 64)
+                                    source: root.resolveIconSource(itemWrapper.modelData.icon)
+                                    fillMode: Image.PreserveAspectFit
+                                    visible: status === Image.Ready
+                                }
+
                                 SvgIcon {
                                     anchors.centerIn: parent
-                                    icon: modelData.icon
-                                    iconSize: Math.round((SettingsService.dockIconSize - 16) * itemWrapper.magScale)
-                                    iconColor: itemHover.hovered ? Theme.accent : Theme.fg
+                                    icon: "rocket"
+                                    iconSize: Math.round(Math.max(16, itemWrapper.baseSlotSize - 16) * itemWrapper.magScale)
+                                    iconColor: (itemHover.hovered || itemWrapper.modelData.isFocused) ? Theme.accent : Theme.fg
                                     flat: true
+                                    visible: !desktopIconImage.visible
                                 }
 
-                                // Running Dot Indicator
-                                Rectangle {
-                                    visible: modelData.isRunning
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.bottom: parent.bottom
-                                    anchors.bottomMargin: 2
-                                    width: 4
-                                    height: 4
-                                    radius: 2
-                                    color: Theme.accent
+                                // Running Dots Indicator (Supports 1, 2, or 3+ dots on outer edge)
+                                Grid {
+                                    visible: itemWrapper.modelData.isRunning
+                                    columns: dockPanel.isHorizontal ? 3 : 1
+                                    rows: dockPanel.isHorizontal ? 1 : 3
+                                    spacing: 2
+                                    anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                    anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                    anchors.bottom: dockPanel.isBottom ? parent.bottom : undefined
+                                    anchors.top: dockPanel.isTop ? parent.top : undefined
+                                    anchors.left: dockPanel.isLeft ? parent.left : undefined
+                                    anchors.right: dockPanel.isRight ? parent.right : undefined
+                                    anchors.margins: 2
+
+                                    Repeater {
+                                        model: Math.min(3, Math.max(1, itemWrapper.modelData.windowCount))
+                                        Rectangle {
+                                            width: 4; height: 4; radius: 2
+                                            color: itemWrapper.modelData.isFocused ? Theme.accent : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.7)
+                                        }
+                                    }
                                 }
 
-                                // Tooltip popup
+                                // Tooltip popup (always inward toward desktop)
                                 Rectangle {
-                                    visible: itemHover.hovered
-                                    anchors.bottom: parent.top
-                                    anchors.bottomMargin: 8
-                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    visible: itemHover.hovered && dockPanel.activeMenuApp === null
+                                    anchors.bottom: dockPanel.isBottom ? parent.top : undefined
+                                    anchors.top: dockPanel.isTop ? parent.bottom : undefined
+                                    anchors.left: dockPanel.isLeft ? parent.right : undefined
+                                    anchors.right: dockPanel.isRight ? parent.left : undefined
+                                    anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                    anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                    anchors.margins: 8
                                     width: tooltipText.implicitWidth + 14
                                     height: 22
                                     radius: 6
                                     color: Theme.isDark ? "#12151D" : "#FFFFFF"
                                     border.width: 1
                                     border.color: Theme.border
-                                    z: 99
+                                    z: 200
 
                                     ThemedText {
                                         id: tooltipText
                                         anchors.centerIn: parent
-                                        text: modelData.name
+                                        text: itemWrapper.modelData.name + (itemWrapper.modelData.windowCount > 1 ? (" (" + itemWrapper.modelData.windowCount + ")") : "")
                                         customSize: 10
                                         font.weight: Font.Bold
                                         color: Theme.fg
@@ -185,107 +589,663 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        SoundService.play("click");
-                                        root.triggerAction(modelData);
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    onClicked: function(mouse) {
+                                        if (mouse.button === Qt.RightButton) {
+                                            dockPanel.openContextMenuFor(iconBox, itemWrapper.modelData);
+                                        } else {
+                                            dockPanel.activeMenuApp = null;
+                                            SoundService.play("click");
+                                            if (itemWrapper.modelData.isRunning) {
+                                                WindowTrackerService.focusApp(itemWrapper.modelData);
+                                            } else {
+                                                WindowTrackerService.launchApp(itemWrapper.modelData);
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                // Vertical Layout (Left/Right Dock)
-                Column {
-                    id: dockContentCol
-                    visible: !dockPanel.isBottom
-                    anchors.centerIn: parent
-                    spacing: 8
+                    // Divider before Trash
+                    Rectangle {
+                        visible: SettingsService.dockShowTrash && (root.dockAppList.length > 0 || SettingsService.dockShowLauncher)
+                        width: dockPanel.isHorizontal ? 1 : Math.max(16, SettingsService.dockIconSize - 16)
+                        height: dockPanel.isHorizontal ? Math.max(16, SettingsService.dockIconSize - 16) : 1
+                        color: Theme.border
+                        opacity: 0.7
+                    }
 
-                    Repeater {
-                        model: dockAppList
+                    // 3. Trash Slot (Trailing slot)
+                    Item {
+                        id: trashBtnSlot
+                        visible: SettingsService.dockShowTrash
+                        width: SettingsService.dockIconSize
+                        height: SettingsService.dockIconSize
 
-                        Item {
-                            id: colItemWrapper
-                            width: colIconBox.width
-                            height: colIconBox.height
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            color: trashHover.hovered ? Theme.bgSecondary : "transparent"
 
-                            property real cursorDist: {
-                                if (!dockMouseArea.containsMouse || !SettingsService.dockMagnification) return 999;
-                                let itemGlobalCenter = colItemWrapper.y + (colItemWrapper.height / 2);
-                                return Math.abs(dockMouseArea.mouseY - 12 - itemGlobalCenter);
-                            }
-                            property real magScale: {
-                                if (cursorDist > 90) return 1.0;
-                                let ratio = Math.cos((cursorDist / 90) * (Math.PI / 2));
-                                return 1.0 + (0.35 * ratio);
-                            }
+                            HoverHandler { id: trashHover }
 
-                            Behavior on magScale {
-                                NumberAnimation { duration: 60; easing.type: Easing.OutQuad }
+                            SvgIcon {
+                                anchors.centerIn: parent
+                                icon: "trash"
+                                iconSize: Math.max(14, SettingsService.dockIconSize - 18)
+                                iconColor: trashHover.hovered ? Theme.accent : Theme.fg
+                                flat: true
                             }
 
                             Rectangle {
-                                id: colIconBox
-                                width: Math.round(SettingsService.dockIconSize * colItemWrapper.magScale)
-                                height: Math.round(SettingsService.dockIconSize * colItemWrapper.magScale)
-                                radius: width / 2
-                                color: colItemHover.hovered ? Theme.bgSecondary : "transparent"
-                                anchors.centerIn: parent
+                                visible: trashHover.hovered && dockPanel.activeMenuApp === null
+                                anchors.bottom: dockPanel.isBottom ? parent.top : undefined
+                                anchors.top: dockPanel.isTop ? parent.bottom : undefined
+                                anchors.left: dockPanel.isLeft ? parent.right : undefined
+                                anchors.right: dockPanel.isRight ? parent.left : undefined
+                                anchors.horizontalCenter: dockPanel.isHorizontal ? parent.horizontalCenter : undefined
+                                anchors.verticalCenter: !dockPanel.isHorizontal ? parent.verticalCenter : undefined
+                                anchors.margins: 8
+                                width: trashTipText.implicitWidth + 14
+                                height: 22
+                                radius: 6
+                                color: Theme.isDark ? "#12151D" : "#FFFFFF"
+                                border.width: 1
+                                border.color: Theme.border
+                                z: 200
 
-                                HoverHandler { id: colItemHover }
-
-                                SvgIcon {
+                                ThemedText {
+                                    id: trashTipText
                                     anchors.centerIn: parent
-                                    icon: modelData.icon
-                                    iconSize: Math.round((SettingsService.dockIconSize - 16) * colItemWrapper.magScale)
-                                    iconColor: colItemHover.hovered ? Theme.accent : Theme.fg
-                                    flat: true
+                                    text: "Trash"
+                                    customSize: 10
+                                    font.weight: Font.Bold
+                                    color: Theme.fg
                                 }
+                            }
 
-                                Rectangle {
-                                    visible: modelData.isRunning
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.right: dockPanel.isLeft ? parent.left : undefined
-                                    anchors.left: dockPanel.isRight ? parent.right : undefined
-                                    width: 4
-                                    height: 4
-                                    radius: 2
-                                    color: Theme.accent
-                                }
-
-                                Rectangle {
-                                    visible: colItemHover.hovered
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.left: dockPanel.isLeft ? parent.right : undefined
-                                    anchors.right: dockPanel.isRight ? parent.left : undefined
-                                    anchors.margins: 8
-                                    width: colTooltipText.implicitWidth + 14
-                                    height: 22
-                                    radius: 6
-                                    color: Theme.isDark ? "#12151D" : "#FFFFFF"
-                                    border.width: 1
-                                    border.color: Theme.border
-                                    z: 99
-
-                                    ThemedText {
-                                        id: colTooltipText
-                                        anchors.centerIn: parent
-                                        text: modelData.name
-                                        customSize: 10
-                                        font.weight: Font.Bold
-                                        color: Theme.fg
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: function(mouse) {
+                                    if (mouse.button === Qt.RightButton) {
+                                        dockPanel.openContextMenuFor(trashBtnSlot, {
+                                            "id": "dock_settings",
+                                            "name": "Dock Controls",
+                                            "isPinned": false,
+                                            "isRunning": false,
+                                            "windows": []
+                                        });
+                                    } else {
+                                        dockPanel.activeMenuApp = null;
+                                        SoundService.play("click");
+                                        Quickshell.execDetached(["agl", "launch-exec", "xdg-open trash:///"]);
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // 4. Fallback empty dock anchor (when Launcher, Trash, and Apps are all empty)
+                    Item {
+                        id: emptyDockSlot
+                        visible: !SettingsService.dockShowLauncher && !SettingsService.dockShowTrash && root.dockAppList.length === 0
+                        width: SettingsService.dockIconSize
+                        height: SettingsService.dockIconSize
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            color: emptyHover.hovered ? Theme.bgSecondary : "transparent"
+
+                            HoverHandler { id: emptyHover }
+
+                            SvgIcon {
+                                anchors.centerIn: parent
+                                icon: "dock"
+                                iconSize: Math.max(14, SettingsService.dockIconSize - 18)
+                                iconColor: emptyHover.hovered ? Theme.accent : Theme.muted
+                                flat: true
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: {
+                                    dockPanel.openContextMenuFor(emptyDockSlot, {
+                                        "id": "dock_settings",
+                                        "name": "Dock Controls",
+                                        "isPinned": false,
+                                        "isRunning": false,
+                                        "windows": []
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ─────────────────────────────────────────────
+            // QUICK SELECTOR & RIGHT-CLICK CONTEXT MENU
+            // ─────────────────────────────────────────────
+            Rectangle {
+                id: contextMenuBox
+                visible: dockPanel.activeMenuApp !== null
+                width: 224
+                height: menuContentCol.implicitHeight + 16
+                z: 1000
+
+                x: {
+                    if (dockPanel.isHorizontal) {
+                        return Math.max(12, Math.min(dockPanel.width - width - 12, dockPanel.menuAnchorCenterX - (width / 2)));
+                    }
+                    if (dockPanel.isLeft) {
+                        return Math.min(dockPanel.width - width - 8, dockStrip.x + dockStrip.width + 10);
+                    }
+                    return Math.max(8, dockStrip.x - width - 10);
+                }
+
+                y: {
+                    if (dockPanel.isBottom) {
+                        return Math.max(8, dockStrip.y - height - 10);
+                    }
+                    if (dockPanel.isTop) {
+                        return Math.min(dockPanel.height - height - 8, dockStrip.y + dockStrip.height + 10);
+                    }
+                    return Math.max(12, Math.min(dockPanel.height - height - 12, dockPanel.menuAnchorCenterY - (height / 2)));
+                }
+
+                radius: Constants.sizeLg
+                color: Theme.isDark ? Qt.rgba(0.08, 0.09, 0.13, 0.96) : Qt.rgba(0.98, 0.98, 1.0, 0.96)
+                border.width: 1
+                border.color: Theme.border
+
+                ThemedShadow {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    opacity: 0.6
+                }
+
+                // Prevent clicks inside menu from hitting dismiss MouseArea
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.AllButtons
+                }
+
+                ColumnLayout {
+                    id: menuContentCol
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 4
+
+                    // App / Controls Header
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        ThemedText {
+                            Layout.fillWidth: true
+                            text: dockPanel.activeMenuApp ? dockPanel.activeMenuApp.name : ""
+                            font.weight: Font.Bold
+                            customSize: 12
+                            elide: Text.ElideRight
+                        }
+
+                        Rectangle {
+                            visible: dockPanel.activeMenuApp && dockPanel.activeMenuApp.id !== "dock_settings"
+                            width: 6; height: 6; radius: 3
+                            color: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.isRunning) ? Theme.accent : Theme.muted
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: Theme.border
+                        opacity: 0.5
+                    }
+
+                    // Windows List (Quick Selector)
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        visible: dockPanel.activeMenuApp && dockPanel.activeMenuApp.windows && dockPanel.activeMenuApp.windows.length > 0
+
+                        ThemedText {
+                            text: "WINDOWS (" + (dockPanel.activeMenuApp && dockPanel.activeMenuApp.windows ? dockPanel.activeMenuApp.windows.length : 0) + ")"
+                            customSize: 9
+                            color: Theme.muted
+                            font.weight: Font.DemiBold
+                        }
+
+                        Repeater {
+                            model: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.windows) ? dockPanel.activeMenuApp.windows : []
+
+                            Rectangle {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 28
+                                radius: 6
+                                color: winHover.hovered ? Theme.bgSecondary : "transparent"
+
+                                HoverHandler { id: winHover }
 
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        SoundService.play("click");
-                                        root.triggerAction(modelData);
+                                        WindowTrackerService.focusWindow(parent.modelData);
+                                        dockPanel.activeMenuApp = null;
                                     }
                                 }
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    spacing: 6
+
+                                    Rectangle {
+                                        width: 4; height: 4; radius: 2
+                                        color: parent.parent.modelData.isFocused ? Theme.accent : "transparent"
+                                    }
+
+                                    ThemedText {
+                                        Layout.fillWidth: true
+                                        text: parent.parent.modelData.title || "Window"
+                                        customSize: 10
+                                        elide: Text.ElideRight
+                                        color: parent.parent.modelData.isFocused ? Theme.accent : Theme.fg
+                                    }
+
+                                    // Close single window button
+                                    Rectangle {
+                                        width: 18; height: 18; radius: 9
+                                        color: closeHover.hovered ? Qt.rgba(1, 0.2, 0.2, 0.2) : "transparent"
+
+                                        HoverHandler { id: closeHover }
+
+                                        ThemedText {
+                                            anchors.centerIn: parent
+                                            text: "✕"
+                                            customSize: 9
+                                            color: closeHover.hovered ? "#FF4B4B" : Theme.muted
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                WindowTrackerService.closeWindow(parent.parent.parent.modelData);
+                                                dockPanel.activeMenuApp = null;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: Theme.border
+                            opacity: 0.5
+                        }
+                    }
+
+                    // Action: Launch / New Window
+                    Rectangle {
+                        visible: dockPanel.activeMenuApp && dockPanel.activeMenuApp.id !== "dock_settings"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 28
+                        radius: 6
+                        color: launchHover.hovered ? Theme.bgSecondary : "transparent"
+
+                        HoverHandler { id: launchHover }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 8
+
+                            SvgIcon {
+                                icon: "rocket"
+                                iconSize: 14
+                                iconColor: Theme.accent
+                                flat: true
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                text: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.isRunning) ? "New Window" : "Open Application"
+                                customSize: 11
+                                color: Theme.accent
+                                font.weight: Font.DemiBold
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                SoundService.play("click");
+                                if (dockPanel.activeMenuApp) {
+                                    WindowTrackerService.launchApp(dockPanel.activeMenuApp);
+                                }
+                                dockPanel.activeMenuApp = null;
+                            }
+                        }
+                    }
+
+                    // Action: Pin / Unpin (only for real apps)
+                    Rectangle {
+                        visible: dockPanel.activeMenuApp && dockPanel.activeMenuApp.id !== "dock_settings"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 28
+                        radius: 6
+                        color: pinHover.hovered ? Theme.bgSecondary : "transparent"
+
+                        HoverHandler { id: pinHover }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 8
+
+                            SvgIcon {
+                                icon: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.isPinned) ? "star-filled" : "star"
+                                iconSize: 14
+                                iconColor: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.isPinned) ? Theme.accent : Theme.fg
+                                flat: true
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                text: (dockPanel.activeMenuApp && dockPanel.activeMenuApp.isPinned) ? "Unpin from Dock" : "Pin to Dock"
+                                customSize: 11
+                                color: Theme.fg
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                SoundService.play("click");
+                                if (dockPanel.activeMenuApp) {
+                                    SettingsService.togglePinApp(dockPanel.activeMenuApp);
+                                }
+                                dockPanel.activeMenuApp = null;
+                            }
+                        }
+                    }
+
+                    // Action: Close All Windows (if running)
+                    Rectangle {
+                        visible: dockPanel.activeMenuApp && dockPanel.activeMenuApp.isRunning
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 28
+                        radius: 6
+                        color: closeAllHover.hovered ? Qt.rgba(1, 0.2, 0.2, 0.15) : "transparent"
+
+                        HoverHandler { id: closeAllHover }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 8
+
+                            SvgIcon {
+                                icon: "x"
+                                iconSize: 14
+                                iconColor: closeAllHover.hovered ? "#FF4B4B" : Theme.fg
+                                flat: true
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                text: "Close All Windows"
+                                customSize: 11
+                                color: closeAllHover.hovered ? "#FF4B4B" : Theme.fg
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (dockPanel.activeMenuApp && dockPanel.activeMenuApp.windows) {
+                                    for (let w = 0; w < dockPanel.activeMenuApp.windows.length; w++) {
+                                        WindowTrackerService.closeWindow(dockPanel.activeMenuApp.windows[w]);
+                                    }
+                                }
+                                dockPanel.activeMenuApp = null;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        visible: dockPanel.activeMenuApp && dockPanel.activeMenuApp.id !== "dock_settings"
+                        Layout.fillWidth: true
+                        height: 1
+                        color: Theme.border
+                        opacity: 0.5
+                    }
+
+                    // Dock Size & Width Stepper
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 30
+                        radius: 6
+                        color: Theme.bgSecondary
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 6
+
+                            Rectangle {
+                                width: 22; height: 22; radius: 4
+                                color: decSizeH.hovered ? Theme.accent : Theme.bg
+                                border.width: 1; border.color: Theme.border
+                                HoverHandler { id: decSizeH }
+                                ThemedText {
+                                    anchors.centerIn: parent
+                                    text: "−"
+                                    customSize: 13
+                                    font.weight: Font.Bold
+                                    color: decSizeH.hovered ? Theme.bg : Theme.fg
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        SettingsService.decreaseDockSize();
+                                        SoundService.play("click");
+                                    }
+                                }
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "Size: " + SettingsService.dockIconSize + "px"
+                                customSize: 11
+                                font.weight: Font.DemiBold
+                                color: Theme.fg
+                            }
+
+                            Rectangle {
+                                width: 22; height: 22; radius: 4
+                                color: incSizeH.hovered ? Theme.accent : Theme.bg
+                                border.width: 1; border.color: Theme.border
+                                HoverHandler { id: incSizeH }
+                                ThemedText {
+                                    anchors.centerIn: parent
+                                    text: "+"
+                                    customSize: 13
+                                    font.weight: Font.Bold
+                                    color: incSizeH.hovered ? Theme.bg : Theme.fg
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        SettingsService.increaseDockSize();
+                                        SoundService.play("click");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Dock Spacing / Width Spread Stepper
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 30
+                        radius: 6
+                        color: Theme.bgSecondary
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 6
+
+                            Rectangle {
+                                width: 22; height: 22; radius: 4
+                                color: decSpH.hovered ? Theme.accent : Theme.bg
+                                border.width: 1; border.color: Theme.border
+                                HoverHandler { id: decSpH }
+                                ThemedText {
+                                    anchors.centerIn: parent
+                                    text: "−"
+                                    customSize: 13
+                                    font.weight: Font.Bold
+                                    color: decSpH.hovered ? Theme.bg : Theme.fg
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        SettingsService.decreaseDockSpacing();
+                                        SoundService.play("click");
+                                    }
+                                }
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                text: "Spread: " + SettingsService.dockItemSpacing + "px"
+                                customSize: 11
+                                font.weight: Font.DemiBold
+                                color: Theme.fg
+                            }
+
+                            Rectangle {
+                                width: 22; height: 22; radius: 4
+                                color: incSpH.hovered ? Theme.accent : Theme.bg
+                                border.width: 1; border.color: Theme.border
+                                HoverHandler { id: incSpH }
+                                ThemedText {
+                                    anchors.centerIn: parent
+                                    text: "+"
+                                    customSize: 13
+                                    font.weight: Font.Bold
+                                    color: incSpH.hovered ? Theme.bg : Theme.fg
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        SettingsService.increaseDockSpacing();
+                                        SoundService.play("click");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Quick Auto-Hide Toggle
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 28
+                        radius: 6
+                        color: autoHideMenuH.hovered ? Theme.bgSecondary : "transparent"
+
+                        HoverHandler { id: autoHideMenuH }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 8
+
+                            SvgIcon {
+                                icon: SettingsService.dockAutoHide ? "eye-off" : "eye"
+                                iconSize: 14
+                                iconColor: SettingsService.dockAutoHide ? Theme.accent : Theme.fg
+                                flat: true
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                text: SettingsService.dockAutoHide ? "Auto-Hide: On" : "Auto-Hide: Off"
+                                customSize: 11
+                                color: Theme.fg
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                SoundService.play("click");
+                                SettingsService.dockAutoHide = !SettingsService.dockAutoHide;
+                            }
+                        }
+                    }
+
+                    // Open Dock Settings
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 28
+                        radius: 6
+                        color: dockSettingsMenuH.hovered ? Theme.bgSecondary : "transparent"
+
+                        HoverHandler { id: dockSettingsMenuH }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 8
+
+                            SvgIcon {
+                                icon: "settings-icon"
+                                iconSize: 14
+                                iconColor: dockSettingsMenuH.hovered ? Theme.accent : Theme.fg
+                                flat: true
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                text: "Dock Settings..."
+                                customSize: 11
+                                color: Theme.fg
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                SoundService.play("click");
+                                dockPanel.activeMenuApp = null;
+                                AppState.pendingSettingsTab = 11;
+                                AppState.openWidget("minflair_settings");
                             }
                         }
                     }
@@ -293,29 +1253,4 @@ Item {
             }
         }
     }
-
-    function triggerAction(item) {
-        if (!item) return;
-        if (item.actionType === "toggle") {
-            AppState.toggleWidget(item.target);
-        } else if (item.actionType === "exec") {
-            Quickshell.execDetached(["agl", "launch-exec", item.target]);
-        } else if (item.actionType === "overview") {
-            AppState.toggleWidget("missioncontrol");
-        }
-    }
-
-    // Default Dock App Registry
-    readonly property var dockAppList: [
-        { id: "launcher",   name: "Applications",   icon: "apps",          actionType: "toggle",   target: "launcher",       isRunning: AppState.isWidgetOpen("launcher") },
-        { id: "spotlight",  name: "Spotlight Search", icon: "search",      actionType: "toggle",   target: "spotlight",      isRunning: AppState.isWidgetOpen("spotlight") || AppState.isWidgetOpen("omni") },
-        { id: "overview",   name: "Mission Control", icon: "window",       actionType: "overview", target: "missioncontrol", isRunning: AppState.isWidgetOpen("missioncontrol") },
-        { id: "terminal",   name: "Terminal",       icon: "code",          actionType: "exec",     target: "x-terminal-emulator", isRunning: false },
-        { id: "files",      name: "File Manager",   icon: "box",           actionType: "exec",     target: "xdg-open ~",     isRunning: false },
-        { id: "browser",    name: "Web Browser",    icon: "rocket",        actionType: "exec",     target: "xdg-open https://", isRunning: false },
-        { id: "music",      name: "Music Player",   icon: "music",         actionType: "toggle",   target: "music",          isRunning: MprisService.isPlaying },
-        { id: "widgets",    name: "Desktop Widgets", icon: "widgets",      actionType: "toggle",   target: "desktopwidgets", isRunning: SettingsService.desktopWidgetsEnabled },
-        { id: "settings",   name: "Settings",       icon: "settings-icon", actionType: "toggle",   target: "minflair_settings", isRunning: AppState.isWidgetOpen("minflair_settings") },
-        { id: "trash",      name: "Trash",          icon: "trash",         actionType: "exec",     target: "xdg-open trash:///", isRunning: false }
-    ]
 }

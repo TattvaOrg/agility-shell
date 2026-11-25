@@ -158,7 +158,7 @@ AppSidebar {
 
         SidebarNavRow {
             anchors.fill: parent
-            iconName: "layout"
+            iconName: "dock"
             labelText: "Dock & Spotlight"
             isActive: sidebarRoot.activeTab === 11
             onRowClicked: sidebarRoot.tabClicked(11)

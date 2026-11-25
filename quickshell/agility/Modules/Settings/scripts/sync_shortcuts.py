@@ -46,11 +46,15 @@ def sync_niri(action_shortcuts, custom_shortcuts):
         "    place-within-backdrop true",
         "}",
         "",
-        "binds {"
+        "binds {",
+        "    Mod+Z         repeat=false { toggle-overview; }",
+        "    Alt+Tab       repeat=false { toggle-overview; }"
     ]
 
     # Action Shortcuts
     for sc in action_shortcuts:
+        if sc.get("id") == "missioncontrol":
+            continue
         key = sc.get("key", "").strip()
         title = sc.get("title", "")
         cmd = sc.get("cmd", [])
@@ -85,6 +89,7 @@ def sync_niri(action_shortcuts, custom_shortcuts):
 
     # Reload niri
     try:
+        subprocess.run(["/usr/local/bin/lniri", "msg", "action", "load-config-file"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["niri", "msg", "action", "load-config-file"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass

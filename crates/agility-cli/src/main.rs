@@ -641,7 +641,7 @@ async fn handle_toggle(target: &str) -> Result<()> {
         "edgelight" | "edgelighting" | "edge-lighting" | "ambient" => toggle_widget("edgelight"),
         "dock" => toggle_widget("dock"),
         "spotlight" | "spot" | "command" | "cmd" | "omni" | "omnilauncher" | "raycast" => toggle_widget("spotlight"),
-        "missioncontrol" | "mission-control" | "overview" => toggle_widget("missioncontrol"),
+        "missioncontrol" | "mission-control" | "overview" | "switcher" | "appswitcher" | "windowswitcher" => toggle_widget("missioncontrol"),
         "island" | "dynamicisland" | "dynamic-island" => toggle_widget("island"),
         "desktopwidgets" | "desktop-widgets" | "widgets" => toggle_widget("desktopwidgets"),
         "suits" => dispatch_qs_ipc("suits", "reload", &[]),

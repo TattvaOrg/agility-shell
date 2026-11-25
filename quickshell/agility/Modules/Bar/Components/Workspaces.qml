@@ -13,6 +13,7 @@ Item {
 
     property color bgColor: Theme.bgSecondary
     property bool compact: false
+    property bool vertical: false
     property int customHeight: compact ? 20 : SettingsService.barWidgetHeight
     readonly property real containerPadding: compact ? 8 : 10
     readonly property int dotHeight: compact ? 6 : 8
@@ -83,12 +84,12 @@ Item {
             root.focusWorkspace(targetId);
     }
 
-    implicitHeight: customHeight
-    height: customHeight
-    Layout.preferredHeight: customHeight
+    implicitHeight: root.vertical ? Math.round(wsGrid.implicitHeight + (root.bgColor === "transparent" ? 0 : (containerPadding * 2))) : customHeight
+    height: implicitHeight
+    Layout.preferredHeight: implicitHeight
     Layout.preferredWidth: implicitWidth
-    Layout.alignment: Qt.AlignVCenter
-    implicitWidth: Math.round(hLayout.implicitWidth + (root.bgColor === "transparent" ? 0 : (containerPadding * 2)))
+    Layout.alignment: root.vertical ? Qt.AlignHCenter : Qt.AlignVCenter
+    implicitWidth: root.vertical ? Math.round(wsGrid.implicitWidth + (root.bgColor === "transparent" ? 0 : (containerPadding * 2))) : Math.round(wsGrid.implicitWidth + (root.bgColor === "transparent" ? 0 : (containerPadding * 2)))
     width: implicitWidth
 
     Rectangle {
@@ -116,10 +117,11 @@ Item {
         }
     }
 
-    Row {
-        id: hLayout
+    Grid {
+        id: wsGrid
 
         anchors.centerIn: parent
+        columns: root.vertical ? 1 : 10
         spacing: root.compact ? 5 : 6
 
         Repeater {
@@ -154,16 +156,16 @@ Item {
 
                 visible: opacity > 0.001
                 opacity: isVisibleSlot ? 1 : 0
-                height: root.dotHeight
-                width: isActive ? root.activePillWidth : root.dotHeight
+                height: root.vertical ? (isActive ? root.activePillWidth : root.dotHeight) : root.dotHeight
+                width: root.vertical ? root.dotHeight : (isActive ? root.activePillWidth : root.dotHeight)
 
                 Rectangle {
                     id: dotItem
 
                     anchors.centerIn: parent
-                    height: root.dotHeight
+                    height: parent.height
                     width: parent.width
-                    radius: DisplayProfileService.gameModeActive ? 0 : height / 2
+                    radius: DisplayProfileService.gameModeActive ? 0 : (root.vertical ? width / 2 : height / 2)
                     color: {
                         if (wsSlot.isActive)
                             return Theme.isLightBar ? Theme.barFg : Theme.accent;

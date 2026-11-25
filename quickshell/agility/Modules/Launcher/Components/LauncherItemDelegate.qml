@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import qs.Core
 import qs.Core.Components
+import qs.Core.Services
 
 Item {
     id: delegateRoot
@@ -122,14 +123,33 @@ Item {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: function(mouse) {
-                if (mouse.button === Qt.RightButton && delegateRoot.hasActions)
-                    delegateRoot.toggleExpanded();
-                else
+                if (mouse.button === Qt.RightButton) {
+                    if (delegateRoot.hasActions)
+                        delegateRoot.toggleExpanded();
+                    else
+                        SettingsService.togglePinApp(modelData);
+                } else {
                     delegateRoot.launchRequested(modelData.exec, modelData.terminal);
+                }
             }
         }
 
         SvgIconButton {
+            id: actionPinBtn
+            icon: SettingsService.isAppPinned(modelData) ? "star-filled" : "star"
+            iconSize: Constants.sizeMd
+            visible: hoverHandler.hovered || delegateRoot.isCurrent || SettingsService.isAppPinned(modelData)
+            iconColor: SettingsService.isAppPinned(modelData) ? Theme.accent : Theme.muted
+            anchors.right: delegateRoot.hasActions ? actionExpandBtn.left : parent.right
+            anchors.rightMargin: Constants.sizeXs
+            anchors.verticalCenter: mainContent.verticalCenter
+            onClicked: {
+                SettingsService.togglePinApp(modelData);
+            }
+        }
+
+        SvgIconButton {
+            id: actionExpandBtn
             icon: "chevron-right"
             iconSize: Constants.sizeMd
             visible: delegateRoot.hasActions

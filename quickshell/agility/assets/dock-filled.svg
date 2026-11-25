@@ -1,0 +1,12 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="currentColor"
+>
+  <path d="M3 17a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v2a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" />
+  <rect x="6" y="8" width="4" height="5" rx="1.5" />
+  <rect x="14" y="8" width="4" height="5" rx="1.5" />
+  <rect x="9.5" y="5" width="5" height="8" rx="1.5" />
+</svg>

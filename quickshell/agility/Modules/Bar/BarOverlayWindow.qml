@@ -445,11 +445,11 @@ PanelWindow {
             z: (root.activeHost === barStrip && root.activeHost.isOpen) ? 30 : (root.activeHost === barStrip ? 5 : 1)
             notificationService: root.notificationService
             mainPanelWidget: null
-            x: root.isPill ? 0 : root.currentBarMarginSide
-            y: root.currentBarMarginTop
-            width: root.isPill ? root.width : (root.width - root.currentBarMarginSide * 2)
-            height: (SettingsService.barIslandMode && barStrip.currentHeight > 0) ? barStrip.currentHeight : root.currentBarHeight
-            transformOrigin: Item.Top
+            x: SettingsService.isBarVertical ? (SettingsService.isBarRight ? (root.width - width - root.currentBarMarginSide) : root.currentBarMarginSide) : (root.isPill ? 0 : root.currentBarMarginSide)
+            y: SettingsService.isBarVertical ? root.currentBarMarginSide : (SettingsService.isBarBottom ? (root.height - height - root.currentBarMarginTop) : root.currentBarMarginTop)
+            width: SettingsService.isBarVertical ? 44 : (root.isPill ? root.width : (root.width - root.currentBarMarginSide * 2))
+            height: SettingsService.isBarVertical ? (root.height - (root.currentBarMarginSide * 2)) : ((SettingsService.barIslandMode && barStrip.currentHeight > 0) ? barStrip.currentHeight : root.currentBarHeight)
+            transformOrigin: SettingsService.isBarBottom ? Item.Bottom : (SettingsService.isBarVertical ? (SettingsService.isBarRight ? Item.Right : Item.Left) : Item.Top)
             Component.onCompleted: {
                 root.isShellReady = true;
             }
@@ -509,12 +509,12 @@ PanelWindow {
     }
 
     mask: Region {
-        // Center (Island or Pill)
+        // Center (Island, Pill, or Vertical)
         Region {
-            x: root.isPill ? (barStrip.x + barStrip.centerX) : barStrip.x
-            y: Math.max(0, barStrip.y + barTranslate.y)
-            width: root.isPill ? barStrip.centerWidth : barStrip.width
-            height: Math.max(0, barStrip.height + Math.min(0, barStrip.y + barTranslate.y))
+            x: SettingsService.isBarVertical ? barStrip.x : (root.isPill ? (barStrip.x + barStrip.centerX) : barStrip.x)
+            y: SettingsService.isBarVertical ? barStrip.y : Math.max(0, barStrip.y + barTranslate.y)
+            width: SettingsService.isBarVertical ? barStrip.width : (root.isPill ? barStrip.centerWidth : barStrip.width)
+            height: SettingsService.isBarVertical ? barStrip.height : Math.max(0, barStrip.height + Math.min(0, barStrip.y + barTranslate.y))
         }
 
         // Top edge trigger when bar is hidden under auto-hide

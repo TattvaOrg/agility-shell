@@ -34,6 +34,30 @@ AppContainer {
         icon: "bar"
 
         SettingSegmented {
+            label: "Screen Edge Position"
+            description: "Place the bar along Top, Bottom, Left, or Right screen boundary"
+            model: [{
+                "text": "Top",
+                "value": "top"
+            }, {
+                "text": "Bottom",
+                "value": "bottom"
+            }, {
+                "text": "Left",
+                "value": "left"
+            }, {
+                "text": "Right",
+                "value": "right"
+            }]
+            currentValue: SettingsService.barPosition
+            onActivated: (value) => {
+                SettingsService.barPosition = value;
+            }
+        }
+
+        Divider {}
+
+        SettingSegmented {
             label: "Style"
             description: "Choose between Convex, Island, or Floating Pill"
             model: [{

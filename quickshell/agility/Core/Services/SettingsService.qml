@@ -25,6 +25,13 @@ Item {
     property bool clockShowDate: true
     property string cursorTheme: "Bibata-Modern-Classic"
     property int cursorSize: Constants.size2Xl
+    property string barPosition: "top" // "top", "bottom", "left", "right"
+    readonly property bool isBarTop: barPosition === "top" || barPosition === ""
+    readonly property bool isBarBottom: barPosition === "bottom"
+    readonly property bool isBarLeft: barPosition === "left"
+    readonly property bool isBarRight: barPosition === "right"
+    readonly property bool isBarVertical: isBarLeft || isBarRight
+    readonly property bool isBarHorizontal: isBarTop || isBarBottom
     property string barStyle: "convex"
     property bool barIslandMode: barStyle === "island"
     property bool barConvexMode: barStyle === "convex"
@@ -66,10 +73,14 @@ Item {
 
     // Dock (macOS / iPadOS dynamic magnification dock)
     property bool dockEnabled: true
-    property string dockPosition: "bottom" // "bottom", "left", "right"
+    property string dockPosition: "bottom" // "bottom", "left", "right", "top"
     property bool dockAutoHide: true
     property int dockIconSize: 48
+    property int dockItemSpacing: 8
     property bool dockMagnification: true
+    property var dockPinnedApps: [] // [{ id, name, icon, exec, desktopId, terminal }]
+    property bool dockShowLauncher: true
+    property bool dockShowTrash: true
 
     // Spotlight Command Bar
     property bool spotlightEnabled: true
@@ -106,7 +117,6 @@ Item {
         {"id": "powerMenu", "title": "Power Menu", "key": "Mod+Shift+E", "cmd": ["agl", "toggle", "power"]},
         {"id": "edgeLighting", "title": "Toggle Edge Lighting", "key": "Mod+Shift+Z", "cmd": ["agl", "toggle", "edgelight"]},
         {"id": "spotlight", "title": "Spotlight Command Bar", "key": "Mod+K", "cmd": ["agl", "toggle", "spotlight"]},
-        {"id": "missioncontrol", "title": "Mission Control", "key": "Mod+Tab", "cmd": ["agl", "toggle", "missioncontrol"]},
         {"id": "dock", "title": "Toggle Dock", "key": "Mod+Alt+D", "cmd": ["agl", "toggle", "dock"]},
         {"id": "dynamicIsland", "title": "Toggle Dynamic Island", "key": "Mod+Alt+I", "cmd": ["agl", "toggle", "island"]}
     ]
@@ -125,6 +135,137 @@ Item {
         syncShortcutsProc.command = ["python3", Quickshell.shellDir + "/Modules/Settings/scripts/sync_shortcuts.py", payload];
         syncShortcutsProc.running = false;
         syncShortcutsProc.running = true;
+    }
+
+    function _normKey(val) {
+        if (!val) return "";
+        return String(val).trim().toLowerCase().replace(/\.desktop$/, "");
+    }
+
+    function _execBin(execStr) {
+        if (!execStr) return "";
+        let cleaned = String(execStr).replace(/%[a-zA-Z]/g, "").trim();
+        let parts = cleaned.split(/\s+/);
+        for (let i = 0; i < parts.length; i++) {
+            let p = parts[i];
+            if (!p || p === "env" || p.indexOf("=") !== -1) continue;
+            let slash = p.lastIndexOf("/");
+            return (slash !== -1 ? p.substring(slash + 1) : p).toLowerCase();
+        }
+        return "";
+    }
+
+    function _keysForEntry(entry) {
+        let keys = [];
+        if (!entry) return keys;
+        if (typeof entry === "string") {
+            let k = _normKey(entry);
+            if (k) keys.push(k);
+            return keys;
+        }
+        let raw = [entry.id, entry.desktopId, entry.rawClass, entry.name];
+        for (let i = 0; i < raw.length; i++) {
+            let k = _normKey(raw[i]);
+            if (k && keys.indexOf(k) === -1) keys.push(k);
+        }
+        let bin = _execBin(entry.exec);
+        if (bin && keys.indexOf(bin) === -1) keys.push(bin);
+        return keys;
+    }
+
+    function _entriesMatch(a, b) {
+        let ka = _keysForEntry(a);
+        let kb = _keysForEntry(b);
+        for (let i = 0; i < ka.length; i++) {
+            if (kb.indexOf(ka[i]) !== -1) return true;
+        }
+        return false;
+    }
+
+    function pinApp(appObj) {
+        if (!appObj) return;
+        let id = appObj.id || appObj.desktopId || appObj.rawClass || appObj.name;
+        if (!id) return;
+        let current = Array.isArray(dockPinnedApps) ? dockPinnedApps.slice() : [];
+        for (let i = 0; i < current.length; i++) {
+            if (_entriesMatch(current[i], appObj)) return;
+        }
+        current.push({
+            "id": String(id),
+            "name": appObj.name || String(id),
+            "icon": appObj.icon || "application-x-executable",
+            "exec": appObj.exec || String(id),
+            "desktopId": appObj.desktopId || String(id),
+            "rawClass": appObj.rawClass || "",
+            "terminal": Boolean(appObj.terminal)
+        });
+        dockPinnedApps = current;
+        if (settingsLoaded) saveSettings();
+    }
+
+    function unpinApp(appIdOrObj) {
+        if (!appIdOrObj) return;
+        let current = Array.isArray(dockPinnedApps) ? dockPinnedApps.slice() : [];
+        let filtered = current.filter(item => !_entriesMatch(item, appIdOrObj));
+        if (filtered.length !== current.length) {
+            dockPinnedApps = filtered;
+            if (settingsLoaded) saveSettings();
+        }
+    }
+
+    function movePinnedApp(fromIndex, toIndex) {
+        let current = Array.isArray(dockPinnedApps) ? dockPinnedApps.slice() : [];
+        if (fromIndex < 0 || fromIndex >= current.length) return;
+        if (toIndex < 0 || toIndex >= current.length || fromIndex === toIndex) return;
+        let item = current.splice(fromIndex, 1)[0];
+        current.splice(toIndex, 0, item);
+        dockPinnedApps = current;
+        if (settingsLoaded) saveSettings();
+    }
+
+    function isAppPinned(appIdOrObj) {
+        if (!appIdOrObj || !Array.isArray(dockPinnedApps)) return false;
+        for (let i = 0; i < dockPinnedApps.length; i++) {
+            if (_entriesMatch(dockPinnedApps[i], appIdOrObj)) return true;
+        }
+        return false;
+    }
+
+    function togglePinApp(appObj) {
+        if (!appObj) return;
+        if (isAppPinned(appObj)) {
+            unpinApp(appObj);
+        } else {
+            pinApp(appObj);
+        }
+    }
+
+    function increaseDockSize() {
+        if (dockIconSize < 84) {
+            dockIconSize = Math.min(84, dockIconSize + 4);
+            if (settingsLoaded) saveSettings();
+        }
+    }
+
+    function decreaseDockSize() {
+        if (dockIconSize > 28) {
+            dockIconSize = Math.max(28, dockIconSize - 4);
+            if (settingsLoaded) saveSettings();
+        }
+    }
+
+    function increaseDockSpacing() {
+        if (dockItemSpacing < 24) {
+            dockItemSpacing = Math.min(24, dockItemSpacing + 2);
+            if (settingsLoaded) saveSettings();
+        }
+    }
+
+    function decreaseDockSpacing() {
+        if (dockItemSpacing > 2) {
+            dockItemSpacing = Math.max(2, dockItemSpacing - 2);
+            if (settingsLoaded) saveSettings();
+        }
     }
 
     function saveSettings() {
@@ -265,6 +406,16 @@ Item {
             saveSettings();
 
     }
+    onBarPositionChanged: { if (settingsLoaded) saveSettings(); }
+    onDockEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onDockPositionChanged: { if (settingsLoaded) saveSettings(); }
+    onDockAutoHideChanged: { if (settingsLoaded) saveSettings(); }
+    onDockIconSizeChanged: { if (settingsLoaded) saveSettings(); }
+    onDockMagnificationChanged: { if (settingsLoaded) saveSettings(); }
+    onDockPinnedAppsChanged: { if (settingsLoaded) saveSettings(); }
+    onDockItemSpacingChanged: { if (settingsLoaded) saveSettings(); }
+    onDockShowLauncherChanged: { if (settingsLoaded) saveSettings(); }
+    onDockShowTrashChanged: { if (settingsLoaded) saveSettings(); }
     onBarOpenOnHoverChanged: { if (settingsLoaded) saveSettings(); }
     onBarGlassModeChanged: { if (settingsLoaded) saveSettings(); }
     onBarSolidToneChanged: { if (settingsLoaded) saveSettings(); }
@@ -352,6 +503,7 @@ Item {
                 "clockShowDate": settingsService.clockShowDate,
                 "cursorTheme": settingsService.cursorTheme,
                 "cursorSize": settingsService.cursorSize,
+                "barPosition": settingsService.barPosition,
                 "barStyle": settingsService.barStyle,
                 "islandRightMode": settingsService.islandRightMode,
                 "pillBarWidthPercent": settingsService.pillBarWidthPercent,
@@ -401,7 +553,11 @@ Item {
                 "dockPosition": settingsService.dockPosition,
                 "dockAutoHide": settingsService.dockAutoHide,
                 "dockIconSize": settingsService.dockIconSize,
+                "dockItemSpacing": settingsService.dockItemSpacing,
                 "dockMagnification": settingsService.dockMagnification,
+                "dockPinnedApps": settingsService.dockPinnedApps,
+                "dockShowLauncher": settingsService.dockShowLauncher,
+                "dockShowTrash": settingsService.dockShowTrash,
                 "spotlightEnabled": settingsService.spotlightEnabled,
                 "dynamicIslandEnabled": settingsService.dynamicIslandEnabled,
                 "missionControlEnabled": settingsService.missionControlEnabled
@@ -557,6 +713,9 @@ Item {
 
                         applyCursor(settingsService.cursorTheme, settingsService.cursorSize);
                         applyFont(settingsService.fontFamily, Math.round(11 * settingsService.fontScale));
+                        if (prefs.barPosition !== undefined) {
+                            settingsService.barPosition = prefs.barPosition;
+                        }
                         if (prefs.barStyle !== undefined) {
                             if (prefs.barStyle === "island")
                                 settingsService.barStyle = "island";
@@ -685,15 +844,29 @@ Item {
                         if (prefs.widgetManagerNotchEnabled !== undefined)
                             settingsService.widgetManagerNotchEnabled = prefs.widgetManagerNotchEnabled;
                         if (prefs.dockEnabled !== undefined)
-                            settingsService.dockEnabled = prefs.dockEnabled;
-                        if (prefs.dockPosition !== undefined)
+                            settingsService.dockEnabled = Boolean(prefs.dockEnabled);
+                        if (prefs.dockPosition !== undefined && (prefs.dockPosition === "bottom" || prefs.dockPosition === "top" || prefs.dockPosition === "left" || prefs.dockPosition === "right"))
                             settingsService.dockPosition = prefs.dockPosition;
                         if (prefs.dockAutoHide !== undefined)
-                            settingsService.dockAutoHide = prefs.dockAutoHide;
-                        if (prefs.dockIconSize !== undefined)
-                            settingsService.dockIconSize = prefs.dockIconSize;
+                            settingsService.dockAutoHide = Boolean(prefs.dockAutoHide);
+                        if (prefs.dockIconSize !== undefined) {
+                            let dis = parseInt(prefs.dockIconSize);
+                            if (!isNaN(dis))
+                                settingsService.dockIconSize = Math.max(28, Math.min(84, dis));
+                        }
+                        if (prefs.dockItemSpacing !== undefined) {
+                            let dsp = parseInt(prefs.dockItemSpacing);
+                            if (!isNaN(dsp))
+                                settingsService.dockItemSpacing = Math.max(2, Math.min(24, dsp));
+                        }
                         if (prefs.dockMagnification !== undefined)
-                            settingsService.dockMagnification = prefs.dockMagnification;
+                            settingsService.dockMagnification = Boolean(prefs.dockMagnification);
+                        if (prefs.dockPinnedApps !== undefined && Array.isArray(prefs.dockPinnedApps))
+                            settingsService.dockPinnedApps = prefs.dockPinnedApps;
+                        if (prefs.dockShowLauncher !== undefined)
+                            settingsService.dockShowLauncher = Boolean(prefs.dockShowLauncher);
+                        if (prefs.dockShowTrash !== undefined)
+                            settingsService.dockShowTrash = Boolean(prefs.dockShowTrash);
                         if (prefs.spotlightEnabled !== undefined)
                             settingsService.spotlightEnabled = prefs.spotlightEnabled;
                         else if (prefs.omniLauncherEnabled !== undefined)

@@ -2,6 +2,7 @@ import QtQuick
 import "Styles/Convex"
 import "Styles/Island"
 import "Styles/Pill"
+import "Styles/Vertical"
 import qs.Core
 import qs.Core.Services
 
@@ -11,11 +12,14 @@ Item {
     required property var notificationService
     property var mainPanelWidget: null
     property string activeBarStyle: SettingsService.barStyle
-    readonly property bool isCurrentIsland: activeBarStyle === "island"
-    readonly property bool isCurrentConvex: activeBarStyle === "convex"
-    readonly property bool isCurrentPill: activeBarStyle === "pill"
+    readonly property bool isCurrentVertical: SettingsService.isBarVertical
+    readonly property bool isCurrentIsland: !isCurrentVertical && activeBarStyle === "island"
+    readonly property bool isCurrentConvex: !isCurrentVertical && activeBarStyle === "convex"
+    readonly property bool isCurrentPill: !isCurrentVertical && activeBarStyle === "pill"
     // Use unified interface exposed by IBarStyle implementation
     readonly property QtObject currentStyleItem: {
+        if (mainBar.isCurrentVertical)
+            return verticalLoader.item;
         switch (mainBar.activeBarStyle) {
         case "island":
             return islandLoader.item;
@@ -104,6 +108,26 @@ Item {
         id: pillComp
 
         PillBar {
+            notificationService: mainBar.notificationService
+            mainPanelWidget: mainBar.mainPanelWidget
+        }
+
+    }
+
+    Loader {
+        id: verticalLoader
+
+        anchors.fill: parent
+        active: mainBar.isCurrentVertical
+        visible: active
+        sourceComponent: verticalComp
+        enabled: visible
+    }
+
+    Component {
+        id: verticalComp
+
+        VerticalBar {
             notificationService: mainBar.notificationService
             mainPanelWidget: mainBar.mainPanelWidget
         }

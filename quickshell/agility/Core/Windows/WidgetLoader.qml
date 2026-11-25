@@ -12,7 +12,7 @@ Item {
     property bool enabled: true
     property bool exclusive: true
     property bool _isInternalActive: false
-    readonly property bool isBarOverlayHandled: AppState.isBarOverlayWidget(widgetId)
+    readonly property bool isBarOverlayHandled: widgetId !== "missioncontrol" && AppState.isBarOverlayWidget(widgetId)
     readonly property bool isIslandHandled: !DisplayProfileService.gameModeActive && SettingsService.barIslandMode && isBarOverlayHandled
     readonly property bool isSidedPillHandled: SettingsService.barPillMode && SettingsService.pillPopupStyle === "sided" && (widgetId !== "music") && isBarOverlayHandled
     readonly property bool isConvexHandled: !DisplayProfileService.gameModeActive && ((SettingsService.barConvexMode && isBarOverlayHandled) || isSidedPillHandled)

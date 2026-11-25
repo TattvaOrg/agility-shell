@@ -65,6 +65,12 @@ ShellRoot {
                 AppState.toggleWidget("spotlight");
                 return true;
             }
+            if (widgetId === "missioncontrol") {
+                if (AppState.isNiri) {
+                    Quickshell.execDetached(["niri", "msg", "action", "toggle-overview"]);
+                    return true;
+                }
+            }
             AppState.toggleWidget(widgetId);
             return true;
         }
@@ -142,6 +148,12 @@ ShellRoot {
             if (widgetId === "spotlight" || widgetId === "omni") {
                 AppState.toggleWidget("spotlight");
                 return true;
+            }
+            if (widgetId === "missioncontrol") {
+                if (AppState.isNiri) {
+                    Quickshell.execDetached(["niri", "msg", "action", "toggle-overview"]);
+                    return true;
+                }
             }
             AppState.toggleWidget(widgetId);
             return true;
@@ -294,6 +306,26 @@ ShellRoot {
         }
     }
 
+    SocketServer {
+        id: missionControlSocketServer
+        path: "/tmp/quickshell_missioncontrol"
+        active: true
+        handler: Component {
+            Socket {
+                onConnectedChanged: {
+                    if (connected) {
+                        if (AppState.isNiri) {
+                            Quickshell.execDetached(["niri", "msg", "action", "toggle-overview"]);
+                        } else {
+                            AppState.toggleWidget("missioncontrol");
+                        }
+                        Qt.callLater(() => { connected = false; });
+                    }
+                }
+            }
+        }
+    }
+
     NotificationService {
         id: globalNotificationService
     }
@@ -309,13 +341,15 @@ ShellRoot {
         WlrLayershell.exclusionMode: (SettingsService.barAutoHide && (SettingsService.barIslandMode || SettingsService.barPillMode)) ? ExclusionMode.Ignore : ExclusionMode.Auto
         color: "transparent"
         focusable: false
-        implicitHeight: !SettingsService.settingsLoaded ? 0 : (barMarginTop + barHeight)
+        implicitHeight: !SettingsService.settingsLoaded ? 0 : (SettingsService.isBarVertical ? 0 : (barMarginTop + barHeight))
+        implicitWidth: !SettingsService.settingsLoaded ? 0 : (SettingsService.isBarVertical ? (barMarginSide + 44) : 0)
         visible: SettingsService.settingsLoaded && !root.isGaming
 
         anchors {
-            top: true
-            left: true
-            right: true
+            top: SettingsService.isBarTop || SettingsService.isBarVertical
+            bottom: SettingsService.isBarBottom || SettingsService.isBarVertical
+            left: SettingsService.isBarTop || SettingsService.isBarBottom || SettingsService.isBarLeft
+            right: SettingsService.isBarTop || SettingsService.isBarBottom || SettingsService.isBarRight
         }
 
         mask: Region {
@@ -349,14 +383,14 @@ ShellRoot {
     BarOverlayWindow {
         notificationService: globalNotificationService
         barSurface: barSurface
-        visible: SettingsService.settingsLoaded && !root.isConvex && !root.isGaming
+        visible: SettingsService.settingsLoaded && (!root.isConvex || !SettingsService.isBarTop) && !root.isGaming
     }
 
     ConvexDesktop {
         id: convexDesktopSurface
 
         notificationService: globalNotificationService
-        visible: SettingsService.settingsLoaded && root.isConvex && !root.isGaming
+        visible: SettingsService.settingsLoaded && root.isConvex && SettingsService.isBarTop && !root.isGaming
     }
 
     GamingOverlay {

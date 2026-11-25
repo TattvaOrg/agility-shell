@@ -14,18 +14,6 @@
 
 ---
 
-## Supported Window Managers
-
-While agility shell does not manage window configurations itself, it connects natively to the following Wayland compositors:
-
-| Window Manager | Status |
-| -------------- | ------ |
-| **Niri**       | Stable |
-| **Hyprland**   | Beta   |
-| **MangoWM**    | Beta   |
-
----
-
 ## Installation & Quick Start
 
 ### 1. Check & Install Dependencies (Step-by-Step Doctor)

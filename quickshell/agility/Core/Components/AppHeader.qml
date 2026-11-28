@@ -10,6 +10,9 @@ ColumnLayout {
     property string category: ""
     property string subtitle: ""
     property bool showDivider: false
+    property bool canGoBack: false
+    property string backText: "Back"
+    signal backClicked()
     default property alias actions: rightSlot.data
 
     Layout.fillWidth: true
@@ -17,46 +20,71 @@ ColumnLayout {
 
     Item {
         Layout.fillWidth: true
-        implicitHeight: headerRow.implicitHeight + Constants.sizeLg * 2
+        implicitHeight: 52
 
         RowLayout {
             id: headerRow
 
             anchors.fill: parent
-            anchors.margins: Constants.sizeLg
+            anchors.leftMargin: 24
+            anchors.rightMargin: 24
             spacing: Constants.sizeMd
 
+            // macOS Back Navigation Button
+            RowLayout {
+                visible: root.canGoBack
+                spacing: 4
+                Layout.alignment: Qt.AlignVCenter
+
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 5
+                    color: backHover.hovered ? (Theme.isDark ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.06)) : "transparent"
+
+                    HoverHandler {
+                        id: backHover
+                    }
+
+                    SvgIcon {
+                        anchors.centerIn: parent
+                        icon: "chevron-left"
+                        iconSize: 14
+                        flat: true
+                        iconColor: Theme.accent
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.backClicked()
+                    }
+                }
+
+                ThemedText {
+                    text: root.backText
+                    customSize: 13
+                    font.weight: Font.Medium
+                    color: Theme.accent
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.backClicked()
+                    }
+                }
+            }
+
             ColumnLayout {
-                spacing: Constants.size2Xs
+                spacing: 1
                 Layout.alignment: Qt.AlignVCenter
                 Layout.maximumWidth: parent.width - (rightSlot.width > 0 ? rightSlot.width + Constants.sizeMd : 0)
 
-                RowLayout {
-                    spacing: Constants.sizeXs
-
-                    ThemedText {
-                        text: root.title
-                        customSize: Constants.sizeXl
-                        font.weight: Font.Bold
-                        color: Theme.fg
-                    }
-
-                    ThemedText {
-                        visible: root.category !== ""
-                        text: "•"
-                        customSize: Constants.sizeXl
-                        color: Theme.accent
-                    }
-
-                    ThemedText {
-                        visible: root.category !== ""
-                        text: root.category
-                        customSize: Constants.sizeSm
-                        font.weight: Font.Bold
-                        font.letterSpacing: 0.9
-                        color: Theme.muted
-                    }
-
+                ThemedText {
+                    text: root.title
+                    customSize: 16
+                    font.weight: Font.Bold
+                    color: Theme.fg
                 }
 
                 ThemedText {
@@ -67,7 +95,6 @@ ColumnLayout {
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                 }
-
             }
 
             Item {
@@ -80,13 +107,10 @@ ColumnLayout {
                 Layout.alignment: Qt.AlignVCenter
                 spacing: Constants.sizeSm
             }
-
         }
-
     }
 
     Divider {
         visible: root.showDivider
     }
-
 }

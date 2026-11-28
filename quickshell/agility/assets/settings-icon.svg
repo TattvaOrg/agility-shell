@@ -1,33 +1,105 @@
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  height="24"
-  viewBox="0 0 24 24"
-  width="24"
->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="minflair-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ccb565" />
-      <stop offset="100%" stop-color="#95cc64" />
+    <!-- Background Gradient: macOS Ventura/Sonoma Dark Space Gray -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#363A44"/>
+      <stop offset="50%" stop-color="#24272F"/>
+      <stop offset="100%" stop-color="#14161A"/>
     </linearGradient>
-    <mask id="minflair-cutout">
-      <rect width="24" height="24" fill="white" />
-      <g transform="matrix(0.5 0 0 0.5 6 6)">
-        <path
-          d="M 11.6 2.5 Q 12 1.2 12.4 2.5 L 14 10 L 21.5 11.6 Q 22.8 12 21.5 12.4 L 14 14 L 12.4 21.5 Q 12 22.8 11.6 21.5 L 10 14 L 2.5 12.4 Q 1.2 12 2.5 11.6 L 10 10 Z"
-          fill="black"
-        />
-        <path
-          transform="translate(12 12) rotate(45) translate(-12 -12)"
-          d="M 11.6 2.5 Q 12 1.2 12.4 2.5 L 14 10 L 21.5 11.6 Q 22.8 12 21.5 12.4 L 14 14 L 12.4 21.5 Q 12 22.8 11.6 21.5 L 10 14 L 2.5 12.4 Q 1.2 12 2.5 11.6 L 10 10 Z"
-          fill="black"
-        />
-      </g>
-    </mask>
+
+    <!-- Squircle Border Highlight -->
+    <linearGradient id="rim-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32"/>
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.45"/>
+    </linearGradient>
+
+    <!-- Gear Body Metallic Shader -->
+    <linearGradient id="gear-body" x1="25%" y1="0%" x2="75%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="25%" stop-color="#E6EAEE"/>
+      <stop offset="60%" stop-color="#B2BAC6"/>
+      <stop offset="100%" stop-color="#7E8794"/>
+    </linearGradient>
+
+    <!-- Gear Bevel / Highlight -->
+    <linearGradient id="gear-bevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#3A3E47" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <!-- Recessed Groove Gradient -->
+    <linearGradient id="groove-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#181B20" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#2E333D" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <linearGradient id="screw-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8ECF2"/>
+      <stop offset="100%" stop-color="#6F7785"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="squircle-shadow" x="-15%" y="-15%" width="130%" height="135%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+
+    <filter id="gear-shadow" x="-20%" y="-20%" width="140%" height="140%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+
+    <filter id="inner-shadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="3" result="offset-blur"/>
+      <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+      <feFlood flood-color="#000000" flood-opacity="0.45" result="color"/>
+      <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
   </defs>
 
-  <path
-    mask="url(#minflair-cutout)"
-    fill="url(#minflair-grad)"
-    d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z"
-  />
+  <!-- Base Squircle -->
+  <rect x="36" y="36" width="440" height="440" rx="100" ry="100" fill="url(#bg-grad)" filter="url(#squircle-shadow)"/>
+
+  <!-- Top Glass Highlight Reflection -->
+  <path d="M 136 36 L 376 36 C 440 36 476 72 476 136 L 476 220 Q 256 260 36 220 L 36 136 C 36 72 72 36 136 36 Z" fill="#FFFFFF" opacity="0.04"/>
+
+  <!-- Precision Rim -->
+  <rect x="37" y="37" width="438" height="438" rx="99" ry="99" fill="none" stroke="url(#rim-grad)" stroke-width="2"/>
+
+  <!-- Gear Mechanism Group -->
+  <g filter="url(#gear-shadow)">
+    <!-- Main Machined Gear -->
+    <path fill="url(#gear-body)" fill-rule="evenodd" d="M 378.96 228.50 L 416.63 235.00 A 162.0 162.0 0 0 1 416.63 277.00 L 378.96 283.50 A 126.0 126.0 0 0 1 362.39 323.50 L 384.43 354.73 A 162.0 162.0 0 0 1 354.73 384.43 L 323.50 362.39 A 126.0 126.0 0 0 1 283.50 378.96 L 277.00 416.63 A 162.0 162.0 0 0 1 235.00 416.63 L 228.50 378.96 A 126.0 126.0 0 0 1 188.50 362.39 L 157.27 384.43 A 162.0 162.0 0 0 1 127.57 354.73 L 149.61 323.50 A 126.0 126.0 0 0 1 133.04 283.50 L 95.37 277.00 A 162.0 162.0 0 0 1 95.37 235.00 L 133.04 228.50 A 126.0 126.0 0 0 1 149.61 188.50 L 127.57 157.27 A 162.0 162.0 0 0 1 157.27 127.57 L 188.50 149.61 A 126.0 126.0 0 0 1 228.50 133.04 L 235.00 95.37 A 162.0 162.0 0 0 1 277.00 95.37 L 283.50 133.04 A 126.0 126.0 0 0 1 323.50 149.61 L 354.73 127.57 A 162.0 162.0 0 0 1 384.43 157.27 L 362.39 188.50 A 126.0 126.0 0 0 1 378.96 228.50 Z M 256 218.0 A 38.0 38.0 0 1 0 256 294.0 A 38.0 38.0 0 1 0 256 218.0 Z" stroke="url(#gear-bevel)" stroke-width="1.5"/>
+
+    <!-- Concentric Recessed Groove -->
+    <path fill="url(#groove-bg)" fill-rule="evenodd" d="M 256 154.0 A 102.0 102.0 0 1 0 256 358.0 A 102.0 102.0 0 1 0 256 154.0 Z M 256 178.0 A 78.0 78.0 0 1 1 256 334.0 A 78.0 78.0 0 1 1 256 178.0 Z" stroke="#000000" stroke-opacity="0.3" stroke-width="1"/>
+
+    <!-- Fine Concentric Grooves Lines for Machined Texture -->
+    <circle cx="256" cy="256" r="90" fill="none" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="2 3"/>
+    
+    <!-- Screws/Rivets on Hub -->
+    
+      <circle cx="319.6" cy="319.6" r="4" fill="url(#screw-grad)" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="0.8"/>
+      <circle cx="319.6" cy="319.6" r="1.5" fill="#1A1C20"/>
+    
+
+      <circle cx="192.4" cy="319.6" r="4" fill="url(#screw-grad)" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="0.8"/>
+      <circle cx="192.4" cy="319.6" r="1.5" fill="#1A1C20"/>
+    
+
+      <circle cx="192.4" cy="192.4" r="4" fill="url(#screw-grad)" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="0.8"/>
+      <circle cx="192.4" cy="192.4" r="1.5" fill="#1A1C20"/>
+    
+
+      <circle cx="319.6" cy="192.4" r="4" fill="url(#screw-grad)" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="0.8"/>
+      <circle cx="319.6" cy="192.4" r="1.5" fill="#1A1C20"/>
+    
+
+    <!-- Central Aperture Bevel -->
+    <circle cx="256" cy="256" r="38.0" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.6"/>
+    <circle cx="256" cy="256" r="36.0" fill="none" stroke="#000000" stroke-width="1.5" stroke-opacity="0.4"/>
+  </g>
 </svg>

@@ -211,9 +211,12 @@ ShellRoot {
         }
     }
 
+    DesktopCompositionLayer {
+        id: desktopCompositionLayer
+    }
+
     DesktopWidgetsLayer {
         id: desktopWidgetsLayer
-        visible: SettingsService.settingsLoaded && SettingsService.desktopWidgetsEnabled && !root.isGaming
     }
 
     OsdPill {

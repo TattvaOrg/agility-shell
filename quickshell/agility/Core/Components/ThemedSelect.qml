@@ -1,3 +1,4 @@
+import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -14,10 +15,8 @@ SettingRowTemplate {
     property int currentIndex: 0
     property int comboWidth: 160
     property string fallbackText: "Auto"
-    property var iconMap: ({
-    })
-    property var textMap: ({
-    })
+    property var iconMap: ({})
+    property var textMap: ({})
     property bool searchable: false
     property var _filteredModel: root.model
 
@@ -26,13 +25,11 @@ SettingRowTemplate {
     function closePopup() {
         if (internalCombo && internalCombo.popup && internalCombo.popup.visible)
             internalCombo.popup.close();
-
     }
 
     onVisibleChanged: {
         if (!visible)
             closePopup();
-
     }
 
     ComboBox {
@@ -51,91 +48,73 @@ SettingRowTemplate {
         z: 10
         opacity: root.enabled ? 1 : 0.5
         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-        implicitWidth: root.comboWidth
-        implicitHeight: Constants.size3Xl
+        implicitWidth: Math.max(root.comboWidth, 120)
+        implicitHeight: 26
         model: root.searchable ? root._filteredModel : root.model
+
         onActivated: (index) => {
             if (root.searchable) {
                 let selectedItem = root._filteredModel[index];
                 let originalIndex = root.model.indexOf(selectedItem);
                 if (originalIndex !== -1)
                     root.activated(originalIndex);
-
             } else {
                 root.activated(index);
             }
         }
-        Keys.onUpPressed: (event) => {
-            event.accepted = true;
-        }
-        Keys.onDownPressed: (event) => {
-            event.accepted = true;
-        }
+
+        Keys.onUpPressed: (event) => { event.accepted = true; }
+        Keys.onDownPressed: (event) => { event.accepted = true; }
+
         Component.onCompleted: {
             internalCombo.updateIndex();
         }
 
         Connections {
-            function onCurrentIndexChanged() {
-                Qt.callLater(internalCombo.updateIndex);
-            }
-
-            function onModelChanged() {
-                Qt.callLater(internalCombo.updateIndex);
-            }
-
+            target: root
+            function onCurrentIndexChanged() { Qt.callLater(internalCombo.updateIndex); }
+            function onModelChanged() { Qt.callLater(internalCombo.updateIndex); }
             function on_FilteredModelChanged() {
                 if (root.searchable)
                     Qt.callLater(internalCombo.updateIndex);
-
             }
-
-            target: root
         }
 
         Connections {
-            function onModelChanged() {
-                Qt.callLater(internalCombo.updateIndex);
-            }
-
             target: internalCombo
+            function onModelChanged() { Qt.callLater(internalCombo.updateIndex); }
         }
 
         HoverHandler {
             cursorShape: Qt.PointingHandCursor
         }
 
-        indicator: SvgIcon {
-            x: internalCombo.width - width - 10
+        // macOS PopUpButton Double Chevrons Indicator (⌃⌄)
+        indicator: Item {
+            x: internalCombo.width - width - 8
             y: (internalCombo.height - height) / 2
-            flat: true
-            icon: "chevron-down"
-            iconSize: 13
-            iconColor: internalCombo.popup.visible ? Theme.accent : Theme.muted
-            rotation: internalCombo.popup.visible ? 180 : 0
+            width: 10
+            height: 16
 
-            Behavior on rotation {
-                NumberAnimation {
-                    duration: Constants.animNormal
-                    easing.type: Easing.OutBack
+            SvgIcon {
+                anchors.centerIn: parent
+                icon: "mac-double-chevron"
+                iconSize: 13
+                flat: true
+                iconColor: internalCombo.popup.visible ? "#007AFF" : (Theme.isDark ? "#8E8E93" : "#636366")
+
+                Behavior on iconColor {
+                    ColorAnimation { duration: Constants.animFast }
                 }
-
             }
-
-            Behavior on iconColor {
-                ColorAnimation {
-                    duration: Constants.animFast
-                }
-
-            }
-
         }
 
+        // Selected Text Display
         contentItem: RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 10
-            anchors.rightMargin: 30
-            spacing: Constants.sizeXs
+            anchors.rightMargin: 24
+            spacing: 6
 
             ThemedText {
                 Layout.fillWidth: true
@@ -151,49 +130,44 @@ SettingRowTemplate {
                         return word.charAt(0).toUpperCase() + word.slice(1);
                     }).join('-');
                 }
-                font.weight: Font.DemiBold
-                customSize: root.customSize
-                color: internalCombo.popup.visible ? Theme.accent : Theme.fg
+                font.weight: Font.Medium
+                customSize: 12
+                color: Theme.isDark ? "#FFFFFF" : "#1D1D1F"
                 elide: Text.ElideRight
                 verticalAlignment: Text.AlignVCenter
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Constants.animFast
-                    }
-
-                }
-
             }
-
         }
 
+        // macOS PopUpButton Background
         background: Rectangle {
-            color: internalCombo.down || internalCombo.hovered || internalCombo.popup.visible ? Theme.bgTertiary : Theme.bgSecondary
-            radius: Constants.sizeXs
+            radius: 5
+            color: {
+                if (internalCombo.down || internalCombo.popup.visible)
+                    return Theme.isDark ? "#3A3A3C" : "#EBEBEF";
+                if (internalCombo.hovered)
+                    return Theme.isDark ? "#323234" : "#F5F5F7";
+                return Theme.isDark ? "#2C2C2E" : "#FFFFFF";
+            }
             border.width: 1
-            border.color: internalCombo.popup.visible ? Theme.accent : Theme.border
+            border.color: internalCombo.popup.visible
+                ? "#007AFF"
+                : (Theme.isDark ? "#3A3A3C" : "#D1D1D6")
 
             Behavior on color {
-                ColorAnimation {
-                    duration: Constants.animFast
-                }
-
+                ColorAnimation { duration: Constants.animFast }
             }
-
             Behavior on border.color {
-                ColorAnimation {
-                    duration: Constants.animFast
-                }
-
+                ColorAnimation { duration: Constants.animFast }
             }
-
         }
 
+        // macOS Menu Popup Window
         popup: Popup {
-            width: internalCombo.width
-            implicitHeight: Math.min(contentItem.implicitHeight + (padding * 2), 200)
-            padding: Constants.sizeXs
+            width: Math.max(internalCombo.width, 160)
+            implicitHeight: Math.min(contentItem.implicitHeight + (padding * 2), 240)
+            padding: 4
+            y: internalCombo.height + 4
+
             onAboutToShow: {
                 if (root.searchable) {
                     popupSearchInput.text = "";
@@ -204,62 +178,33 @@ SettingRowTemplate {
             onClosed: {
                 if (root.searchable)
                     root._filteredModel = root.model;
-
             }
             transformOrigin: Item.Top
 
             enter: Transition {
-                NumberAnimation {
-                    property: "opacity"
-                    from: 0
-                    to: 1
-                    duration: Constants.animFast
-                }
-
-                NumberAnimation {
-                    property: "scale"
-                    from: 0.95
-                    to: 1
-                    duration: Constants.animNormal
-                    easing.type: Easing.OutBack
-                }
-
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 100 }
+                NumberAnimation { property: "scale"; from: 0.96; to: 1; duration: 120; easing.type: Easing.OutCubic }
             }
 
             exit: Transition {
-                NumberAnimation {
-                    property: "opacity"
-                    from: 1
-                    to: 0
-                    duration: Constants.animFast
-                }
-
-                NumberAnimation {
-                    property: "scale"
-                    from: 1
-                    to: 0.95
-                    duration: Constants.animFast
-                    easing.type: Easing.InCubic
-                }
-
+                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 80 }
             }
 
             contentItem: ColumnLayout {
-                spacing: Constants.sizeXs
+                spacing: 4
 
                 TextField {
                     id: popupSearchInput
-
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Constants.size3Xl
-                    leftPadding: Constants.sizeSm
-                    rightPadding: Constants.sizeSm
+                    Layout.preferredHeight: 24
+                    leftPadding: 8
+                    rightPadding: 8
                     visible: root.searchable
                     placeholderText: "Search..."
-                    font.pixelSize: Math.round(Constants.sizeSm * SettingsService.fontScale)
+                    font.pixelSize: 11
                     color: Theme.fg
-                    selectionColor: Theme.accent
-                    selectedTextColor: Theme.bg
+                    selectionColor: "#007AFF"
+                    selectedTextColor: "#FFFFFF"
                     onTextEdited: {
                         if (root.searchable) {
                             let query = text.toLowerCase();
@@ -267,21 +212,19 @@ SettingRowTemplate {
                                 root._filteredModel = root.model;
                             else
                                 root._filteredModel = root.model.filter((item) => {
-                                return typeof item === "string" && item.toLowerCase().includes(query);
-                            });
+                                    return typeof item === "string" && item.toLowerCase().includes(query);
+                                });
                             popupListView.currentIndex = 0;
                         }
                     }
                     Keys.onUpPressed: (event) => {
                         if (popupListView.currentIndex > 0)
                             popupListView.currentIndex--;
-
                         event.accepted = true;
                     }
                     Keys.onDownPressed: (event) => {
                         if (popupListView.currentIndex < popupListView.count - 1)
                             popupListView.currentIndex++;
-
                         event.accepted = true;
                     }
                     Keys.onReturnPressed: (event) => {
@@ -290,17 +233,15 @@ SettingRowTemplate {
                             let originalIndex = root.model.indexOf(selectedItem);
                             if (originalIndex !== -1)
                                 root.activated(originalIndex);
-
                             internalCombo.popup.close();
                         }
                         event.accepted = true;
                     }
 
                     background: Rectangle {
-                        color: Theme.bgSecondary
-                        radius: Constants.sizeXs
+                        color: Theme.isDark ? "#1E1E1E" : "#EBEBEF"
+                        radius: 4
                     }
-
                 }
 
                 ListView {
@@ -320,54 +261,76 @@ SettingRowTemplate {
                     Layout.fillHeight: true
                     Layout.preferredHeight: contentHeight
                     clip: true
-                    spacing: Constants.size3Xs
+                    spacing: 1
                     model: internalCombo.delegateModel
 
-                    ScrollIndicator.vertical: ScrollIndicator {
-                    }
-
+                    ScrollIndicator.vertical: ScrollIndicator {}
                 }
-
             }
 
             background: Rectangle {
-                color: Theme.bg
+                color: Theme.isDark ? "#282828" : "#F6F6F6"
                 border.width: 1
-                border.color: Theme.border
-                radius: Constants.sizeSm
-            }
+                border.color: Theme.isDark ? "#3E3E42" : "#D1D1D6"
+                radius: 6
 
+                layer.enabled: true
+                layer.effect: DropShadow {
+                    transparentBorder: true
+                    color: "#00000030"
+                    radius: 8
+                    samples: 17
+                    verticalOffset: 3
+                }
+            }
         }
 
+        // macOS Menu Item Delegate
         delegate: ItemDelegate {
             id: delegateItem
 
             width: ListView.view.width
-            height: Constants.size3Xl
+            height: 24
 
             HoverHandler {
                 cursorShape: Qt.PointingHandCursor
             }
 
+            readonly property bool isSelected: popupListView.currentIndex === index
+            readonly property bool isHoveredOrActive: delegateItem.hovered || delegateItem.down
+
             background: Rectangle {
                 anchors.fill: parent
-                radius: Constants.sizeXs
-                color: popupListView.currentIndex === index || delegateItem.hovered || delegateItem.down ? Theme.bgSecondary : "transparent"
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+                radius: 4
+                color: delegateItem.isHoveredOrActive ? "#007AFF" : "transparent"
 
                 Behavior on color {
-                    ColorAnimation {
-                        duration: Constants.animFast
-                    }
-
+                    ColorAnimation { duration: 60 }
                 }
-
             }
 
             contentItem: RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: Constants.sizeMd
-                anchors.rightMargin: Constants.sizeMd
-                spacing: Constants.sizeXs
+                anchors.leftMargin: 6
+                anchors.rightMargin: 8
+                spacing: 4
+
+                // macOS Checkmark indicator on selected item
+                Item {
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
+
+                    SvgIcon {
+                        anchors.centerIn: parent
+                        icon: "mac-check"
+                        iconSize: 10
+                        flat: true
+                        visible: delegateItem.isSelected
+                        iconColor: delegateItem.isHoveredOrActive ? "#FFFFFF" : (Theme.isDark ? "#FFFFFF" : "#007AFF")
+                    }
+                }
 
                 ThemedText {
                     Layout.fillWidth: true
@@ -383,16 +346,13 @@ SettingRowTemplate {
                             return word.charAt(0).toUpperCase() + word.slice(1);
                         }).join('-');
                     }
-                    font.bold: popupListView.currentIndex === index
-                    customSize: root.customSize
-                    color: popupListView.currentIndex === index || delegateItem.hovered ? Theme.accent : Theme.fg
+                    font.weight: delegateItem.isSelected ? Font.Medium : Font.Normal
+                    customSize: 12
+                    color: delegateItem.isHoveredOrActive ? "#FFFFFF" : Theme.fg
                     verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
                 }
-
             }
-
         }
-
     }
-
 }

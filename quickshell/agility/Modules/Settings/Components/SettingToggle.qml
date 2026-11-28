@@ -19,84 +19,90 @@ SettingRowTemplate {
 
         z: 10
         Layout.alignment: Qt.AlignVCenter
-        opacity: root.enabled ? 1 : 0.5
+        opacity: root.enabled ? 1 : 0.45
         onToggled: root.toggled(checked)
-        implicitWidth: Constants.size4Xl
-        implicitHeight: Constants.sizeXl + 2
+        implicitWidth: 42
+        implicitHeight: 22
+        padding: 0
+        leftPadding: 0
+        rightPadding: 0
+        topPadding: 0
+        bottomPadding: 0
 
         HoverHandler {
             cursorShape: Qt.PointingHandCursor
         }
 
         indicator: Rectangle {
-            implicitWidth: Constants.size4Xl
-            implicitHeight: Constants.sizeXl + 2
-            radius: height / 2
-            color: settingSwitch.checked ? Theme.accent : Theme.bgSecondary
-            border.width: 1
-            border.color: settingSwitch.checked ? Theme.accent : Theme.border
+            implicitWidth: 42
+            implicitHeight: 22
+            radius: 11
 
+            // Apple System Green (#34C759) when ON, subtle dark/light neutral when OFF
+            color: settingSwitch.checked ? "#34C759" : (Theme.isDark ? "#39393D" : "#E9E9EB")
+            border.width: 1
+            border.color: settingSwitch.checked ? "#30B34F" : (Theme.isDark ? "#48484A" : "#D1D1D6")
+
+            // macOS Switch "On" Vertical Tick Indicator (| at x: 8.5, y: 7)
+            Rectangle {
+                x: 8.5
+                y: 7
+                width: 1.2
+                height: 8
+                radius: 0.6
+                color: "#FFFFFF"
+                opacity: settingSwitch.checked ? 0.85 : 0
+                visible: opacity > 0
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 160 }
+                }
+            }
+
+            // macOS Switch Pure White Capsule Knob (24 x 18 with 9px radius, resting at x: 2 or x: 16)
             Rectangle {
                 id: knob
 
-                x: settingSwitch.checked ? parent.width - width - 3 : 3
-                y: (parent.height - height) / 2
-                width: Constants.sizeLg
-                height: Constants.sizeLg
-                radius: width / 2
-                color: settingSwitch.checked ? "#ffffff" : (Theme.isDark ? Theme.muted : "#ffffff")
-                scale: settingSwitch.pressed ? 0.9 : (settingSwitch.hovered ? 1.05 : 1)
+                x: settingSwitch.checked ? (parent.width - width - 2) : 2
+                y: 2
+                width: settingSwitch.pressed ? 27 : 24
+                height: 18
+                radius: 9
+                color: "#FFFFFF"
+                border.width: 0.5
+                border.color: "#00000014"
                 layer.enabled: true
 
                 layer.effect: DropShadow {
                     transparentBorder: true
-                    color: Theme.shadow
-                    radius: Constants.size3Xs + 1
-                    samples: 7
-                    verticalOffset: 1
+                    color: "#00000030"
+                    radius: 3
+                    samples: 9
+                    verticalOffset: 1.2
                 }
 
                 Behavior on x {
                     NumberAnimation {
-                        duration: Constants.animFast
+                        duration: 180
                         easing.type: Easing.OutCubic
                     }
-
                 }
 
-                Behavior on scale {
+                Behavior on width {
                     NumberAnimation {
-                        duration: Constants.animFast
-                        easing.type: Easing.OutBack
+                        duration: 120
+                        easing.type: Easing.OutQuad
                     }
-
                 }
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Constants.animFast
-                    }
-
-                }
-
             }
 
             Behavior on color {
-                ColorAnimation {
-                    duration: Constants.animFast
-                }
-
+                ColorAnimation { duration: 160 }
             }
 
             Behavior on border.color {
-                ColorAnimation {
-                    duration: Constants.animFast
-                }
-
+                ColorAnimation { duration: 160 }
             }
-
         }
-
     }
-
 }

@@ -60,9 +60,19 @@ Item {
     property bool appletNetwork: false
     property bool appletDnd: false
     property bool dndEnabled: false
-    // Desktop Widgets (Awe suite)
+    // Desktop Widgets (Awe suite & End composition/suite)
     property bool desktopWidgetsEnabled: true
     property bool widgetManagerNotchEnabled: true
+    property bool desktopCompositionEnabled: false
+    property bool desktopBackdropDimEnabled: true
+    property real desktopBackdropDimStrength: 0.55
+    property bool desktopCenterShapeEnabled: true
+    property string desktopCenterShape: "Arch"
+    property real desktopCenterShapeSize: 0.54
+    property bool desktopCompositionAnimEnabled: true
+    property real desktopCompositionAnimSpeed: 1.0
+    property string desktopWidgetProvider: "awe" // "awe" | "end"
+    property bool desktopWidgetsEditMode: false
     readonly property int barWidgetHeight: {
         if (barPillMode) {
             return Math.max(18, Math.min(44, Math.round(pillBarThickness - 10)));
@@ -92,9 +102,9 @@ Item {
     property var customShortcuts: []
 
     // Settings Window Presentation
-    property string settingsWindowMode: "half" // "full", "half", "boxed"
+    property string settingsWindowMode: "boxed" // "full", "half", "boxed"
     property int settingsBoxedWidth: 960
-    property int settingsBoxedHeight: 680
+    property int settingsBoxedHeight: 640
 
     function syncShortcuts() {
         let payload = JSON.stringify({
@@ -283,6 +293,22 @@ Item {
     onEdgeLightingDirectionChanged: { if (settingsLoaded) saveSettings(); }
     onDesktopWidgetsEnabledChanged: { if (settingsLoaded) saveSettings(); }
     onWidgetManagerNotchEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopCompositionEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopBackdropDimEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopBackdropDimStrengthChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopCenterShapeEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopCenterShapeChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopCenterShapeSizeChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopCompositionAnimEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopCompositionAnimSpeedChanged: { if (settingsLoaded) saveSettings(); }
+    onDesktopWidgetProviderChanged: {
+        if (desktopWidgetProvider !== "awe" && desktopWidgetProvider !== "end") {
+            desktopWidgetProvider = "awe";
+            return;
+        }
+        desktopWidgetsEditMode = false;
+        if (settingsLoaded) saveSettings();
+    }
 
     Timer {
         id: saveTimer
@@ -375,7 +401,16 @@ Item {
                 "edgeLightingAudioOnly": settingsService.edgeLightingAudioOnly,
                 "edgeLightingDirection": settingsService.edgeLightingDirection,
                 "desktopWidgetsEnabled": settingsService.desktopWidgetsEnabled,
-                "widgetManagerNotchEnabled": settingsService.widgetManagerNotchEnabled
+                "widgetManagerNotchEnabled": settingsService.widgetManagerNotchEnabled,
+                "desktopCompositionEnabled": settingsService.desktopCompositionEnabled,
+                "desktopBackdropDimEnabled": settingsService.desktopBackdropDimEnabled,
+                "desktopBackdropDimStrength": settingsService.desktopBackdropDimStrength,
+                "desktopCenterShapeEnabled": settingsService.desktopCenterShapeEnabled,
+                "desktopCenterShape": settingsService.desktopCenterShape,
+                "desktopCenterShapeSize": settingsService.desktopCenterShapeSize,
+                "desktopCompositionAnimEnabled": settingsService.desktopCompositionAnimEnabled,
+                "desktopCompositionAnimSpeed": settingsService.desktopCompositionAnimSpeed,
+                "desktopWidgetProvider": settingsService.desktopWidgetProvider
             };
             syncShortcuts();
             settingsSaver.command = ["python3", Quickshell.shellDir + "/Core/Services/scripts/save_settings.py", JSON.stringify(data)];
@@ -655,6 +690,34 @@ Item {
                             settingsService.desktopWidgetsEnabled = prefs.desktopWidgetsEnabled;
                         if (prefs.widgetManagerNotchEnabled !== undefined)
                             settingsService.widgetManagerNotchEnabled = prefs.widgetManagerNotchEnabled;
+                        if (prefs.desktopCompositionEnabled !== undefined)
+                            settingsService.desktopCompositionEnabled = Boolean(prefs.desktopCompositionEnabled);
+                        if (prefs.desktopBackdropDimEnabled !== undefined)
+                            settingsService.desktopBackdropDimEnabled = Boolean(prefs.desktopBackdropDimEnabled);
+                        if (prefs.desktopBackdropDimStrength !== undefined) {
+                            let dds = parseFloat(prefs.desktopBackdropDimStrength);
+                            if (!isNaN(dds))
+                                settingsService.desktopBackdropDimStrength = Math.max(0.0, Math.min(0.9, dds));
+                        }
+                        if (prefs.desktopCenterShapeEnabled !== undefined)
+                            settingsService.desktopCenterShapeEnabled = Boolean(prefs.desktopCenterShapeEnabled);
+                        if (prefs.desktopCenterShape !== undefined)
+                            settingsService.desktopCenterShape = String(prefs.desktopCenterShape);
+                        if (prefs.desktopCenterShapeSize !== undefined) {
+                            let dcs = parseFloat(prefs.desktopCenterShapeSize);
+                            if (!isNaN(dcs))
+                                settingsService.desktopCenterShapeSize = Math.max(0.30, Math.min(0.80, dcs));
+                        }
+                        if (prefs.desktopCompositionAnimEnabled !== undefined)
+                            settingsService.desktopCompositionAnimEnabled = Boolean(prefs.desktopCompositionAnimEnabled);
+                        if (prefs.desktopCompositionAnimSpeed !== undefined) {
+                            let dcas = parseFloat(prefs.desktopCompositionAnimSpeed);
+                            if (!isNaN(dcas))
+                                settingsService.desktopCompositionAnimSpeed = Math.max(0.4, Math.min(2.5, dcas));
+                        }
+                        if (prefs.desktopWidgetProvider !== undefined) {
+                            settingsService.desktopWidgetProvider = (prefs.desktopWidgetProvider === "end") ? "end" : "awe";
+                        }
 
                     } catch (e) {
                         console.error("Error loading settings: " + e);

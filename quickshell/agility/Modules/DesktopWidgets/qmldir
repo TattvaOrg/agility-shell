@@ -1,5 +1,6 @@
 singleton Theme 1.0 Theme.qml
 singleton WidgetTheme 1.0 Theme.qml
+DesktopCompositionLayer 1.0 DesktopCompositionLayer.qml
 DesktopWidgetsLayer 1.0 DesktopWidgetsLayer.qml
 AweIcon 1.0 AweIcon.qml
 WidgetManager 1.0 WidgetManager.qml

@@ -9,6 +9,37 @@ AppContainer {
     id: root
 
     AppGroup {
+        title: "Appearance & Theme"
+        icon: "color-palette"
+
+        SettingToggle {
+            id: themeModeToggle
+
+            label: "Dark Mode"
+            description: "Switch appearance between Dark and Light mode"
+            checked: Theme.isDark
+            onToggled: (val) => {
+                if (val !== Theme.isDark) {
+                    if (!Theme.generateFromWallpaper) {
+                        let t = Theme.themes[0];
+                        let scheme = val ? t.dark : t.light;
+                        Theme.applyScheme(scheme);
+                    } else {
+                        Theme.applyWallpaperTheme(val);
+                    }
+                }
+            }
+
+            Connections {
+                target: Theme
+                function onIsDarkChanged() {
+                    themeModeToggle.checked = Theme.isDark;
+                }
+            }
+        }
+    }
+
+    AppGroup {
         title: "Default Applications"
         icon: "star"
 

@@ -278,3 +278,11 @@ Contributions are always welcome! Please check the issues tab, follow our descri
 Special thanks and attributions to:
 - **[Minflair](https://github.com/t4lentles5/minflair)** : The modular Quickshell QML frontend architecture to use as a Agility's new rust + qml releses.
 - **[caffyne-shell](https://github.com/caffyne-org/caffyne-shell)**: For foundational ideas and inspiration and python based desktop shell (Agility's older versions).
+
+### Credits & Attributions (Desktop Wallpaper Composition & End Widgets)
+
+- **[pctrade/end4-pC](https://github.com/pctrade/end4-pC)** *(GNU GPL v3.0)* and **[end-4/dots-hyprland](https://github.com/end-4/dots-hyprland)** (`illogical-impulse`, *GNU GPL v3.0*):
+  - Adapted components in `quickshell/agility/Modules/DesktopWidgets/End/`: `EndWidgetCanvas.qml` (from `WidgetCanvas.qml`), `EndWidgetFrame.qml` (from `AbstractWidget.qml` / `AbstractBackgroundWidget.qml`), `EndWidgetsLoader.qml` (from `WidgetsLoader.qml`), `MaterialShape.qml` (from `MaterialShape.qml` / `ShapeUtils.qml`), and the 16 End widget modules (`EndClockWidget.qml`, `EndUserCardWidget.qml`, `EndCalendarWidget.qml`, `EndWeatherWidget.qml`, `EndResourcesWidget.qml`, `EndTodoWidget.qml`, `EndNotesWidget.qml`, `EndTimersWidget.qml`, `EndMediaWidget.qml`, `EndWorldClockWidget.qml`, `EndVisualizerWidget.qml`, `EndImageConverterWidget.qml`, `EndImageCardWidget.qml`, `EndCustomImageWidget.qml`, `EndStickerWidget.qml`, `EndCustomTextWidget.qml`), combined with Agility Shell (GNU AGPL v3.0) under AGPL-3.0 Section 13 / GPL-3.0 Section 13.
+  - `DesktopCompositionLayer.qml` is visually inspired by `pctrade/end4-pC`'s `CenteredWallpaper.qml` layout and implemented using Agility Shell's `WallpaperManager`, `Theme`, and `SettingsService`.
+- **Material 3 Rounded Polygon Shapes (`quickshell/agility/Modules/DesktopWidgets/End/shapes/`)** *(Apache License 2.0)*:
+  - `ShapeCanvas.qml`, `material-shapes.js`, `geometry/`, `graphics/`, and `shapes/` included from `pctrade/end4-pC` (`modules/common/widgets/shapes/`), originally a QML JS port of `Knugel/rounded-polygon-ts` / AndroidX `graphics-shapes`, retaining `shapes/LICENSE` (Apache-2.0).

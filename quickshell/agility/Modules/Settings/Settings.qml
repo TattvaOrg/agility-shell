@@ -85,8 +85,17 @@ AppWindow {
     readonly property var currentTabMeta: tabMetadata[activeTab] || tabMetadata[0]
 
     widgetId: "minflair_settings"
-    windowTitle: "Minflair Settings"
+    windowTitle: "System Settings"
     contentPadding: 0
+    property bool isDarkView: Theme.isDark
+    backgroundColor: isDarkView ? "#1E1E1E" : "#F5F5F7"
+
+    Connections {
+        target: Theme
+        function onIsDarkChanged() {
+            root.isDarkView = Theme.isDark;
+        }
+    }
 
     implicitWidth: {
         if (SettingsService.settingsWindowMode === "full")
@@ -118,7 +127,7 @@ AppWindow {
                 return;
 
             if (SettingsService.settingsWindowMode === "boxed") {
-                niriWindowAdjustProc.actionCmd = "niri msg action move-window-to-floating 2>/dev/null; niri msg action set-window-width " + SettingsService.settingsBoxedWidth + " 2>/dev/null; niri msg action set-window-height " + SettingsService.settingsBoxedHeight + " 2>/dev/null; niri msg action center-window 2>/dev/null";
+                niriWindowAdjustProc.actionCmd = "niri msg action move-window-to-floating 2>/dev/null; niri msg action set-window-width " + SettingsService.settingsBoxedWidth + " 2>/dev/null; niri msg action set-window-height " + SettingsService.settingsBoxedHeight + " 2>/dev/null; niri msg action center-window 2>/dev/null; hyprctl dispatch setfloating active 2>/dev/null; hyprctl dispatch resizeactive exact " + SettingsService.settingsBoxedWidth + " " + SettingsService.settingsBoxedHeight + " 2>/dev/null; hyprctl dispatch centerwindow 2>/dev/null";
                 niriWindowAdjustProc.running = false;
                 niriWindowAdjustProc.running = true;
             } else if (SettingsService.settingsWindowMode === "full") {
@@ -174,48 +183,59 @@ AppWindow {
 
             Layout.fillHeight: true
             activeTab: root.activeTab
+            isDarkView: root.isDarkView
             onTabClicked: (id) => {
                 root.activeTab = id;
             }
+            onCloseRequested: {
+                root.isOpen = false;
+            }
         }
 
-        ColumnLayout {
+        Rectangle {
             id: contentContainer
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 0
+            color: root.isDarkView ? "#1E1E1E" : "#F5F5F7"
 
-            AppHeader {
-                title: root.currentTabMeta.title
-                category: root.currentTabMeta.category
-                subtitle: root.currentTabMeta.subtitle
-                showDivider: true
-            }
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
 
-            Item {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-
-                PageTransitionView {
-                    anchors.fill: parent
-                    activeIndex: root.activeTab
-                    order: root.navOrder
-                    onContentNeedsUpdate: (index) => {
-                        pageLoader.sourceComponent = root.pageComponents[index];
+                AppHeader {
+                    title: root.currentTabMeta.title
+                    category: root.currentTabMeta.category
+                    subtitle: root.currentTabMeta.subtitle
+                    showDivider: true
+                    canGoBack: root.activeTab === 9
+                    backText: "Desktop Bar"
+                    onBackClicked: {
+                        root.activeTab = 1;
                     }
-
-                    Loader {
-                        id: pageLoader
-
-                        anchors.fill: parent
-                        sourceComponent: personalizationComp
-                    }
-
                 }
 
-            }
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
+                    PageTransitionView {
+                        anchors.fill: parent
+                        activeIndex: root.activeTab
+                        order: root.navOrder
+                        onContentNeedsUpdate: (index) => {
+                            pageLoader.sourceComponent = root.pageComponents[index];
+                        }
+
+                        Loader {
+                            id: pageLoader
+
+                            anchors.fill: parent
+                            sourceComponent: personalizationComp
+                        }
+                    }
+                }
+            }
         }
 
     }

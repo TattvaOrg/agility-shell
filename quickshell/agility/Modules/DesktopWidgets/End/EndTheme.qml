@@ -75,4 +75,9 @@ QtObject {
     // Crisp foreground text over frosted wallpaper glass
     readonly property color onCard: Theme.isDark ? Qt.rgba(0.96, 0.97, 0.96, 1.0) : Qt.rgba(0.09, 0.10, 0.11, 1.0)
     readonly property color onCardMuted: Theme.isDark ? Qt.rgba(0.90, 0.92, 0.90, 0.68) : Qt.rgba(0.15, 0.16, 0.18, 0.65)
+
+    // Fallback solid card background when blurred wallpaper is unavailable
+    readonly property color cardBg: Theme.isDark
+        ? Qt.rgba(Theme.bg.r * 1.15, Theme.bg.g * 1.15, Theme.bg.b * 1.15, 0.78)
+        : Qt.rgba(Theme.bg.r * 0.96, Theme.bg.g * 0.96, Theme.bg.b * 0.96, 0.88)
 }

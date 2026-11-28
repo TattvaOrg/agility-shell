@@ -70,7 +70,7 @@ Item {
             required property var modelData
             screen: modelData
 
-            WlrLayershell.layer: WlrLayer.Bottom
+            WlrLayershell.layer: WlrLayer.Background
             WlrLayershell.namespace: "quickshell:desktop-composition"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             WlrLayershell.exclusionMode: ExclusionMode.Ignore
@@ -88,9 +88,11 @@ Item {
             // Completely click-through so normal windows and desktop clicks pass through
             mask: Region {}
 
-            readonly property string wallSource: WallpaperManager.currentWallpaperPath !== ""
-                ? ("file://" + WallpaperManager.currentWallpaperPath)
-                : ""
+            readonly property string wallSource: {
+                let p = WallpaperManager.currentWallpaperPath;
+                if (!p) return "";
+                return p.startsWith("file://") ? p : ("file://" + p);
+            }
             readonly property size wallSourceSize: Qt.size(
                 Math.max(1, Math.ceil(modelData.width * modelData.devicePixelRatio)),
                 Math.max(1, Math.ceil(modelData.height * modelData.devicePixelRatio))

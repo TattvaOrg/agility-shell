@@ -37,9 +37,10 @@ Item {
     readonly property var blurSource: _canvas ? _canvas.blurSourceItem : null
     readonly property bool hasWallpaperBlur: blurSource !== null && _canvas && _canvas.wallpaperUrl !== ""
 
+    readonly property point _canvasPt: (_canvas && blurSource) ? root.mapToItem(_canvas, 0, 0) : Qt.point(0, 0)
     readonly property real _scale: _frame ? (_frame.fixedFullWidth ? 1.0 : _frame.scaleFactor) : 1.0
-    readonly property real _sampleX: (_frame ? _frame.x : 0) + trackX * _scale
-    readonly property real _sampleY: (_frame ? _frame.y : 0) + trackY * _scale
+    readonly property real _sampleX: Math.max(0, _canvasPt.x)
+    readonly property real _sampleY: Math.max(0, _canvasPt.y)
     readonly property real _sampleW: Math.max(1, width * _scale)
     readonly property real _sampleH: Math.max(1, height * _scale)
 
@@ -63,7 +64,7 @@ Item {
         id: cardBody
         anchors.fill: parent
         radius: root.cardRadius
-        color: root.hasWallpaperBlur ? "transparent" : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.72)
+        color: root.hasWallpaperBlur ? "transparent" : EndTheme.cardBg
         antialiasing: true
     }
 

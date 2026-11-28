@@ -76,6 +76,8 @@ Item {
     }
 
     function clampPosition(nx, ny) {
+        if (screenWidth <= 0 || screenHeight <= 0)
+            return { x: nx, y: ny };
         if (fixedFullWidth)
             return { x: 0, y: Math.max(0, screenHeight - height) };
         let maxX = Math.max(marginX, screenWidth - width - marginX);
@@ -153,8 +155,14 @@ Item {
         saveToStore();
     }
 
-    onScreenWidthChanged: clampToBounds()
-    onScreenHeightChanged: clampToBounds()
+    onScreenWidthChanged: {
+        if (_layoutLoaded && screenWidth > 0 && screenHeight > 0)
+            loadFromStore();
+    }
+    onScreenHeightChanged: {
+        if (_layoutLoaded && screenWidth > 0 && screenHeight > 0)
+            loadFromStore();
+    }
     onBaseWidthChanged: if (_layoutLoaded && !_resizing) clampToBounds()
     onBaseHeightChanged: if (_layoutLoaded && !_resizing) clampToBounds()
 

@@ -20,6 +20,9 @@ Item {
 
     readonly property int animDuration: Math.max(150, Math.round(620 / Math.max(0.4, SettingsService.desktopCompositionAnimSpeed)))
 
+    readonly property real effectiveWidth: (root.screen && root.screen.width > 0) ? root.screen.width : (root.width > 0 ? root.width : 1920)
+    readonly property real effectiveHeight: (root.screen && root.screen.height > 0) ? root.screen.height : (root.height > 0 ? root.height : 1080)
+
     property real revealProgress: 0.0
     property bool _initialized: false
 
@@ -82,8 +85,8 @@ Item {
         id: visualizerWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 0
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["visualizer"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -93,8 +96,8 @@ Item {
         id: clockWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 1
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["clock"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -104,8 +107,8 @@ Item {
         id: userCardWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 2
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["userCard"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -115,8 +118,8 @@ Item {
         id: calendarWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 3
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["calendar"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -126,8 +129,8 @@ Item {
         id: weatherWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 4
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["weather"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -137,8 +140,8 @@ Item {
         id: resourcesWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 5
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["resources"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -148,8 +151,8 @@ Item {
         id: todoWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 6
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["todo"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -159,8 +162,8 @@ Item {
         id: worldClockWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 7
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["worldClock"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -170,8 +173,8 @@ Item {
         id: timersWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 8
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["timers"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -181,8 +184,8 @@ Item {
         id: notesWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 9
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["notes"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -192,8 +195,8 @@ Item {
         id: mediaWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 10
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["media"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -203,8 +206,8 @@ Item {
         id: imagesWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 11
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["images"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -214,8 +217,8 @@ Item {
         id: imageCardWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 12
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["imageCard"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -225,8 +228,8 @@ Item {
         id: customImageWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 13
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["customImage"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -236,8 +239,8 @@ Item {
         id: stickerWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 14
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["sticker"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)
@@ -247,8 +250,8 @@ Item {
         id: customTextWidget
         screen: root.screen
         canvas: root.canvas
-        screenWidth: root.width
-        screenHeight: root.height
+        screenWidth: root.effectiveWidth
+        screenHeight: root.effectiveHeight
         staggerIndex: 15
         revealProgress: root.revealProgress
         visible: EndWidgetStore.visibility["customText"] === true && (root.revealProgress > 0.001 || root.widgetsWanted)

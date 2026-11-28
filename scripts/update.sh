@@ -283,28 +283,55 @@ download_and_extract_prebuilt() {
             ;;
     esac
 
+    # Check if prebuilt binaries are already available locally
+    if [[ -x "$target_dir/target/release/agilityd" && -x "$target_dir/target/release/agl" ]]; then
+        success "Prebuilt release binaries (agilityd, agl) already present in target/release."
+        return 0
+    fi
+    if [[ -x "$target_dir/bin/agilityd" && -x "$target_dir/bin/agl" ]]; then
+        mkdir -p "$target_dir/target/release"
+        cp -f "$target_dir/bin/agilityd" "$target_dir/target/release/"
+        cp -f "$target_dir/bin/agl" "$target_dir/target/release/"
+        chmod +x "$target_dir/target/release/agilityd" "$target_dir/target/release/agl" 2>/dev/null || true
+        success "Prebuilt release binaries detected in bin/ and staged to target/release."
+        return 0
+    fi
+
     local tarball_name="agility-shell-${arch}-linux.tar.gz"
     local base_url="https://github.com/TattvaOrg/agility-shell/releases"
     local download_url=""
     local checksum_url=""
 
-    if [[ -n "$tag" && "$tag" != "latest" ]]; then
-        local tag_ref="$tag"
-        [[ "$tag_ref" =~ ^[0-9] ]] && tag_ref="v$tag_ref"
-        download_url="${base_url}/download/${tag_ref}/${tarball_name}"
-        checksum_url="${base_url}/download/${tag_ref}/${tarball_name}.sha256"
-    else
-        download_url="${base_url}/latest/download/${tarball_name}"
-        checksum_url="${base_url}/latest/download/${tarball_name}.sha256"
-    fi
-
-    info "Fetching prebuilt release binaries for ${arch}..."
-    info "URL: $download_url"
-
+    local download_success=false
     local tmp_dir
     tmp_dir="$(mktemp -d)"
 
-    if ! curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name"; then
+    if [[ -n "$tag" && "$tag" != "latest" ]]; then
+        local tag_ref="$tag"
+        local clean_tag="${tag_ref#v}"
+        local v_tag="v$clean_tag"
+        for t in "$tag_ref" "$v_tag" "$clean_tag"; do
+            download_url="${base_url}/download/${t}/${tarball_name}"
+            checksum_url="${base_url}/download/${t}/${tarball_name}.sha256"
+            info "Fetching prebuilt release binaries for ${arch} (tag: ${t})..."
+            if curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name" 2>/dev/null; then
+                download_success=true
+                break
+            fi
+        done
+    fi
+
+    if [[ "$download_success" == "false" ]]; then
+        download_url="${base_url}/latest/download/${tarball_name}"
+        checksum_url="${base_url}/latest/download/${tarball_name}.sha256"
+        info "Fetching prebuilt release binaries for ${arch} (latest release)..."
+        info "URL: $download_url"
+        if curl -f -sSL -L "$download_url" -o "$tmp_dir/$tarball_name"; then
+            download_success=true
+        fi
+    fi
+
+    if [[ "$download_success" == "false" ]]; then
         warn "Could not download prebuilt release binaries from GitHub Releases."
         rm -rf "$tmp_dir"
         return 1
@@ -407,7 +434,7 @@ do_update() {
 
     # Discover latest release tag and current checkout state
     local latest_tag
-    latest_tag=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+(\.[0-9]+)+' | head -n 1 || true)
+    latest_tag=$(git tag -l --sort=-v:refname | grep -E '^v?[0-9]+(\.[0-9]+)+' | head -n 1 || true)
     if [[ -z "$latest_tag" ]]; then
         latest_tag=$(git tag -l --sort=-v:refname | head -n 1 || true)
     fi
@@ -419,9 +446,12 @@ do_update() {
     local main_hash
     main_hash=$(git rev-parse --short origin/main 2>/dev/null || echo "head")
 
+    local display_tag="$latest_tag"
+    [[ "$display_tag" =~ ^[0-9] ]] && display_tag="v$display_tag"
+
     echo ""
     echo -e "  ${BOLD}Current local version:${RESET} ${CYAN}$current_desc${RESET}"
-    echo -e "  ${BOLD}Latest release tag:${RESET}   ${GREEN}v$latest_tag${RESET}"
+    echo -e "  ${BOLD}Latest release tag:${RESET}   ${GREEN}$display_tag${RESET}"
     echo -e "  ${BOLD}Main branch head:${RESET}     ${CYAN}$main_hash${RESET}"
     echo ""
 

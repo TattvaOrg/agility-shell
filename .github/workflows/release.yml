@@ -5,6 +5,8 @@ on:
     tags:
       - 'v*'
       - '[0-9]+.[0-9]+.[0-9]+*'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag_name:
@@ -32,7 +34,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install System Dependencies
         run: |
@@ -66,10 +68,15 @@ jobs:
           # 2. Standalone bundle tarball containing executables + complete shell assets
           BUNDLE_DIR="agility-shell-${ARCH}"
           mkdir -p "$BUNDLE_DIR/bin"
+          mkdir -p "$BUNDLE_DIR/target/release"
           cp "$TARGET_DIR/agilityd" "$BUNDLE_DIR/bin/"
           cp "$TARGET_DIR/agl" "$BUNDLE_DIR/bin/"
+          cp "$TARGET_DIR/agilityd" "$BUNDLE_DIR/target/release/"
+          cp "$TARGET_DIR/agl" "$BUNDLE_DIR/target/release/"
           cp agility-shell "$BUNDLE_DIR/bin/"
+          cp agility-shell "$BUNDLE_DIR/"
           chmod +x "$BUNDLE_DIR/bin/"*
+          chmod +x "$BUNDLE_DIR/target/release/"*
 
           mkdir -p "$BUNDLE_DIR/systemd"
           cp systemd/agility-shell.service "$BUNDLE_DIR/systemd/"
@@ -87,7 +94,7 @@ jobs:
           sha256sum "$BUNDLE_TAR" > "${BUNDLE_TAR}.sha256"
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: release-assets-${{ matrix.arch }}
           path: |
@@ -100,10 +107,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           path: release-dist
           merge-multiple: true
@@ -120,12 +127,15 @@ jobs:
         run: |
           TAG="${{ github.event.inputs.tag_name }}"
           if [ -z "$TAG" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          if [ -z "$TAG" ]; then
             TAG="${{ github.ref_name }}"
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Publish to GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_info.outputs.tag }}
           files: |

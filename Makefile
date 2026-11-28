@@ -61,6 +61,9 @@ install:
 	@if [ -f "$(PREBUILT_DIR)/agilityd" ] && [ -f "$(PREBUILT_DIR)/agl" ]; then \
 		echo "==> Found prebuilt binaries in $(PREBUILT_DIR), installing directly..."; \
 		$(MAKE) install-prebuilt PREBUILT_DIR="$(PREBUILT_DIR)"; \
+	elif [ -f "bin/agilityd" ] && [ -f "bin/agl" ]; then \
+		echo "==> Found prebuilt binaries in bin/, installing directly..."; \
+		$(MAKE) install-prebuilt PREBUILT_DIR="bin"; \
 	else \
 		echo "==> Prebuilt binaries not found in $(PREBUILT_DIR), compiling from source..."; \
 		$(MAKE) build && $(MAKE) install-prebuilt PREBUILT_DIR="target/release"; \

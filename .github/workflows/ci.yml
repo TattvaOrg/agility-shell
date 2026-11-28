@@ -3,17 +3,66 @@ name: CI
 on:
   push:
     branches: [ main, rust-rewrite, rust-ccc ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'package.nix'
   pull_request:
     branches: [ main, rust-rewrite ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'package.nix'
+  workflow_dispatch:
 
 jobs:
-  rust-and-qml-ci:
-    name: Rust & QML CI Validation
+  filter:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.changes.outputs.rust }}
+      qml: ${{ steps.changes.outputs.qml }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check file paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'Makefile'
+              - 'scripts/**'
+              - '.github/workflows/ci.yml'
+            qml:
+              - 'quickshell/**'
+              - 'themes/**'
+              - 'svgs/**'
+              - 'Makefile'
+              - 'scripts/**'
+              - '.github/workflows/ci.yml'
+
+  rust-ci:
+    name: Rust CI Validation
+    needs: filter
+    if: needs.filter.outputs.rust == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install System Dependencies
         run: |
@@ -40,18 +89,38 @@ jobs:
       - name: Run Tests & Headless Mock Harness
         run: cargo test --workspace --verbose
 
-      - name: Optional QML Lint Verification
+  qml-ci:
+    name: QML CI Validation
+    needs: filter
+    if: needs.filter.outputs.qml == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt6 QML Linting Tools
         run: |
-          if command -v qmllint >/dev/null 2>&1; then
-            qmllint quickshell/agility/shell.qml \
-                    quickshell/agility/bar/*.qml \
-                    quickshell/agility/dock/*.qml \
-                    quickshell/agility/launcher/*.qml \
-                    quickshell/agility/notifications/*.qml \
-                    quickshell/agility/osd/*.qml \
-                    quickshell/agility/popouts/*.qml \
-                    quickshell/agility/canvas/*.qml \
-                    quickshell/agility/lockscreen/*.qml
-          else
-            echo "qmllint not available in ubuntu runner; skipping"
+          sudo apt-get update
+          sudo apt-get install -y qt6-declarative-dev-tools
+
+      - name: Run QML Lint Verification
+        run: |
+          export PATH="/usr/lib/qt6/bin:$PATH"
+          if ! command -v qmllint >/dev/null 2>&1; then
+            echo "qmllint binary not found after installing qt6-declarative-dev-tools!"
+            exit 1
           fi
+          qmllint --version
+          FAILED=0
+          while IFS= read -r -d '' file; do
+            if ! qmllint "$file"; then
+              echo "::error file=$file::qmllint failed for $file"
+              FAILED=1
+            fi
+          done < <(find quickshell -type f -name "*.qml" -print0)
+          if [ "$FAILED" -ne 0 ]; then
+            echo "One or more QML files failed validation."
+            exit 1
+          fi
+          echo "All QML files successfully passed validation."

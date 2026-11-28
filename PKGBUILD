@@ -65,6 +65,11 @@ build() {
 
     if [[ -f "target/release/agilityd" && -f "target/release/agl" ]]; then
         echo "==> Using prebuilt release binaries in target/release..."
+    elif [[ -f "bin/agilityd" && -f "bin/agl" ]]; then
+        mkdir -p target/release
+        cp bin/agilityd target/release/
+        cp bin/agl target/release/
+        echo "==> Using prebuilt release binaries in bin/..."
     elif [[ -f "target/x86_64-unknown-linux-gnu/release/agilityd" && -f "target/x86_64-unknown-linux-gnu/release/agl" ]]; then
         mkdir -p target/release
         cp target/x86_64-unknown-linux-gnu/release/agilityd target/release/

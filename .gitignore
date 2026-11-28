@@ -18,3 +18,4 @@ config/*.json
 
 # Rust build artifacts
 target/
+

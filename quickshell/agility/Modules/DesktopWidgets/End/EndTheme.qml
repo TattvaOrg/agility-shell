@@ -49,10 +49,10 @@ QtObject {
     readonly property color tertiary: shiftHue(Theme.accent, -0.22, 1.05, 0.76)
     readonly property color onTertiary: contrastOn(tertiary)
 
-    // Translucent frosted glass tint layered over the undimmed blurred wallpaper
+    // Translucent frosted glass tint layered over the undimmed direct wallpaper
     readonly property color glassTint: {
         let base = mixColor(Theme.bg, Theme.accent, 0.22);
-        return Qt.rgba(base.r, base.g, base.b, Theme.isDark ? 0.36 : 0.48);
+        return Qt.rgba(base.r, base.g, base.b, Theme.isDark ? 0.22 : 0.30);
     }
 
     // Inner sub-tile / metric pill fill (frosted dark-tinted chip inside cards)
@@ -65,14 +65,19 @@ QtObject {
         : Qt.rgba(0.0, 0.0, 0.0, 0.12)
 
     readonly property color glassBorder: Theme.isDark
-        ? Qt.rgba(1.0, 1.0, 1.0, 0.18)
+        ? Qt.rgba(1.0, 1.0, 1.0, 0.20)
         : Qt.rgba(1.0, 1.0, 1.0, 0.55)
 
     readonly property color glassHighlight: Theme.isDark
-        ? Qt.rgba(1.0, 1.0, 1.0, 0.22)
-        : Qt.rgba(1.0, 1.0, 1.0, 0.65)
+        ? Qt.rgba(1.0, 1.0, 1.0, 0.30)
+        : Qt.rgba(1.0, 1.0, 1.0, 0.70)
 
     // Crisp foreground text over frosted wallpaper glass
     readonly property color onCard: Theme.isDark ? Qt.rgba(0.96, 0.97, 0.96, 1.0) : Qt.rgba(0.09, 0.10, 0.11, 1.0)
     readonly property color onCardMuted: Theme.isDark ? Qt.rgba(0.90, 0.92, 0.90, 0.68) : Qt.rgba(0.15, 0.16, 0.18, 0.65)
+
+    // Translucent glass card backing when wallpaper blur is unavailable
+    readonly property color cardBg: Theme.isDark
+        ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.32)
+        : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.45)
 }

@@ -99,9 +99,9 @@ Item {
                     width: aweEditRow.implicitWidth + 24
                     height: 40
                     radius: 20
-                    color: Qt.rgba(qs.Core.Theme.bg.r, qs.Core.Theme.bg.g, qs.Core.Theme.bg.b, 0.92)
+                    color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.92)
                     border.width: 1
-                    border.color: qs.Core.Theme.accent
+                    border.color: Theme.accent
 
                     RowLayout {
                         id: aweEditRow
@@ -110,7 +110,7 @@ Item {
 
                         Text {
                             text: "Awe Edit Mode • Drag widgets or scroll to scale"
-                            color: qs.Core.Theme.fg
+                            color: Theme.fg
                             font.family: SettingsService.fontFamily
                             font.pixelSize: 12
                         }
@@ -119,13 +119,13 @@ Item {
                             implicitWidth: aweDoneTxt.implicitWidth + 16
                             implicitHeight: 26
                             radius: 13
-                            color: qs.Core.Theme.accent
+                            color: Theme.accent
 
                             Text {
                                 id: aweDoneTxt
                                 anchors.centerIn: parent
                                 text: "Done"
-                                color: qs.Core.Theme.isDark ? "#000000" : "#ffffff"
+                                color: Theme.isDark ? "#000000" : "#ffffff"
                                 font.family: SettingsService.fontFamily
                                 font.pixelSize: 11
                                 font.weight: Font.Bold

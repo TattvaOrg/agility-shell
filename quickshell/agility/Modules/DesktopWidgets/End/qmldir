@@ -1,0 +1,24 @@
+module qs.Modules.DesktopWidgets.End
+singleton EndWidgetStore 1.0 EndWidgetStore.qml
+singleton EndTheme 1.0 EndTheme.qml
+MaterialShape 1.0 MaterialShape.qml
+EndWidgetCard 1.0 EndWidgetCard.qml
+EndWidgetFrame 1.0 EndWidgetFrame.qml
+EndWidgetCanvas 1.0 EndWidgetCanvas.qml
+EndWidgetsLoader 1.0 EndWidgetsLoader.qml
+EndClockWidget 1.0 EndClockWidget.qml
+EndUserCardWidget 1.0 EndUserCardWidget.qml
+EndCalendarWidget 1.0 EndCalendarWidget.qml
+EndWeatherWidget 1.0 EndWeatherWidget.qml
+EndResourcesWidget 1.0 EndResourcesWidget.qml
+EndTodoWidget 1.0 EndTodoWidget.qml
+EndNotesWidget 1.0 EndNotesWidget.qml
+EndTimersWidget 1.0 EndTimersWidget.qml
+EndMediaWidget 1.0 EndMediaWidget.qml
+EndWorldClockWidget 1.0 EndWorldClockWidget.qml
+EndVisualizerWidget 1.0 EndVisualizerWidget.qml
+EndImageConverterWidget 1.0 EndImageConverterWidget.qml
+EndImageCardWidget 1.0 EndImageCardWidget.qml
+EndCustomImageWidget 1.0 EndCustomImageWidget.qml
+EndStickerWidget 1.0 EndStickerWidget.qml
+EndCustomTextWidget 1.0 EndCustomTextWidget.qml

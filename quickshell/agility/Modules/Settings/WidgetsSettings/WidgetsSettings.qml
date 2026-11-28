@@ -8,6 +8,7 @@ import qs.Core.Components
 import qs.Core.Services
 import qs.Modules.Settings.Components
 import qs.Modules.DesktopWidgets as DesktopWidgets
+import qs.Modules.DesktopWidgets.End as EndSuite
 
 AppContainer {
     id: widgetsSettingsRoot
@@ -243,7 +244,7 @@ AppContainer {
 
         SettingToggle {
             label: "Enable Desktop Widgets"
-            description: "Render interactive floating widgets with draggable placement directly on the desktop"
+            description: "Render interactive floating widgets directly on the desktop"
             checked: SettingsService.desktopWidgetsEnabled
             onToggled: (val) => {
                 SettingsService.desktopWidgetsEnabled = val;
@@ -251,7 +252,52 @@ AppContainer {
             }
         }
 
+        SettingSegmented {
+            label: "Widget Provider"
+            description: "Switch exclusively between Agility's Awe suite and the End suite"
+            model: [
+                { "text": "Awe", "value": "awe" },
+                { "text": "End", "value": "end" }
+            ]
+            currentValue: SettingsService.desktopWidgetProvider
+            onActivated: (val) => {
+                SettingsService.desktopWidgetProvider = val;
+            }
+        }
+
+        SettingRowTemplate {
+            label: "Widget Layout Edit Mode"
+            description: SettingsService.desktopWidgetsEditMode
+                ? "Edit mode active — drag or resize widgets on the desktop"
+                : "Unlock widget dragging and resize handles on the desktop"
+
+            Rectangle {
+                implicitWidth: wEditTxt.implicitWidth + 24
+                implicitHeight: Constants.size3Xl
+                radius: Constants.sizeXs
+                color: SettingsService.desktopWidgetsEditMode ? Theme.accent : Theme.bgAccent
+                border.width: 1
+                border.color: Theme.accent
+
+                ThemedText {
+                    id: wEditTxt
+                    anchors.centerIn: parent
+                    text: SettingsService.desktopWidgetsEditMode ? "Lock Layout" : "Edit Layout"
+                    customSize: 11
+                    font.weight: Font.Bold
+                    color: SettingsService.desktopWidgetsEditMode ? (Theme.isDark ? "#000000" : "#ffffff") : Theme.accent
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: SettingsService.desktopWidgetsEditMode = !SettingsService.desktopWidgetsEditMode
+                }
+            }
+        }
+
         SettingToggle {
+            visible: SettingsService.desktopWidgetProvider !== "end"
             label: "Floating Widget Manager Notch"
             description: "Display a floating desktop notch / pill to toggle widgets and access status on the fly"
             checked: widgetsSettingsRoot.showPill && SettingsService.widgetManagerNotchEnabled
@@ -263,6 +309,7 @@ AppContainer {
         }
 
         SettingSegmented {
+            visible: SettingsService.desktopWidgetProvider !== "end"
             label: "Notch Screen Position"
             description: "Anchor position of the floating manager notch on your primary desktop"
             model: [
@@ -276,6 +323,7 @@ AppContainer {
         }
 
         ColumnLayout {
+            visible: SettingsService.desktopWidgetProvider !== "end"
             Layout.fillWidth: true
             spacing: Constants.sizeSm
 
@@ -349,8 +397,9 @@ AppContainer {
         }
     }
 
-    // ─── Section 2: Visual Themes Engine ───
+    // ─── Section 2: Visual Themes Engine (Awe) ───
     AppGroup {
+        visible: SettingsService.desktopWidgetProvider !== "end"
         title: "Widget Visual Themes (11 Presets)"
         icon: "color-palette"
         badge: widgetsSettingsRoot.currentTheme.replace("_", " ").toUpperCase()
@@ -476,14 +525,16 @@ AppContainer {
         }
     }
 
-    // ─── Section 3: Widget Suite Manager (All 24 Widgets) ───
+    // ─── Section 3: Widget Suite Manager (Awe - All 24 Widgets) ───
     AppGroup {
+        visible: SettingsService.desktopWidgetProvider !== "end"
         title: "Widget Suite Manager (" + widgetsSettingsRoot.allWidgets.length + " Widgets)"
         icon: "box"
         badge: "Interactive"
 
         // Search & Filter Toolbar
         ColumnLayout {
+            visible: SettingsService.desktopWidgetProvider !== "end"
             Layout.fillWidth: true
             spacing: Constants.sizeSm
 
@@ -749,42 +800,11 @@ AppContainer {
                             }
                         }
 
-                        // Interactive Switch
-                        Switch {
+                        // macOS Checkbox
+                        MacCheckBox {
                             checked: parent.parent.isWidgetEnabled
                             Layout.alignment: Qt.AlignVCenter
-                            implicitWidth: Constants.size4Xl
-                            implicitHeight: Constants.sizeXl + 2
-                            onToggled: widgetsSettingsRoot.toggleWidget(modelData.id)
-
-                            HoverHandler {
-                                cursorShape: Qt.PointingHandCursor
-                            }
-
-                            indicator: Rectangle {
-                                implicitWidth: Constants.size4Xl
-                                implicitHeight: Constants.sizeXl + 2
-                                radius: height / 2
-                                color: parent.checked ? Theme.accent : Theme.bgSecondary
-                                border.width: 1
-                                border.color: parent.checked ? Theme.accent : Theme.border
-
-                                Rectangle {
-                                    x: parent.parent.checked ? parent.width - width - 2 : 2
-                                    y: 2
-                                    width: parent.height - 4
-                                    height: parent.height - 4
-                                    radius: width / 2
-                                    color: parent.parent.checked ? Theme.bg : Theme.muted
-
-                                    Behavior on x {
-                                        NumberAnimation {
-                                            duration: Constants.animFast
-                                            easing.type: Easing.OutQuad
-                                        }
-                                    }
-                                }
-                            }
+                            onToggled: (val) => widgetsSettingsRoot.toggleWidget(modelData.id)
                         }
                     }
                 }
@@ -792,8 +812,9 @@ AppContainer {
         }
     }
 
-    // ─── Section 4: Layout & Quick Setup Presets ───
+    // ─── Section 4: Layout & Quick Setup Presets (Awe) ───
     AppGroup {
+        visible: SettingsService.desktopWidgetProvider !== "end"
         title: "Desktop Layout Presets"
         icon: "layout"
 
@@ -842,6 +863,156 @@ AppContainer {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: widgetsSettingsRoot.applyPresetLayout(modelData.id)
+                    }
+                }
+            }
+        }
+    }
+
+    // ─── End Widget Suite Manager (shown when provider === "end") ───
+    AppGroup {
+        visible: SettingsService.desktopWidgetProvider === "end"
+        title: "End Widget Suite (" + EndSuite.EndWidgetStore.widgetCatalog.length + " Widgets)"
+        icon: "widgets"
+        badge: "End"
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Constants.sizeSm
+
+            ThemedText {
+                text: "Toggle individual End desktop widgets or reset positions per monitor"
+                customSize: Constants.sizeSm
+                color: Theme.muted
+                Layout.fillWidth: true
+            }
+
+            Repeater {
+                model: [
+                    { label: "Defaults", act: "defaults" },
+                    { label: "Enable All", act: "all" },
+                    { label: "Disable All", act: "none" },
+                    { label: "Reset Layout", act: "reset" }
+                ]
+                delegate: Rectangle {
+                    required property var modelData
+                    implicitHeight: 30
+                    implicitWidth: endBatchTxt.implicitWidth + 18
+                    radius: Constants.sizeXs
+                    color: Theme.bgSecondary
+                    border.width: 1
+                    border.color: Theme.border
+
+                    ThemedText {
+                        id: endBatchTxt
+                        anchors.centerIn: parent
+                        text: modelData.label
+                        customSize: 11
+                        font.weight: Font.Medium
+                        color: modelData.act === "all" ? Theme.accent : Theme.fg
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (modelData.act === "defaults") EndSuite.EndWidgetStore.applyDefaultVisibility();
+                            else if (modelData.act === "all") EndSuite.EndWidgetStore.setAllVisibility(true);
+                            else if (modelData.act === "none") EndSuite.EndWidgetStore.setAllVisibility(false);
+                            else EndSuite.EndWidgetStore.resetLayouts();
+                        }
+                    }
+                }
+            }
+        }
+
+        GridLayout {
+            Layout.fillWidth: true
+            columns: 2
+            rowSpacing: Constants.sizeSm
+            columnSpacing: Constants.sizeSm
+
+            Repeater {
+                model: EndSuite.EndWidgetStore.widgetCatalog
+
+                Rectangle {
+                    id: endMgrCard
+                    required property var modelData
+                    readonly property bool isOn: EndSuite.EndWidgetStore.visibility[modelData.id] === true
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 64
+                    radius: Constants.sizeSm
+                    color: isOn ? Theme.bgSecondary : Theme.bgTertiary
+                    border.width: 1
+                    border.color: isOn ? Theme.border : "transparent"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: Constants.sizeSm
+                        spacing: Constants.sizeSm
+
+                        Rectangle {
+                            width: 34
+                            height: 34
+                            radius: Constants.sizeXs
+                            color: endMgrCard.isOn ? Theme.bgAccent : Theme.bgSecondary
+                            border.width: 1
+                            border.color: endMgrCard.isOn ? Theme.accent : Theme.border
+
+                            SvgIcon {
+                                anchors.centerIn: parent
+                                icon: endMgrCard.modelData.icon
+                                iconSize: 16
+                                iconColor: endMgrCard.isOn ? Theme.accent : Theme.muted
+                                flat: true
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            RowLayout {
+                                spacing: Constants.sizeXs
+                                ThemedText {
+                                    text: endMgrCard.modelData.name
+                                    customSize: 12
+                                    font.weight: Font.Bold
+                                    color: endMgrCard.isOn ? Theme.fg : Theme.muted
+                                }
+                                Rectangle {
+                                    implicitHeight: 14
+                                    implicitWidth: endCatLbl.implicitWidth + 8
+                                    radius: 3
+                                    color: Theme.bgTertiary
+                                    border.width: 1
+                                    border.color: Theme.border
+                                    ThemedText {
+                                        id: endCatLbl
+                                        anchors.centerIn: parent
+                                        text: endMgrCard.modelData.cat
+                                        customSize: 8
+                                        color: Theme.muted
+                                    }
+                                }
+                            }
+
+                            ThemedText {
+                                Layout.fillWidth: true
+                                text: endMgrCard.modelData.desc
+                                customSize: 10
+                                color: Theme.muted
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // macOS Checkbox
+                        MacCheckBox {
+                            checked: endMgrCard.isOn
+                            Layout.alignment: Qt.AlignVCenter
+                            onToggled: (val) => EndSuite.EndWidgetStore.setWidgetEnabled(endMgrCard.modelData.id, val)
+                        }
                     }
                 }
             }

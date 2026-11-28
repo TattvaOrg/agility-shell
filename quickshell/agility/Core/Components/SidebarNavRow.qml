@@ -9,6 +9,7 @@ Rectangle {
     property string iconName: ""
     property string labelText: ""
     property string statusText: ""
+    property string badgeColor: ""
     property bool isActive: false
     property bool hasChevron: false
     property bool isExpanded: false
@@ -17,38 +18,58 @@ Rectangle {
     signal chevronClicked()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: Constants.size3Xl
-    radius: Constants.sizeXs
-    scale: tapHandler.pressed ? 0.98 : 1
-    color: isActive ? Theme.bgSecondary : (hoverHandler.hovered ? Theme.border : "transparent")
-    border.color: isActive ? Theme.border : "transparent"
-    border.width: 1
+    Layout.preferredHeight: 34
+    radius: 7
+    scale: tapHandler.pressed ? 0.985 : 1
+    color: isActive ? Theme.accent : (hoverHandler.hovered ? (Theme.isDark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.05)) : "transparent")
+    border.color: "transparent"
+    border.width: 0
 
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: Constants.sizeSm
         anchors.rightMargin: Constants.sizeSm
-        spacing: Constants.sizeXs
+        spacing: Constants.sizeSm
 
+        // macOS Squircle Icon Badge with original project SVG
+        Rectangle {
+            visible: rowRoot.badgeColor !== ""
+            width: 24
+            height: 24
+            radius: 6
+            color: rowRoot.badgeColor !== "" ? rowRoot.badgeColor : "transparent"
+            Layout.alignment: Qt.AlignVCenter
+
+            SvgIcon {
+                anchors.centerIn: parent
+                icon: rowRoot.iconName
+                iconSize: 14
+                flat: true
+                iconColor: "#FFFFFF"
+            }
+        }
+
+        // Standard Flat Icon fallback when no badge color is provided
         SvgIcon {
+            visible: rowRoot.badgeColor === ""
             icon: rowRoot.iconName
             iconSize: 15
             flat: true
-            iconColor: rowRoot.isActive ? Theme.fg : (hoverHandler.hovered ? Theme.fg : Theme.muted)
+            iconColor: rowRoot.isActive ? "#FFFFFF" : (hoverHandler.hovered ? Theme.fg : Theme.muted)
+            Layout.alignment: Qt.AlignVCenter
 
             Behavior on iconColor {
                 ColorAnimation {
                     duration: Constants.animFast
                 }
-
             }
-
         }
 
         ThemedText {
             text: rowRoot.labelText
+            customSize: 13
             font.weight: rowRoot.isActive ? Font.DemiBold : Font.Normal
-            color: rowRoot.isActive ? Theme.fg : (hoverHandler.hovered ? Theme.fg : Theme.muted)
+            color: rowRoot.isActive ? "#FFFFFF" : (hoverHandler.hovered ? Theme.fg : Theme.muted)
             elide: Text.ElideRight
             Layout.fillWidth: true
 
@@ -56,9 +77,7 @@ Rectangle {
                 ColorAnimation {
                     duration: Constants.animFast
                 }
-
             }
-
         }
 
         Rectangle {
@@ -66,7 +85,7 @@ Rectangle {
             implicitHeight: Constants.sizeLg + 2
             implicitWidth: Math.max(statusLabel.implicitWidth + 10, 18)
             radius: height / 2
-            color: rowRoot.isActive ? Theme.bgAccent : Theme.bgSecondary
+            color: rowRoot.isActive ? Qt.rgba(1, 1, 1, 0.25) : Theme.bgSecondary
             Layout.alignment: Qt.AlignVCenter
 
             ThemedText {
@@ -76,9 +95,8 @@ Rectangle {
                 text: rowRoot.statusText
                 customSize: 10
                 font.weight: rowRoot.isActive ? Font.Bold : Font.Normal
-                color: rowRoot.isActive ? Theme.accent : Theme.muted
+                color: rowRoot.isActive ? "#FFFFFF" : Theme.muted
             }
-
         }
 
         SvgIcon {
@@ -87,7 +105,7 @@ Rectangle {
             iconSize: 12
             flat: true
             rotation: rowRoot.isExpanded ? 0 : -90
-            iconColor: rowRoot.isActive ? Theme.fg : (hoverHandler.hovered ? Theme.fg : Theme.muted)
+            iconColor: rowRoot.isActive ? "#FFFFFF" : (hoverHandler.hovered ? Theme.fg : Theme.muted)
             Layout.alignment: Qt.AlignVCenter
             Layout.rightMargin: Constants.size3Xs
 
@@ -98,18 +116,15 @@ Rectangle {
                 }
             }
         }
-
     }
 
     HoverHandler {
         id: hoverHandler
-
         cursorShape: Qt.PointingHandCursor
     }
 
     TapHandler {
         id: tapHandler
-
         onTapped: rowRoot.rowClicked()
     }
 
@@ -117,7 +132,6 @@ Rectangle {
         ColorAnimation {
             duration: Constants.animFast
         }
-
     }
 
     Behavior on scale {
@@ -125,7 +139,5 @@ Rectangle {
             duration: Constants.animFast
             easing.type: Easing.OutQuart
         }
-
     }
-
 }

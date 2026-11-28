@@ -23,23 +23,23 @@ SettingRowTemplate {
 
     RowLayout {
         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-        spacing: 6
+        spacing: 4
         opacity: root.enabled ? 1 : 0.5
 
         // Minus Button
         Rectangle {
-            width: Constants.size3Xl
-            height: Constants.size3Xl
-            radius: Constants.sizeXs
-            color: minusArea.containsMouse ? Theme.bgSecondary : Theme.bgTertiary
+            width: 28
+            height: 28
+            radius: 6
+            color: minusArea.containsMouse ? (Theme.isDark ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(0, 0, 0, 0.08)) : (Theme.isDark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.04))
             scale: minusArea.pressed ? 0.94 : 1
             border.width: 1
-            border.color: minusArea.containsMouse ? Theme.accent : Theme.border
+            border.color: Theme.borderSecondary
 
             SvgIcon {
                 anchors.centerIn: parent
                 icon: "minus"
-                iconSize: Constants.sizeMd
+                iconSize: 12
                 iconColor: root.value <= root.from ? Theme.muted : Theme.fg
                 flat: true
             }
@@ -63,14 +63,6 @@ SettingRowTemplate {
                 ColorAnimation {
                     duration: Constants.animFast
                 }
-
-            }
-
-            Behavior on border.color {
-                ColorAnimation {
-                    duration: Constants.animFast
-                }
-
             }
 
             Behavior on scale {
@@ -78,19 +70,17 @@ SettingRowTemplate {
                     duration: Constants.animFast
                     easing.type: Easing.OutQuart
                 }
-
             }
-
         }
 
         // Center Value Input
         Rectangle {
-            Layout.preferredWidth: Math.max(58, contentRow.implicitWidth + 20)
-            Layout.preferredHeight: Constants.size3Xl
-            radius: Constants.sizeXs
-            color: Theme.bgSecondary
+            Layout.preferredWidth: Math.max(54, contentRow.implicitWidth + 16)
+            Layout.preferredHeight: 28
+            radius: 6
+            color: Theme.isDark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.04)
             border.width: 1
-            border.color: valueInput.activeFocus ? Theme.accent : Theme.border
+            border.color: valueInput.activeFocus ? Theme.accent : Theme.borderSecondary
 
             MouseArea {
                 anchors.fill: parent
@@ -170,18 +160,18 @@ SettingRowTemplate {
 
         // Plus Button
         Rectangle {
-            width: Constants.size3Xl
-            height: Constants.size3Xl
-            radius: Constants.sizeXs
-            color: plusArea.containsMouse ? Theme.bgSecondary : Theme.bgTertiary
+            width: 28
+            height: 28
+            radius: 6
+            color: plusArea.containsMouse ? (Theme.isDark ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(0, 0, 0, 0.08)) : (Theme.isDark ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.04))
             scale: plusArea.pressed ? 0.94 : 1
             border.width: 1
-            border.color: plusArea.containsMouse ? Theme.accent : Theme.border
+            border.color: Theme.borderSecondary
 
             SvgIcon {
                 anchors.centerIn: parent
                 icon: "plus"
-                iconSize: Constants.sizeMd
+                iconSize: 12
                 iconColor: root.value >= root.to ? Theme.muted : Theme.fg
                 flat: true
             }

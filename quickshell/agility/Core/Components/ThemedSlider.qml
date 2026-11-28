@@ -1,3 +1,4 @@
+import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -12,7 +13,7 @@ Item {
     property string icon: ""
     property string suffix: "%"
     property int decimals: 0
-    property color accentColor: Theme.accent
+    property color accentColor: "#0091FF" // Apple System Vibrant Blue from Sketch asset
     property real from: 0
     property real to: 100
     property real stepSize: 1
@@ -25,7 +26,7 @@ Item {
     signal iconClicked()
 
     Layout.fillWidth: true
-    implicitHeight: root.label !== "" ? (labelRow.implicitHeight + mainRow.implicitHeight + 4) : Constants.size2Xl + 2
+    implicitHeight: root.label !== "" ? (labelRow.implicitHeight + mainRow.implicitHeight + 4) : 26
 
     ColumnLayout {
         anchors.fill: parent
@@ -39,7 +40,8 @@ Item {
 
             ThemedText {
                 text: root.label
-                font.bold: true
+                customSize: 13
+                font.weight: Font.Medium
                 color: Theme.fg
                 Layout.fillWidth: true
             }
@@ -49,7 +51,7 @@ Item {
                     let v = root.decimals > 0 ? root.value.toFixed(root.decimals) : Math.round(root.value);
                     return v + (root.suffix !== "" ? root.suffix : "");
                 }
-                font.bold: true
+                customSize: 11
                 color: Theme.muted
                 visible: root.showValue && root.icon === ""
             }
@@ -60,7 +62,7 @@ Item {
             id: mainRow
 
             Layout.fillWidth: true
-            Layout.preferredHeight: Constants.size2Xl + 2
+            Layout.preferredHeight: 24
             spacing: Constants.sizeSm
 
             // Left Icon
@@ -96,7 +98,7 @@ Item {
 
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
-                implicitHeight: Constants.size2Xl + 2
+                implicitHeight: 24
                 from: root.from
                 to: root.to
                 stepSize: root.stepSize
@@ -131,30 +133,23 @@ Item {
                     }
                 }
 
+                // macOS Slider 4px Track
                 background: Rectangle {
                     id: trackRect
 
                     x: internalSlider.leftPadding
                     y: Math.round(internalSlider.topPadding + (internalSlider.availableHeight - height) / 2)
                     width: internalSlider.availableWidth
-                    height: Constants.size2Xs + 2
-                    radius: height / 2
-                    color: Theme.bgSecondary
+                    height: 4
+                    radius: 2
+                    color: Theme.isDark ? Qt.rgba(120 / 255, 120 / 255, 128 / 255, 0.36) : Qt.rgba(0, 0, 0, 0.15)
 
                     Rectangle {
                         id: progressRect
 
-                        width: {
-                            if (internalSlider.value <= internalSlider.from)
-                                return 0;
-
-                            if (internalSlider.value >= internalSlider.to)
-                                return parent.width;
-
-                            return Math.max(0, Math.min(parent.width, sliderHandle.x + sliderHandle.width / 2));
-                        }
+                        width: internalSlider.visualPosition <= 0 ? 0 : Math.min(parent.width, sliderHandle.x + sliderHandle.width / 2)
                         height: parent.height
-                        radius: height / 2
+                        radius: 2
                         color: root.enabled ? root.accentColor : Theme.muted
 
                         Behavior on width {
@@ -171,6 +166,7 @@ Item {
 
                 }
 
+                // macOS Slider 24 x 16 Capsule Thumb Handle
                 handle: Rectangle {
                     id: sliderHandle
 
@@ -178,17 +174,28 @@ Item {
 
                     x: Math.round(internalSlider.leftPadding + internalSlider.visualPosition * trackWidth)
                     y: Math.round(internalSlider.topPadding + (internalSlider.availableHeight - height) / 2)
-                    width: 5
-                    height: Constants.size2Xl
-                    radius: height / 2
-                    color: root.enabled ? root.accentColor : Theme.muted
-                    scale: internalSlider.pressed ? 1.15 : (sliderHover.hovered ? 1.08 : 1)
+                    width: 24
+                    height: 16
+                    radius: 8
+                    color: "#FFFFFF"
+                    border.width: 0.5
+                    border.color: Theme.isDark ? "#00000030" : "#00000018"
+                    scale: internalSlider.pressed ? 1.04 : (sliderHover.hovered ? 1.02 : 1.0)
                     transformOrigin: Item.Center
+
+                    layer.enabled: true
+                    layer.effect: DropShadow {
+                        transparentBorder: true
+                        color: "#00000035"
+                        radius: 3
+                        samples: 9
+                        verticalOffset: 1.2
+                    }
 
                     Behavior on scale {
                         NumberAnimation {
                             duration: Constants.animFast
-                            easing.type: Easing.OutBack
+                            easing.type: Easing.OutQuad
                         }
 
                     }
@@ -207,7 +214,7 @@ Item {
 
             }
 
-            // Right Value
+            // Right Value Readout
             ThemedText {
                 id: valueLabel
 
@@ -215,7 +222,7 @@ Item {
                     let v = root.decimals > 0 ? root.value.toFixed(root.decimals) : Math.round(root.value);
                     return v + (root.suffix !== "" ? root.suffix : "");
                 }
-                font.bold: true
+                customSize: 11
                 color: root.enabled ? Theme.fg : Theme.muted
                 visible: root.showValue
                 Layout.alignment: Qt.AlignVCenter

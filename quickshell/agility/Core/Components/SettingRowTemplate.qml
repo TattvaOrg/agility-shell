@@ -8,11 +8,11 @@ Item {
 
     property string label: ""
     property string description: ""
-    property int labelSize: Constants.sizeSm
+    property int labelSize: 13
     property bool isSubSetting: false
     default property alias content: controlContainer.data
 
-    implicitHeight: mainLayout.implicitHeight
+    implicitHeight: Math.max(38, mainLayout.implicitHeight + 8)
     Layout.fillWidth: true
 
     RowLayout {
@@ -20,18 +20,21 @@ Item {
 
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
-        spacing: Constants.sizeLg
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Constants.sizeMd
 
         ColumnLayout {
-            spacing: Constants.size3Xs
+            spacing: 2
             Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+            Layout.fillWidth: true
 
             ThemedText {
                 text: root.label
                 customSize: root.labelSize
                 font.weight: Font.Medium
                 color: root.enabled ? Theme.fg : Theme.muted
+                elide: Text.ElideRight
+                Layout.fillWidth: true
             }
 
             ThemedText {
@@ -39,12 +42,9 @@ Item {
                 customSize: 11
                 color: Theme.muted
                 visible: root.description !== ""
+                elide: Text.ElideRight
+                Layout.fillWidth: true
             }
-
-        }
-
-        Item {
-            Layout.fillWidth: true
         }
 
         Item {
@@ -54,7 +54,5 @@ Item {
             implicitWidth: childrenRect.width
             implicitHeight: childrenRect.height
         }
-
     }
-
 }

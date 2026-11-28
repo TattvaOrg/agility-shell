@@ -49,10 +49,10 @@ QtObject {
     readonly property color tertiary: shiftHue(Theme.accent, -0.22, 1.05, 0.76)
     readonly property color onTertiary: contrastOn(tertiary)
 
-    // Translucent frosted glass tint layered over the undimmed blurred wallpaper
+    // Translucent frosted glass tint layered over the undimmed direct wallpaper
     readonly property color glassTint: {
         let base = mixColor(Theme.bg, Theme.accent, 0.22);
-        return Qt.rgba(base.r, base.g, base.b, Theme.isDark ? 0.28 : 0.38);
+        return Qt.rgba(base.r, base.g, base.b, Theme.isDark ? 0.22 : 0.30);
     }
 
     // Inner sub-tile / metric pill fill (frosted dark-tinted chip inside cards)

@@ -1,12 +1,14 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 import qs.Core
+import qs.Core.Services
 
 /*
- * Expressive Material 3 frosted glass widget card surface matching pctrade/end4-pC's
- * reference screenshot. Cards render with translucent glass, ambient drop shadows,
- * undimmed blurred wallpaper backdrop sampling, and top specular highlights so they stay
- * transparent, luminous, and completely unaffected by desktop composition dimming.
+ * Direct-wallpaper masked glass widget card surface matching DesktopCompositionLayer's
+ * central shape. Cards directly render the undimmed active wallpaper crop masked
+ * strictly to their rounded boundary with a luminous glass tint, ambient drop shadow,
+ * and top specular highlight so they stay transparent, bright, and completely immune
+ * to desktop composition backdrop dimming.
  */
 Item {
     id: root
@@ -22,6 +24,12 @@ Item {
     property real trackX: 0
     property real trackY: 0
 
+    readonly property string wallpaperSource: {
+        let p = WallpaperManager.currentWallpaperPath;
+        if (!p) return "";
+        return p.startsWith("file://") ? p : ("file://" + p);
+    }
+
     readonly property var _frame: {
         if (widgetFrame)
             return widgetFrame;
@@ -35,23 +43,25 @@ Item {
     }
 
     readonly property var _canvas: _frame ? _frame.findCanvasItem() : null
-    readonly property var blurSource: _canvas ? _canvas.blurSourceItem : null
-    readonly property bool hasWallpaperBlur: blurSource !== null && _canvas && _canvas.wallpaperUrl !== ""
-
-    readonly property point _canvasPt: (_canvas && blurSource) ? root.mapToItem(_canvas, 0, 0) : Qt.point(0, 0)
-    readonly property real _sampleX: Math.max(0, Math.min(_canvas ? _canvas.width - 1 : 0, _canvasPt.x))
-    readonly property real _sampleY: Math.max(0, Math.min(_canvas ? _canvas.height - 1 : 0, _canvasPt.y))
-    readonly property real _sampleW: Math.max(1, Math.min(_canvas ? (_canvas.width - _sampleX) : width, width))
-    readonly property real _sampleH: Math.max(1, Math.min(_canvas ? (_canvas.height - _sampleY) : height, height))
+    readonly property point _canvasPt: _canvas ? root.mapToItem(_canvas, 0, 0) : Qt.point(0, 0)
 
     readonly property color resolvedTint: tintOpacity >= 0
         ? Qt.rgba(tint.r, tint.g, tint.b, tintOpacity)
         : tint
 
+    // Mask shape for card body
+    Rectangle {
+        id: cardMask
+        anchors.fill: parent
+        radius: root.cardRadius
+        color: "#ffffff"
+        visible: false
+    }
+
     // Soft ambient shadow behind card
     DropShadow {
-        anchors.fill: cardBody
-        source: cardBody
+        anchors.fill: cardMask
+        source: cardMask
         visible: root.shadowed
         transparentBorder: true
         color: Qt.rgba(0, 0, 0, Theme.isDark ? 0.45 : 0.22)
@@ -60,44 +70,60 @@ Item {
         verticalOffset: 5
     }
 
-    // Elevated M3 card container body (transparent when wallpaper blur active, translucent glass fallback)
-    Rectangle {
-        id: cardBody
-        anchors.fill: parent
-        radius: root.cardRadius
-        color: root.hasWallpaperBlur ? "transparent" : EndTheme.cardBg
-        antialiasing: true
-    }
-
-    // Real undimmed blurred wallpaper slice clipped to card radius
+    // Direct undimmed wallpaper host masked to the card (matching central shape composition)
     Item {
-        id: glassLayer
+        id: cardFocalHost
         anchors.fill: parent
-        visible: root.hasWallpaperBlur
-
-        layer.enabled: root.hasWallpaperBlur
+        layer.enabled: true
         layer.effect: OpacityMask {
-            maskSource: Rectangle {
-                width: glassLayer.width
-                height: glassLayer.height
-                radius: root.cardRadius
-            }
+            maskSource: cardMask
         }
 
-        ShaderEffectSource {
+        // Fallback surface if wallpaper path is empty
+        Rectangle {
             anchors.fill: parent
-            sourceItem: root.blurSource
-            sourceRect: Qt.rect(root._sampleX, root._sampleY, root._sampleW, root._sampleH)
-            live: true
+            color: Theme.bgSecondary
+            visible: root.wallpaperSource === ""
+        }
+
+        // Direct real undimmed wallpaper registered with desktop coordinates
+        Image {
+            id: directWallpaper
+            x: -root._canvasPt.x
+            y: -root._canvasPt.y
+            width: _canvas ? _canvas.width : 1920
+            height: _canvas ? _canvas.height : 1080
+            source: root.wallpaperSource
+            fillMode: Image.PreserveAspectCrop
+            sourceSize: Qt.size(
+                Math.max(1, Math.ceil(_canvas ? _canvas.width : 1920)),
+                Math.max(1, Math.ceil(_canvas ? _canvas.height : 1080))
+            )
+            asynchronous: true
+            cache: true
             smooth: true
+            mipmap: true
+            visible: root.wallpaperSource !== ""
+        }
+
+        // Translucent Material 3 glass wash over the direct wallpaper
+        Rectangle {
+            anchors.fill: parent
+            color: root.resolvedTint
+        }
+
+        // Inner subtle luminous highlight
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(1, 1, 1, Theme.isDark ? 0.04 : 0.08)
         }
     }
 
-    // Translucent Material 3 tint + glass rim over the card
+    // Translucent Material 3 glass rim over the card
     Rectangle {
         anchors.fill: parent
         radius: root.cardRadius
-        color: root.resolvedTint
+        color: "transparent"
         border.width: root.showBorder ? 1 : 0
         border.color: EndTheme.glassBorder
         antialiasing: true

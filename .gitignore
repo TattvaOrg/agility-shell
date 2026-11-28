@@ -19,5 +19,3 @@ config/*.json
 # Rust build artifacts
 target/
 
-# Cloned reference repos
-end4-pC/

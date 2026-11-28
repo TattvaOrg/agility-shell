@@ -32,46 +32,6 @@ MouseArea {
         if (!p) return "";
         return p.startsWith("file://") ? p : ("file://" + p);
     }
-    readonly property alias blurSourceItem: blurredTexture
-
-    // Single shared UNDIMMED blurred wallpaper source for all frosted End widget cards.
-    // Rendered into a single offscreen ShaderEffectSource so dragging cards stays 60 FPS.
-    Item {
-        id: blurredWallpaperHost
-        width: root.width
-        height: root.height
-
-        Image {
-            id: rawRealWallpaper
-            anchors.fill: parent
-            source: root.wallpaperUrl
-            fillMode: Image.PreserveAspectCrop
-            sourceSize: Qt.size(
-                Math.max(1, Math.ceil(root.screen ? root.screen.width : root.width)),
-                Math.max(1, Math.ceil(root.screen ? root.screen.height : root.height))
-            )
-            asynchronous: true
-            cache: true
-            smooth: true
-            visible: true
-        }
-
-        FastBlur {
-            id: realWallpaperBlur
-            anchors.fill: rawRealWallpaper
-            source: rawRealWallpaper
-            radius: 46
-            transparentBorder: false
-        }
-    }
-
-    ShaderEffectSource {
-        id: blurredTexture
-        sourceItem: realWallpaperBlur
-        hideSource: true
-        visible: false
-        live: true
-    }
 
     acceptedButtons: editMode ? Qt.LeftButton : Qt.NoButton
     hoverEnabled: editMode

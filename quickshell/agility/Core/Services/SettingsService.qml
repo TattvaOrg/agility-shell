@@ -106,7 +106,7 @@ Item {
     property int settingsBoxedWidth: 960
     property int settingsBoxedHeight: 640
     property bool settingsBorderlessMode: true
-    property bool settingsCustomBackgroundEnabled: false
+    property bool settingsCustomBackgroundEnabled: true
     property string settingsCustomBackgroundSource: "wallpaper" // "wallpaper", "custom"
     property string settingsCustomBackgroundImage: ""
     property real settingsCustomBackgroundDim: 0.60

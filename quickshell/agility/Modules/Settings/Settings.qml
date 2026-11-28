@@ -197,9 +197,9 @@ AppWindow {
                     return "";
                 if (SettingsService.settingsCustomBackgroundSource === "custom" && SettingsService.settingsCustomBackgroundImage !== "")
                     return "file://" + SettingsService.settingsCustomBackgroundImage;
-                if (WallpaperManager.currentWallpaperPath !== "")
+                if (WallpaperManager.currentWallpaperPath && WallpaperManager.currentWallpaperPath !== "")
                     return "file://" + WallpaperManager.currentWallpaperPath;
-                return "";
+                return "file:///home/cachy/Pictures/Wallpapers/3.png";
             }
             asynchronous: true
             cache: true

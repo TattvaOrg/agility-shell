@@ -207,10 +207,9 @@ AppContainer {
         }
 
         ThemedSelect {
-            visible: SettingsService.settingsCustomBackgroundEnabled
             label: "Background Source"
-            description: "Choose between your desktop wallpaper or a custom image file"
-            model: ["Current Desktop Wallpaper", "Custom Image File"]
+            description: "Choose between your desktop wallpaper or a custom local image file"
+            model: ["Desktop Wallpaper", "Custom Image File"]
             currentIndex: SettingsService.settingsCustomBackgroundSource === "custom" ? 1 : 0
             onActivated: (index) => {
                 SettingsService.settingsCustomBackgroundSource = index === 1 ? "custom" : "wallpaper";
@@ -218,11 +217,10 @@ AppContainer {
         }
 
         SettingRowTemplate {
-            visible: SettingsService.settingsCustomBackgroundEnabled && SettingsService.settingsCustomBackgroundSource === "custom"
-            label: "Selected Image"
-            description: SettingsService.settingsCustomBackgroundImage !== ""
+            label: "Custom Background Image"
+            description: SettingsService.settingsCustomBackgroundSource === "custom" && SettingsService.settingsCustomBackgroundImage !== ""
                 ? SettingsService.settingsCustomBackgroundImage
-                : "No image selected. Click Browse to pick an image."
+                : "Using current desktop wallpaper. Click Browse to pick any local image file."
 
             RowLayout {
                 spacing: 8
@@ -236,18 +234,23 @@ AppContainer {
                     color: "#2C2C2E"
                     border.width: 1
                     border.color: Theme.border
-                    visible: SettingsService.settingsCustomBackgroundImage !== ""
 
                     Image {
                         anchors.fill: parent
-                        source: SettingsService.settingsCustomBackgroundImage !== "" ? ("file://" + SettingsService.settingsCustomBackgroundImage) : ""
+                        source: {
+                            if (SettingsService.settingsCustomBackgroundSource === "custom" && SettingsService.settingsCustomBackgroundImage !== "")
+                                return "file://" + SettingsService.settingsCustomBackgroundImage;
+                            if (WallpaperManager.currentWallpaperPath && WallpaperManager.currentWallpaperPath !== "")
+                                return "file://" + WallpaperManager.currentWallpaperPath;
+                            return "file:///home/cachy/Pictures/Wallpapers/3.png";
+                        }
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                     }
                 }
 
                 Rectangle {
-                    implicitWidth: 84
+                    implicitWidth: 92
                     implicitHeight: 28
                     radius: 6
                     color: browseHover.hovered ? (Theme.isDark ? "#3A3A3C" : "#E5E5EA") : (Theme.isDark ? "#2C2C2E" : "#F2F2F7")
@@ -286,11 +289,41 @@ AppContainer {
                         }
                     }
                 }
+
+                Rectangle {
+                    implicitWidth: 64
+                    implicitHeight: 28
+                    radius: 6
+                    visible: SettingsService.settingsCustomBackgroundSource === "custom"
+                    color: resetHover.hovered ? (Theme.isDark ? "#3A3A3C" : "#E5E5EA") : (Theme.isDark ? "#2C2C2E" : "#F2F2F7")
+                    border.width: 1
+                    border.color: Theme.border
+
+                    HoverHandler {
+                        id: resetHover
+                    }
+
+                    ThemedText {
+                        anchors.centerIn: parent
+                        text: "Reset"
+                        customSize: 12
+                        font.weight: Font.Medium
+                        color: Theme.muted
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            SettingsService.settingsCustomBackgroundSource = "wallpaper";
+                            SettingsService.settingsCustomBackgroundImage = "";
+                        }
+                    }
+                }
             }
         }
 
         ThemedSlider {
-            visible: SettingsService.settingsCustomBackgroundEnabled
             label: "Background Dimming"
             suffix: "%"
             from: 10
@@ -303,7 +336,6 @@ AppContainer {
         }
 
         ThemedSlider {
-            visible: SettingsService.settingsCustomBackgroundEnabled
             label: "Background Blur"
             suffix: "px"
             from: 0

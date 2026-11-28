@@ -13,6 +13,20 @@ AppContainer {
     id: wallpaperRoot
 
     Process {
+        id: singleWpPickerProc
+
+        command: ["sh", "-c", "zenity --file-selection --file-filter='Images | *.png *.jpg *.jpeg *.webp *.gif' --title='Select Desktop Wallpaper' 2>/dev/null || true"]
+        stdout: SplitParser {
+            onRead: (data) => {
+                let path = ("" + data).trim();
+                if (path && path !== "") {
+                    WallpaperManager.applyWallpaper(path);
+                }
+            }
+        }
+    }
+
+    Process {
         id: folderPickerProc
 
         command: ["sh", "-c", "zenity --file-selection --directory --title='Select Wallpapers Folder' 2>/dev/null || true"]
@@ -33,6 +47,53 @@ AppContainer {
     AppGroup {
         title: "Wallpaper Source & Library"
         icon: "folder"
+
+        SettingRowTemplate {
+            label: "Select Local Wallpaper Image"
+            description: "Pick any local picture (.png, .jpg, .webp) to set as your desktop wallpaper immediately"
+
+            Rectangle {
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                implicitWidth: 140
+                implicitHeight: 28
+                radius: 6
+                color: localWpHover.hovered ? (Theme.isDark ? "#3A3A3C" : "#E5E5EA") : (Theme.isDark ? "#2C2C2E" : "#F2F2F7")
+                border.width: 1
+                border.color: Theme.border
+
+                HoverHandler {
+                    id: localWpHover
+                }
+
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    SvgIcon {
+                        icon: "picture"
+                        iconSize: 14
+                        flat: true
+                        iconColor: Theme.fg
+                    }
+
+                    ThemedText {
+                        text: "Choose Image..."
+                        customSize: 12
+                        font.weight: Font.Medium
+                        color: Theme.fg
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        singleWpPickerProc.running = false;
+                        singleWpPickerProc.running = true;
+                    }
+                }
+            }
+        }
 
         SettingSegmented {
             label: "Wallpaper Source"

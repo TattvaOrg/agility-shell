@@ -52,7 +52,7 @@ QtObject {
     // Translucent frosted glass tint layered over the undimmed blurred wallpaper
     readonly property color glassTint: {
         let base = mixColor(Theme.bg, Theme.accent, 0.22);
-        return Qt.rgba(base.r, base.g, base.b, Theme.isDark ? 0.36 : 0.48);
+        return Qt.rgba(base.r, base.g, base.b, Theme.isDark ? 0.28 : 0.38);
     }
 
     // Inner sub-tile / metric pill fill (frosted dark-tinted chip inside cards)
@@ -65,31 +65,19 @@ QtObject {
         : Qt.rgba(0.0, 0.0, 0.0, 0.12)
 
     readonly property color glassBorder: Theme.isDark
-        ? Qt.rgba(1.0, 1.0, 1.0, 0.18)
+        ? Qt.rgba(1.0, 1.0, 1.0, 0.20)
         : Qt.rgba(1.0, 1.0, 1.0, 0.55)
 
     readonly property color glassHighlight: Theme.isDark
-        ? Qt.rgba(1.0, 1.0, 1.0, 0.22)
-        : Qt.rgba(1.0, 1.0, 1.0, 0.65)
+        ? Qt.rgba(1.0, 1.0, 1.0, 0.30)
+        : Qt.rgba(1.0, 1.0, 1.0, 0.70)
 
     // Crisp foreground text over frosted wallpaper glass
     readonly property color onCard: Theme.isDark ? Qt.rgba(0.96, 0.97, 0.96, 1.0) : Qt.rgba(0.09, 0.10, 0.11, 1.0)
     readonly property color onCardMuted: Theme.isDark ? Qt.rgba(0.90, 0.92, 0.90, 0.68) : Qt.rgba(0.15, 0.16, 0.18, 0.65)
 
-    // Elevated M3 card surface fill:
-    // In Dark Mode: dark tinted surface container with high clarity and subtle primary warmth
-    // In Light Mode: clean crisp elevated white container
+    // Translucent glass card backing when wallpaper blur is unavailable
     readonly property color cardBg: Theme.isDark
-        ? Qt.rgba(
-            Math.min(1.0, Theme.bg.r * 1.30 + Theme.accent.r * 0.08),
-            Math.min(1.0, Theme.bg.g * 1.30 + Theme.accent.g * 0.08),
-            Math.min(1.0, Theme.bg.b * 1.30 + Theme.accent.b * 0.08),
-            0.82
-          )
-        : Qt.rgba(
-            Math.max(0.0, Theme.bg.r * 0.96),
-            Math.max(0.0, Theme.bg.g * 0.96),
-            Math.max(0.0, Theme.bg.b * 0.96),
-            0.92
-          )
+        ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.32)
+        : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.45)
 }

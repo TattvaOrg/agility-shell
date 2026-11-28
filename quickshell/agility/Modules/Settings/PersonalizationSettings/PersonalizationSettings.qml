@@ -46,6 +46,21 @@ AppContainer {
     }
 
     Process {
+        id: imagePickerProc
+
+        command: ["sh", "-c", "zenity --file-selection --file-filter='Images | *.png *.jpg *.jpeg *.webp *.gif' --title='Select Settings Window Background Image' 2>/dev/null || true"]
+        stdout: SplitParser {
+            onRead: (data) => {
+                let path = ("" + data).trim();
+                if (path && path !== "") {
+                    SettingsService.settingsCustomBackgroundImage = path;
+                    SettingsService.settingsCustomBackgroundSource = "custom";
+                }
+            }
+        }
+    }
+
+    Process {
         id: fetchFontsProc
 
         command: ["sh", "-c", "fc-list : family | cut -d, -f1 | sort -u"]
@@ -167,6 +182,138 @@ AppContainer {
             }
         }
 
+    }
+
+    AppGroup {
+        title: "Settings Window Appearance"
+        icon: "window"
+
+        SettingToggle {
+            label: "Borderless Window"
+            description: "Remove window frame borders for a seamless edge-to-edge floating canvas"
+            checked: SettingsService.settingsBorderlessMode
+            onToggled: (val) => {
+                SettingsService.settingsBorderlessMode = val;
+            }
+        }
+
+        SettingToggle {
+            label: "Custom Window Background"
+            description: "Display an immersive wallpaper or custom image inside the Settings window"
+            checked: SettingsService.settingsCustomBackgroundEnabled
+            onToggled: (val) => {
+                SettingsService.settingsCustomBackgroundEnabled = val;
+            }
+        }
+
+        ThemedSelect {
+            visible: SettingsService.settingsCustomBackgroundEnabled
+            label: "Background Source"
+            description: "Choose between your desktop wallpaper or a custom image file"
+            model: ["Current Desktop Wallpaper", "Custom Image File"]
+            currentIndex: SettingsService.settingsCustomBackgroundSource === "custom" ? 1 : 0
+            onActivated: (index) => {
+                SettingsService.settingsCustomBackgroundSource = index === 1 ? "custom" : "wallpaper";
+            }
+        }
+
+        SettingRowTemplate {
+            visible: SettingsService.settingsCustomBackgroundEnabled && SettingsService.settingsCustomBackgroundSource === "custom"
+            label: "Selected Image"
+            description: SettingsService.settingsCustomBackgroundImage !== ""
+                ? SettingsService.settingsCustomBackgroundImage
+                : "No image selected. Click Browse to pick an image."
+
+            RowLayout {
+                spacing: 8
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+
+                Rectangle {
+                    width: 36
+                    height: 22
+                    radius: 4
+                    clip: true
+                    color: "#2C2C2E"
+                    border.width: 1
+                    border.color: Theme.border
+                    visible: SettingsService.settingsCustomBackgroundImage !== ""
+
+                    Image {
+                        anchors.fill: parent
+                        source: SettingsService.settingsCustomBackgroundImage !== "" ? ("file://" + SettingsService.settingsCustomBackgroundImage) : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                    }
+                }
+
+                Rectangle {
+                    implicitWidth: 84
+                    implicitHeight: 28
+                    radius: 6
+                    color: browseHover.hovered ? (Theme.isDark ? "#3A3A3C" : "#E5E5EA") : (Theme.isDark ? "#2C2C2E" : "#F2F2F7")
+                    border.width: 1
+                    border.color: Theme.border
+
+                    HoverHandler {
+                        id: browseHover
+                    }
+
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        SvgIcon {
+                            icon: "picture"
+                            iconSize: 14
+                            flat: true
+                            iconColor: Theme.fg
+                        }
+
+                        ThemedText {
+                            text: "Browse..."
+                            customSize: 12
+                            font.weight: Font.Medium
+                            color: Theme.fg
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            imagePickerProc.running = false;
+                            imagePickerProc.running = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        ThemedSlider {
+            visible: SettingsService.settingsCustomBackgroundEnabled
+            label: "Background Dimming"
+            suffix: "%"
+            from: 10
+            to: 95
+            stepSize: 1
+            value: Math.round(SettingsService.settingsCustomBackgroundDim * 100)
+            onMoved: (val) => {
+                SettingsService.settingsCustomBackgroundDim = Math.max(0.1, Math.min(0.95, val / 100));
+            }
+        }
+
+        ThemedSlider {
+            visible: SettingsService.settingsCustomBackgroundEnabled
+            label: "Background Blur"
+            suffix: "px"
+            from: 0
+            to: 60
+            stepSize: 2
+            value: SettingsService.settingsCustomBackgroundBlur
+            onMoved: (val) => {
+                SettingsService.settingsCustomBackgroundBlur = val;
+            }
+        }
     }
 
     AppGroup {

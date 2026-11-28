@@ -22,7 +22,9 @@ Rectangle {
     Layout.minimumWidth: sidebarWidth
     Layout.maximumWidth: sidebarWidth
     Layout.fillHeight: true
-    color: isDarkView ? "#252527" : "#EBECEF"
+    color: SettingsService.settingsCustomBackgroundEnabled
+        ? (sidebarRoot.isDarkView ? Qt.rgba(0, 0, 0, 0.22) : Qt.rgba(255, 255, 255, 0.25))
+        : (isDarkView ? "#252527" : "#EBECEF")
 
     // Vertical Divider on right edge
     Rectangle {
@@ -30,7 +32,9 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
-        color: sidebarRoot.isDarkView ? "#38383A" : "#DCDCDE"
+        color: SettingsService.settingsCustomBackgroundEnabled
+            ? Qt.rgba(255, 255, 255, 0.08)
+            : (sidebarRoot.isDarkView ? "#38383A" : "#DCDCDE")
     }
 
     readonly property var navOrder: [0, 8, 1, 9, 10, 2, 3, 5, 6, 4, 7]
@@ -192,9 +196,11 @@ Rectangle {
             Rectangle {
                 anchors.fill: parent
                 radius: 8
-                color: sidebarRoot.isDarkView ? "#1E1E1E" : "#FFFFFF"
+                color: SettingsService.settingsCustomBackgroundEnabled
+                    ? (sidebarRoot.isDarkView ? Qt.rgba(0, 0, 0, 0.3) : Qt.rgba(255, 255, 255, 0.45))
+                    : (sidebarRoot.isDarkView ? "#1E1E1E" : "#FFFFFF")
                 border.width: 1
-                border.color: searchInput.activeFocus ? Theme.accent : (sidebarRoot.isDarkView ? "#38383A" : "#DCDCDE")
+                border.color: searchInput.activeFocus ? Theme.accent : (SettingsService.settingsCustomBackgroundEnabled ? Qt.rgba(255, 255, 255, 0.12) : (sidebarRoot.isDarkView ? "#38383A" : "#DCDCDE"))
 
                 RowLayout {
                     anchors.fill: parent

@@ -105,6 +105,12 @@ Item {
     property string settingsWindowMode: "boxed" // "full", "half", "boxed"
     property int settingsBoxedWidth: 960
     property int settingsBoxedHeight: 640
+    property bool settingsBorderlessMode: true
+    property bool settingsCustomBackgroundEnabled: false
+    property string settingsCustomBackgroundSource: "wallpaper" // "wallpaper", "custom"
+    property string settingsCustomBackgroundImage: ""
+    property real settingsCustomBackgroundDim: 0.60
+    property real settingsCustomBackgroundBlur: 20.0
 
     function syncShortcuts() {
         let payload = JSON.stringify({
@@ -271,6 +277,12 @@ Item {
     onSettingsWindowModeChanged: { if (settingsLoaded) saveSettings(); }
     onSettingsBoxedWidthChanged: { if (settingsLoaded) saveSettings(); }
     onSettingsBoxedHeightChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsBorderlessModeChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsCustomBackgroundEnabledChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsCustomBackgroundSourceChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsCustomBackgroundImageChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsCustomBackgroundDimChanged: { if (settingsLoaded) saveSettings(); }
+    onSettingsCustomBackgroundBlurChanged: { if (settingsLoaded) saveSettings(); }
     onAppletActiveWindowChanged: { if (settingsLoaded) saveSettings(); }
     onAppletActiveWindowActionChanged: { if (settingsLoaded) saveSettings(); }
     onAppletDynamicMediaChanged: { if (settingsLoaded) saveSettings(); }
@@ -391,6 +403,12 @@ Item {
                 "settingsWindowMode": settingsService.settingsWindowMode,
                 "settingsBoxedWidth": settingsService.settingsBoxedWidth,
                 "settingsBoxedHeight": settingsService.settingsBoxedHeight,
+                "settingsBorderlessMode": settingsService.settingsBorderlessMode,
+                "settingsCustomBackgroundEnabled": settingsService.settingsCustomBackgroundEnabled,
+                "settingsCustomBackgroundSource": settingsService.settingsCustomBackgroundSource,
+                "settingsCustomBackgroundImage": settingsService.settingsCustomBackgroundImage,
+                "settingsCustomBackgroundDim": settingsService.settingsCustomBackgroundDim,
+                "settingsCustomBackgroundBlur": settingsService.settingsCustomBackgroundBlur,
                 "edgeLightingEnabled": settingsService.edgeLightingEnabled,
                 "edgeLightingColorMode": settingsService.edgeLightingColorMode,
                 "edgeLightingCustomColor": settingsService.edgeLightingCustomColor.toString(),
@@ -667,6 +685,24 @@ Item {
                             settingsService.settingsBoxedWidth = prefs.settingsBoxedWidth;
                         if (prefs.settingsBoxedHeight !== undefined)
                             settingsService.settingsBoxedHeight = prefs.settingsBoxedHeight;
+                        if (prefs.settingsBorderlessMode !== undefined)
+                            settingsService.settingsBorderlessMode = Boolean(prefs.settingsBorderlessMode);
+                        if (prefs.settingsCustomBackgroundEnabled !== undefined)
+                            settingsService.settingsCustomBackgroundEnabled = Boolean(prefs.settingsCustomBackgroundEnabled);
+                        if (prefs.settingsCustomBackgroundSource !== undefined)
+                            settingsService.settingsCustomBackgroundSource = String(prefs.settingsCustomBackgroundSource);
+                        if (prefs.settingsCustomBackgroundImage !== undefined)
+                            settingsService.settingsCustomBackgroundImage = String(prefs.settingsCustomBackgroundImage);
+                        if (prefs.settingsCustomBackgroundDim !== undefined) {
+                            let sbgDim = parseFloat(prefs.settingsCustomBackgroundDim);
+                            if (!isNaN(sbgDim))
+                                settingsService.settingsCustomBackgroundDim = Math.max(0.1, Math.min(0.95, sbgDim));
+                        }
+                        if (prefs.settingsCustomBackgroundBlur !== undefined) {
+                            let sbgBlur = parseFloat(prefs.settingsCustomBackgroundBlur);
+                            if (!isNaN(sbgBlur))
+                                settingsService.settingsCustomBackgroundBlur = Math.max(0.0, Math.min(60.0, sbgBlur));
+                        }
 
                         if (prefs.edgeLightingEnabled !== undefined)
                             settingsService.edgeLightingEnabled = prefs.edgeLightingEnabled;

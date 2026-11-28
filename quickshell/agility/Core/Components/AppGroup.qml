@@ -46,9 +46,13 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: contentLayout.implicitHeight + 22
         radius: 10
-        color: Theme.isDark ? "#28282A" : "#FFFFFF"
-        border.width: 1
-        border.color: Theme.isDark ? "#38383A" : "#E5E5EA"
+        color: SettingsService.settingsCustomBackgroundEnabled
+            ? (Theme.isDark ? Qt.rgba(255, 255, 255, 0.06) : Qt.rgba(255, 255, 255, 0.45))
+            : (Theme.isDark ? "#28282A" : "#FFFFFF")
+        border.width: SettingsService.settingsBorderlessMode ? 0 : 1
+        border.color: SettingsService.settingsCustomBackgroundEnabled
+            ? Qt.rgba(255, 255, 255, 0.08)
+            : (Theme.isDark ? "#38383A" : "#E5E5EA")
 
         Item {
             anchors.fill: parent
@@ -72,7 +76,9 @@ ColumnLayout {
                     property var targetChild: contentLayout.children[index]
 
                     height: 1
-                    color: Theme.isDark ? "#38383A" : "#E5E5EA"
+                    color: SettingsService.settingsCustomBackgroundEnabled
+                        ? Qt.rgba(255, 255, 255, 0.06)
+                        : (Theme.isDark ? "#38383A" : "#E5E5EA")
                     x: 0
                     width: parent.width
                     y: targetChild ? targetChild.y + targetChild.height + 4.5 : 0

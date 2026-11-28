@@ -1,3 +1,4 @@
+import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -88,7 +89,7 @@ AppWindow {
     windowTitle: "System Settings"
     contentPadding: 0
     property bool isDarkView: Theme.isDark
-    backgroundColor: isDarkView ? "#1E1E1E" : "#F5F5F7"
+    backgroundColor: "transparent"
 
     Connections {
         target: Theme
@@ -173,71 +174,126 @@ AppWindow {
         }
     }
 
-    RowLayout {
+    Rectangle {
+        id: windowCanvas
         Layout.fillWidth: true
         Layout.fillHeight: true
-        spacing: 0
+        radius: SettingsService.settingsBorderlessMode ? 14 : 12
+        clip: true
+        color: (!SettingsService.settingsCustomBackgroundEnabled)
+            ? (root.isDarkView ? "#1E1E1E" : "#F5F5F7")
+            : "#101216"
+        border.width: SettingsService.settingsBorderlessMode ? 0 : 1
+        border.color: root.isDarkView ? "#38383A" : "#D1D1D6"
 
-        SettingsSidebar {
-            id: sidebar
-
-            Layout.fillHeight: true
-            activeTab: root.activeTab
-            isDarkView: root.isDarkView
-            onTabClicked: (id) => {
-                root.activeTab = id;
+        // Background Image Layer (Wallpaper or Custom Selected Image)
+        Image {
+            id: bgImage
+            anchors.fill: parent
+            visible: SettingsService.settingsCustomBackgroundEnabled && SettingsService.settingsCustomBackgroundBlur <= 0 && source !== ""
+            fillMode: Image.PreserveAspectCrop
+            source: {
+                if (!SettingsService.settingsCustomBackgroundEnabled)
+                    return "";
+                if (SettingsService.settingsCustomBackgroundSource === "custom" && SettingsService.settingsCustomBackgroundImage !== "")
+                    return "file://" + SettingsService.settingsCustomBackgroundImage;
+                if (WallpaperManager.currentWallpaperPath !== "")
+                    return "file://" + WallpaperManager.currentWallpaperPath;
+                return "";
             }
-            onCloseRequested: {
-                root.isOpen = false;
-            }
+            asynchronous: true
+            cache: true
+            smooth: true
         }
 
+        // FastBlur for Frosted Glass Effect
+        FastBlur {
+            id: bgBlur
+            anchors.fill: parent
+            source: bgImage
+            radius: SettingsService.settingsCustomBackgroundBlur
+            visible: SettingsService.settingsCustomBackgroundEnabled && SettingsService.settingsCustomBackgroundBlur > 0 && bgImage.status === Image.Ready
+            transparentBorder: false
+            cached: true
+        }
+
+        // Frosted Tint Overlay (Dark/Light)
         Rectangle {
-            id: contentContainer
+            id: dimOverlay
+            anchors.fill: parent
+            visible: SettingsService.settingsCustomBackgroundEnabled
+            color: root.isDarkView
+                ? Qt.rgba(12 / 255, 15 / 255, 20 / 255, SettingsService.settingsCustomBackgroundDim)
+                : Qt.rgba(245 / 255, 245 / 255, 247 / 255, SettingsService.settingsCustomBackgroundDim)
+        }
 
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            color: root.isDarkView ? "#1E1E1E" : "#F5F5F7"
+        RowLayout {
+            anchors.fill: parent
+            spacing: 0
 
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
+            SettingsSidebar {
+                id: sidebar
 
-                AppHeader {
-                    title: root.currentTabMeta.title
-                    category: root.currentTabMeta.category
-                    subtitle: root.currentTabMeta.subtitle
-                    showDivider: true
-                    canGoBack: root.activeTab === 9
-                    backText: "Desktop Bar"
-                    onBackClicked: {
-                        root.activeTab = 1;
-                    }
+                Layout.fillHeight: true
+                activeTab: root.activeTab
+                isDarkView: root.isDarkView
+                onTabClicked: (id) => {
+                    root.activeTab = id;
                 }
+                onCloseRequested: {
+                    root.isOpen = false;
+                }
+            }
 
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+            Rectangle {
+                id: contentContainer
 
-                    PageTransitionView {
-                        anchors.fill: parent
-                        activeIndex: root.activeTab
-                        order: root.navOrder
-                        onContentNeedsUpdate: (index) => {
-                            pageLoader.sourceComponent = root.pageComponents[index];
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: SettingsService.settingsCustomBackgroundEnabled
+                    ? "transparent"
+                    : (root.isDarkView ? "#1E1E1E" : "#F5F5F7")
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    AppHeader {
+                        title: root.currentTabMeta.title
+                        category: root.currentTabMeta.category
+                        subtitle: root.currentTabMeta.subtitle
+                        showDivider: true
+                        canGoBack: root.activeTab === 9
+                        backText: "Desktop Bar"
+                        onBackClicked: {
+                            root.activeTab = 1;
                         }
+                    }
 
-                        Loader {
-                            id: pageLoader
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
 
+                        PageTransitionView {
                             anchors.fill: parent
-                            sourceComponent: personalizationComp
+                            activeIndex: root.activeTab
+                            order: root.navOrder
+                            onContentNeedsUpdate: (index) => {
+                                pageLoader.sourceComponent = root.pageComponents[index];
+                            }
+
+                            Loader {
+                                id: pageLoader
+
+                                anchors.fill: parent
+                                sourceComponent: personalizationComp
+                            }
                         }
                     }
                 }
             }
-        }
 
+        }
     }
 
     Shortcut {
